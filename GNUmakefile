@@ -21,18 +21,17 @@ CXXFLAGS += -Wall -W -std=c++17 -O2 -fexceptions -sNO_DISABLE_EXCEPTION_CATCHING
 LDFLAGS += -Llua/src -fexceptions
 LDLIBS += -llua
 
-OBJS = \
-	main.o
+OBJS = main.o
 TARGET = main.html
 
 all: all-recursive $(TARGET)
 
 all-recursive:
-	(cd lua/src && $(MAKE) CC=em++ AR="emar rcu" RANLIB=emranlib MYCFLAGS="-fexceptions -sNO_DISABLE_EXCEPTION_CATCHING" MYLDFLAGS=-fexceptions LUA_T=lua.html posix)
+	(cd lua/src && $(MAKE) CC=em++ AR="emar rcu" RANLIB=emranlib MYCFLAGS="-fexceptions -sNO_DISABLE_EXCEPTION_CATCHING" MYLDFLAGS=-fexceptions LUA_T=lua.html LUAC_T=luac.html posix)
 
 clean::
-	rm -f *.o $(TARGET)
-	(cd lua/src && $(MAKE) clean)
+	$(RM) *.o $(TARGET) main.html main.js main.wasm
+	(cd lua/src && $(MAKE) clean && $(RM) lua*.html lua*.js lua*.wasm)
 
 $(TARGET): $(OBJS)
 	$(CXX) $(CPPFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@

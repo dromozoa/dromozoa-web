@@ -5,7 +5,8 @@
 -[ ] LuaをビルドしてWASMを生成する
   -[x] emscriptenを導入する
   -[x] Luaをレポジトリに追加する
-  -[ ] LuaをCでコンパイルしてWASMを生成する
+  -[x] LuaをCでコンパイルしてWASMを生成する
+  -[ ] emscripten runtimeを使う
   -[ ] LuaをC++でコンパイルしてWASMを生成する
 -[ ] Luaとお役立ちモジュールをビルドしてWASMを生成する
   -[ ] 生メモリを直接扱う

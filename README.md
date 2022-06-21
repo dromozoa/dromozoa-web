@@ -7,7 +7,7 @@
    - [x] Luaをレポジトリに追加する
    - [x] LuaをCでコンパイルしてWASMを生成する
    - [ ] emscripten runtimeを使う
-   - [-] LuaをC++でコンパイルしてWASMを生成する
+   - [ ] LuaをC++でコンパイルしてWASMを生成する
 - [ ] Luaとお役立ちモジュールをビルドしてWASMを生成する
    - [ ] 生メモリを直接扱う
    - [ ] JavaScript関数を扱う
@@ -100,5 +100,4 @@ wasmer self-update
 ### httpdの設定
 
 mime.typesでwasmを設定する。
-
 

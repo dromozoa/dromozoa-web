@@ -24,10 +24,14 @@ LDLIBS += -llua
 OBJS = main.o
 TARGET = main.html
 
-all: $(TARGET)
+all: all-recursive $(TARGET)
 
-clean:
+all-recursive:
+	(cd lua/src && $(MAKE) CC=em++ AR="emar rcu" RANLIB=emranlib MYCFLAGS="-fexceptions -sNO_DISABLE_EXCEPTION_CATCHING" MYLDFLAGS=-fexceptions LUA_T=lua.html posix)
+
+clean::
 	rm -f *.o $(TARGET)
+	(cd lua/src && $(MAKE) clean)
 
 $(TARGET): $(OBJS)
 	$(CXX) $(CPPFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@

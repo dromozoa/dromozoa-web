@@ -20,6 +20,7 @@
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
+#include <chrono>
 #include <iostream>
 #include <exception>
 #include "error.hpp"
@@ -71,7 +72,13 @@ void context_t::load() {
   attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY;
   attr.onsuccess = download_succeeded;
   attr.onerror = download_failed;
-  emscripten_fetch(&attr, "README.md");
+
+  using clock_t = std::chrono::system_clock;
+  clock_t::time_point t = clock_t::now();
+
+  std::ostringstream out;
+  out << "README.md?t=" << clock_t::to_time_t(t);
+  emscripten_fetch(&attr, out.str().c_str());
 
   std::cout << "load done\n";
 }

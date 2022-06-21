@@ -7,12 +7,15 @@
    - [x] Luaをレポジトリに追加する
    - [x] LuaをCでコンパイルしてWASMを生成する
    - [ ] emscripten runtimeを使う
-   - [-] LuaをC++でコンパイルしてWASMを生成する
+    - [x] そもそもメインループどうしよう: コルーチン登場？
+    - [ ] スクリプトの読みこみ方式は？
+   - [x] LuaをC++でコンパイルしてWASMを生成する
 - [ ] Luaとお役立ちモジュールをビルドしてWASMを生成する
    - [ ] 生メモリを直接扱う
    - [ ] JavaScript関数を扱う
    - [ ] コルーチンはどうしよう
-- [ ] どうやってLuaの更新に追随しよう
+- [x] どうやってLuaの更新に追随しよう
+  - Lua本体は基本的にいじらない
 
 ## おぼえがき
 
@@ -91,6 +94,19 @@ cd lua/src
 make CC=emcc AR="emar rcu" RANLIB=emranlib LUA_T=lua.html posix
 ```
 
+生成するHTMLのテンプレートは下記にある。
+
+```
+/opt/emsdk/upstream/emscripten/src
+```
+
+C++に戻ってみる。
+
+```
+cd lua/src
+make CC=em++ AR="emar rcu" RANLIB=emranlib MYCFLAGS="-fexceptions -sNO_DISABLE_EXCEPTION_CATCHING" MYLDFLAGS=-fexceptions LUA_T=lua.html posix
+```
+
 ### wasmerを更新
 
 ```
@@ -100,5 +116,4 @@ wasmer self-update
 ### httpdの設定
 
 mime.typesでwasmを設定する。
-
 

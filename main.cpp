@@ -1,11 +1,27 @@
-#include <emscripten.h>
+// Copyright (C) 2022 Tomoyuki Fujimori <moyu@dromozoa.com>
+//
+// This file is part of dromozoa-web.
+//
+// dromozoa-png is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// dromozoa-png is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with dromozoa-png.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <emscripten.h>
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
-
 #include <iostream>
-#include <stdexcept>
+#include <exception>
+#include "error.hpp"
 
 class context_t {
 public:
@@ -34,8 +50,7 @@ void context_t::load() {
   ;
 
   if (luaL_loadbuffer(L, code, strlen(code), "=(load)") != 0) {
-    std::cerr << "could not luaL_loadbuffer: " << lua_tostring(L, -1) << "\n";
-    // error
+    throw DROMOZOA_LOGIC_ERROR("could not luaL_loadbuffer: ", lua_tostring(L, -1));
   }
   lua_pcall(L, 0, 1, 0);
 }
@@ -55,7 +70,11 @@ void each(void* data) {
 
 int main() {
   context_t* context = new context_t();
-  context->load();
-  emscripten_set_main_loop_arg(each, context, 30, true);
+  try {
+    context->load();
+    emscripten_set_main_loop_arg(each, context, 30, true);
+  } catch (const std::exception& e) {
+    std::cerr << e.what() << "\n";
+  }
   return 0;
 }

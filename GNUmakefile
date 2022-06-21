@@ -17,11 +17,12 @@
 
 CXX = em++
 CPPFLAGS += -Ilua/src -DLUA_USE_POSIX
-CXXFLAGS += -Wall -W -O2 -fexceptions -sNO_DISABLE_EXCEPTION_CATCHING
+CXXFLAGS += -Wall -W -std=c++17 -O2 -fexceptions -sNO_DISABLE_EXCEPTION_CATCHING
 LDFLAGS += -Llua/src -fexceptions
 LDLIBS += -llua
 
-OBJS = main.o
+OBJS = \
+	main.o
 TARGET = main.html
 
 all: all-recursive $(TARGET)

@@ -1,1 +1,8 @@
+*.a
+*.o
 .*.swp
+/lua/src/lua.html
+/lua/src/lua.js
+/lua/src/lua.wasm
+/lua/src/luac
+/lua/src/luac.wasm

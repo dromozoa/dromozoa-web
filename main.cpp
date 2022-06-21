@@ -16,6 +16,7 @@
 // along with dromozoa-png.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <emscripten.h>
+#include <emscripten/fetch.h>
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
@@ -42,6 +43,16 @@ private:
   lua_State* state_;
 };
 
+void download_succeeded(emscripten_fetch_t *fetch) {
+  std::cout << "download_succeeded " << fetch->numBytes << " " << fetch->url << "\n";
+  emscripten_fetch_close(fetch);
+}
+
+void download_failed(emscripten_fetch_t *fetch) {
+  std::cout << "download_succeeded " << fetch->status << " " << fetch->url << "\n";
+  emscripten_fetch_close(fetch);
+}
+
 void context_t::load() {
   lua_State* L = state_;
 
@@ -53,6 +64,16 @@ void context_t::load() {
     throw DROMOZOA_LOGIC_ERROR("could not luaL_loadbuffer: ", lua_tostring(L, -1));
   }
   lua_pcall(L, 0, 1, 0);
+
+  emscripten_fetch_attr_t attr;
+  emscripten_fetch_attr_init(&attr);
+  memcpy(attr.requestMethod, "GET", 4);
+  attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY;
+  attr.onsuccess = download_succeeded;
+  attr.onerror = download_failed;
+  emscripten_fetch(&attr, "README.md");
+
+  std::cout << "load done\n";
 }
 
 void context_t::each() {

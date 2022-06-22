@@ -55,7 +55,7 @@ namespace dromozoa {
   }
 
   thread_reference::operator bool() const {
-    return thread_ != nullptr;
+    return thread_;
   }
 
   void thread_reference::unref() {

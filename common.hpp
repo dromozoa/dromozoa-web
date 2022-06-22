@@ -19,6 +19,9 @@
 #define DROMOZOA_WEB_COMMON_HPP
 
 #include <limits>
+#include <new>
+#include <exception>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include "lua.hpp"
@@ -137,6 +140,14 @@ namespace dromozoa {
       lua_settable(L, -3);
       lua_setmetatable(L, index);
     }
+  }
+
+  template <class T, class... T_args>
+  inline T* new_userdata(lua_State* L, const char* name, T_args&&... args) {
+    T* data = static_cast<T*>(lua_newuserdata(L, sizeof(T)));
+    new(data) T(std::forward<T_args>(args)...);
+    luaL_setmetatable(L, name);
+    return data;
   }
 }
 

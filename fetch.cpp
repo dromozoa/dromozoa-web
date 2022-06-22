@@ -28,6 +28,9 @@
 
 namespace dromozoa {
   namespace {
+    class fetch_t : noncopyable {
+    };
+
     class fetch_callback_t : noncopyable {
     public:
       fetch_callback_t(
@@ -196,10 +199,10 @@ typedef struct emscripten_fetch_attr_t {
           overidden_mime_type = string?;
           request_data = string?;
         }
+
+
+
      */
-
-
-
 
     void impl_call(lua_State* L) {
       emscripten_fetch_attr_t attr;
@@ -265,10 +268,10 @@ typedef struct emscripten_fetch_attr_t {
       const char* url = luaL_checkstring(L, 3);
 
       // あとでラップする
-      fetch_callback_t* fetch_callback = nullptr;
+      std::unique_ptr<fetch_callback_t> fetch_callback;
       if (ref) {
-        fetch_callback = new fetch_callback_t(std::move(ref), onsuccess, onerror, onprogress);
-        attr.userData = fetch_callback;
+        fetch_callback = std::make_unique<fetch_callback_t>(std::move(ref), onsuccess, onerror, onprogress);
+        attr.userData = fetch_callback.release();
         attr.onsuccess = fetch_callback_t::onsuccess;
         attr.onerror = fetch_callback_t::onerror;
         attr.onprogress = fetch_callback_t::onprogress;
@@ -276,6 +279,7 @@ typedef struct emscripten_fetch_attr_t {
 
       emscripten_fetch(&attr, url);
     }
+
   }
 
   void initialize_fetch(lua_State* L) {

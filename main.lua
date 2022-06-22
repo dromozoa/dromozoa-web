@@ -3,6 +3,15 @@ R""--(
 local dromozoa = require "dromozoa"
 
 local coro = coroutine.create(function ()
+
+  dromozoa.fetch()
+  local u = 0
+  for k, v in pairs(dromozoa.fetch) do
+    print(k, v)
+    u = u | v
+  end
+  print(("0x%0x"):format(u))
+
   for i = 1, 10 do
     print(i)
     coroutine.yield()

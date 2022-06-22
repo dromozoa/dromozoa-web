@@ -15,13 +15,101 @@
 // You should have received a copy of the GNU General Public License
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <string.h>
 #include <emscripten/fetch.h>
 #include <iostream>
+#include <utility>
 #include "common.hpp"
+#include "error.hpp"
+#include "exception_queue.hpp"
 #include "lua.hpp"
+#include "noncopyable.hpp"
+#include "thread_reference.hpp"
 
 namespace dromozoa {
   namespace {
+    class fetch_callback_t : noncopyable {
+    public:
+      fetch_callback_t(
+          thread_reference&& ref,
+          int onsuccess,
+          int onerror,
+          int onprogress)
+        : ref_(std::move(ref)),
+          onsuccess_(onsuccess),
+          onerror_(onerror),
+          onprogress_(onprogress) {}
+
+      static void onsuccess(struct emscripten_fetch_t* fetch) {
+        if (auto* self = static_cast<fetch_callback_t*>(fetch->userData)) {
+          self->onsuccess_impl(fetch);
+        }
+      }
+
+      static void onerror(struct emscripten_fetch_t* fetch) {
+        if (auto* self = static_cast<fetch_callback_t*>(fetch->userData)) {
+          self->onerror_impl(fetch);
+        }
+      }
+
+      static void onprogress(struct emscripten_fetch_t* fetch) {
+        if (auto* self = static_cast<fetch_callback_t*>(fetch->userData)) {
+          self->onprogress_impl(fetch);
+        }
+      }
+
+    private:
+      thread_reference ref_;
+      int onsuccess_;
+      int onerror_;
+      int onprogress_;
+
+      void onsuccess_impl(struct emscripten_fetch_t* fetch) {
+        try {
+          if (onsuccess_) {
+            if (lua_State* L = ref_.get()) {
+              lua_pushvalue(L, onsuccess_);
+              if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
+                throw DROMOZOA_RUNTIME_ERROR(lua_tostring(L, -1));
+              }
+            }
+          }
+        } catch (...) {
+          push_exception_queue();
+        }
+      }
+
+      void onerror_impl(struct emscripten_fetch_t* fetch) {
+        try {
+          if (onerror_) {
+            if (lua_State* L = ref_.get()) {
+              lua_pushvalue(L, onerror_);
+              if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
+                throw DROMOZOA_RUNTIME_ERROR(lua_tostring(L, -1));
+              }
+            }
+          }
+        } catch (...) {
+          push_exception_queue();
+        }
+      }
+
+      void onprogress_impl(struct emscripten_fetch_t* fetch) {
+        try {
+          if (onprogress_) {
+            if (lua_State* L = ref_.get()) {
+              lua_pushvalue(L, onprogress_);
+              if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
+                throw DROMOZOA_RUNTIME_ERROR(lua_tostring(L, -1));
+              }
+            }
+          }
+        } catch (...) {
+          push_exception_queue();
+        }
+      }
+    };
+
     /*
 
 typedef struct emscripten_fetch_attr_t {
@@ -98,6 +186,7 @@ typedef struct emscripten_fetch_attr_t {
           onerror = function?;
           onprogress = function?;
           onreadystatechange = function?;
+
           attributes = integer?;
           with_credentials = boolean?;
           destination_path = string?;
@@ -107,33 +196,92 @@ typedef struct emscripten_fetch_attr_t {
           overidden_mime_type = string?;
           request_data = string?;
         }
-
-
-
      */
 
 
 
 
     void impl_call(lua_State* L) {
-      // 1: attr
-      // 2: url
+      emscripten_fetch_attr_t attr;
+      emscripten_fetch_attr_init(&attr);
 
-      std::cout << "fetch!\n";
+      thread_reference ref;
+      int ref_index = 0;
+      int onsuccess = 0;
+      int onerror = 0;
+      int onprogress = 0;
 
+      if (lua_getfield(L, 2, "request_method") != LUA_TNIL) {
+        size_t size = 0;
+        if (const char* data = lua_tolstring(L, -1, &size)) {
+          if (size >= sizeof(attr.requestMethod)) {
+            throw DROMOZOA_RUNTIME_ERROR("field 'request_method' is too long");
+          }
+          memcpy(attr.requestMethod, data, size);
+        }
+      }
+      lua_pop(L, 1);
 
+      if (lua_getfield(L, 2, "attributes") != LUA_TNIL) {
+        int result = 0;
+        lua_Integer value = lua_tointegerx(L, -1, &result);
+        if (!result) {
+            throw DROMOZOA_RUNTIME_ERROR("field 'attributes' is not an integer");
+        }
+        attr.attributes = value;
+      }
+      lua_pop(L, 1);
 
+      if (lua_getfield(L, 2, "onsuccess") != LUA_TNIL) {
+        if (!ref) {
+          ref = thread_reference(L);
+        }
+        lua_pushvalue(L, -1);
+        lua_xmove(L, ref.get(), 1);
+        onsuccess = ++ref_index;
+      }
+      lua_pop(L, 1);
 
+      if (lua_getfield(L, 2, "onerror") != LUA_TNIL) {
+        if (!ref) {
+          ref = thread_reference(L);
+        }
+        lua_pushvalue(L, -1);
+        lua_xmove(L, ref.get(), 1);
+        onerror = ++ref_index;
+      }
+      lua_pop(L, 1);
 
+      if (lua_getfield(L, 2, "onprogress") != LUA_TNIL) {
+        if (!ref) {
+          ref = thread_reference(L);
+        }
+        lua_pushvalue(L, -1);
+        lua_xmove(L, ref.get(), 1);
+        onprogress = ++ref_index;
+      }
+      lua_pop(L, 1);
+
+      const char* url = luaL_checkstring(L, 3);
+
+      // あとでラップする
+      fetch_callback_t* fetch_callback = nullptr;
+      if (ref) {
+        fetch_callback = new fetch_callback_t(std::move(ref), onsuccess, onerror, onprogress);
+        attr.userData = fetch_callback;
+        attr.onsuccess = fetch_callback_t::onsuccess;
+        attr.onerror = fetch_callback_t::onerror;
+        attr.onprogress = fetch_callback_t::onprogress;
+      }
+
+      emscripten_fetch(&attr, url);
     }
   }
 
   void initialize_fetch(lua_State* L) {
     lua_newtable(L);
     {
-      // decltype(function<impl_call>())::set_metafield(L, -1, "__call");
       set_metafield(L, -1, "__call", function<impl_call>());
-      set_metafield(L, -1, "test", 42);
 
       set_field(L, -1, "LOAD_TO_MEMORY", EMSCRIPTEN_FETCH_LOAD_TO_MEMORY);
       set_field(L, -1, "STREAM_DATA", EMSCRIPTEN_FETCH_STREAM_DATA);

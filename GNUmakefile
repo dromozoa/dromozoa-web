@@ -22,6 +22,7 @@ LDFLAGS += -Llua/src -fexceptions -sFETCH
 LDLIBS += -llua
 
 OBJS = \
+	exception_queue.o \
 	fetch.o \
 	main.o \
 	module.o \

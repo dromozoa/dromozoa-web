@@ -3,6 +3,9 @@ R""--(
 local dromozoa = require "dromozoa"
 
 local coro = coroutine.create(function ()
+  local metatable = getmetatable(dromozoa.fetch)
+  print(metatable.__call)
+  print(metatable.test)
 
   dromozoa.fetch()
   local u = 0

@@ -18,7 +18,6 @@
 #include <emscripten/fetch.h>
 #include <iostream>
 #include "common.hpp"
-#include "function.hpp"
 #include "lua.hpp"
 
 namespace dromozoa {
@@ -132,24 +131,18 @@ typedef struct emscripten_fetch_attr_t {
   void initialize_fetch(lua_State* L) {
     lua_newtable(L);
     {
-      decltype(function<impl_call>())::set_metafield(L, -1, "__call");
+      // decltype(function<impl_call>())::set_metafield(L, -1, "__call");
+      set_metafield(L, -1, "__call", function<impl_call>());
+      set_metafield(L, -1, "test", 42);
 
-      push_integer(L, EMSCRIPTEN_FETCH_LOAD_TO_MEMORY);
-      lua_setfield(L, -2, "LOAD_TO_MEMORY");
-      push_integer(L, EMSCRIPTEN_FETCH_STREAM_DATA);
-      lua_setfield(L, -2, "STREAM_DATA");
-      push_integer(L, EMSCRIPTEN_FETCH_PERSIST_FILE);
-      lua_setfield(L, -2, "PERSIST_FILE");
-      push_integer(L, EMSCRIPTEN_FETCH_APPEND);
-      lua_setfield(L, -2, "APPEND");
-      push_integer(L, EMSCRIPTEN_FETCH_REPLACE);
-      lua_setfield(L, -2, "REPLACE");
-      push_integer(L, EMSCRIPTEN_FETCH_NO_DOWNLOAD);
-      lua_setfield(L, -2, "NO_DOWNLOAD");
-      push_integer(L, EMSCRIPTEN_FETCH_SYNCHRONOUS);
-      lua_setfield(L, -2, "SYNCHRONOUS");
-      push_integer(L, EMSCRIPTEN_FETCH_WAITABLE);
-      lua_setfield(L, -2, "WAITABLE");
+      set_field(L, -1, "LOAD_TO_MEMORY", EMSCRIPTEN_FETCH_LOAD_TO_MEMORY);
+      set_field(L, -1, "STREAM_DATA", EMSCRIPTEN_FETCH_STREAM_DATA);
+      set_field(L, -1, "PERSIST_FILE", EMSCRIPTEN_FETCH_PERSIST_FILE);
+      set_field(L, -1, "APPEND", EMSCRIPTEN_FETCH_APPEND);
+      set_field(L, -1, "REPLACE", EMSCRIPTEN_FETCH_REPLACE);
+      set_field(L, -1, "NO_DOWNLOAD", EMSCRIPTEN_FETCH_NO_DOWNLOAD);
+      set_field(L, -1, "SYNCHRONOUS", EMSCRIPTEN_FETCH_SYNCHRONOUS);
+      set_field(L, -1, "WAITABLE", EMSCRIPTEN_FETCH_WAITABLE);
     }
     lua_setfield(L, -2, "fetch");
   }

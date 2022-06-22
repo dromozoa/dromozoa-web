@@ -17,13 +17,13 @@
 
 #include <emscripten.h>
 #include <emscripten/fetch.h>
-#include <lua.h>
-#include <lualib.h>
-#include <lauxlib.h>
 #include <chrono>
 #include <iostream>
 #include <exception>
 #include "error.hpp"
+#include "lua.hpp"
+
+extern "C" int luaopen_dromozoa(lua_State*);
 
 class context_t {
 public:
@@ -54,8 +54,16 @@ void download_failed(emscripten_fetch_t *fetch) {
   emscripten_fetch_close(fetch);
 }
 
+
 void context_t::load() {
   lua_State* L = state_;
+  luaL_openlibs(L);
+
+  lua_getglobal(L, "package");
+  lua_getfield(L, -1, "preload");
+  lua_pushcfunction(L, luaopen_dromozoa);
+  lua_setfield(L, -2, "dromozoa");
+  lua_pop(L, 2);
 
   static const char code[] =
   #include "main.lua"

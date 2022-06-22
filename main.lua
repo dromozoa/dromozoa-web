@@ -1,5 +1,7 @@
 R""--(
 
+local dromozoa = require "dromozoa"
+
 local coro = coroutine.create(function ()
   for i = 1, 10 do
     print(i)

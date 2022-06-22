@@ -21,7 +21,11 @@ CXXFLAGS += -Wall -W -std=c++17 -O2 -fexceptions -sNO_DISABLE_EXCEPTION_CATCHING
 LDFLAGS += -Llua/src -fexceptions -sFETCH
 LDLIBS += -llua
 
-OBJS = main.o
+OBJS = \
+	fetch.o \
+	main.o \
+	module.o \
+	thread_reference.o
 TARGET = main.html
 
 all: all-recursive $(TARGET)

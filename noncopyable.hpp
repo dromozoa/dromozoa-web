@@ -15,33 +15,16 @@
 // You should have received a copy of the GNU General Public License
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef DROMOZOA_WEB_ERROR_HPP
-#define DROMOZOA_WEB_ERROR_HPP
-
-#include <sstream>
-#include <stdexcept>
-#include <string>
+#ifndef DROMOZOA_WEB_NONCOPYABLE_HPP
+#define DROMOZOA_WEB_NONCOPYABLE_HPP
 
 namespace dromozoa {
-  namespace detail{
-    template <class... T>
-    std::string make_error_impl(const char* file, int line, T... message) {
-      std::ostringstream out;
-      (out << ... << message) << " at " << file << ":" << line;
-      return out.str();
-    }
-  }
-
-  template <class T>
-  class error : public T {
+  class noncopyable {
   public:
-    template <class... U>
-    error(const char* file, int line, U... message)
-      : T(detail::make_error_impl(file, line, message...)) {}
+    noncopyable() = default;
+    noncopyable(const noncopyable&) = delete;
+    noncopyable& operator=(const noncopyable&) = delete;
   };
 }
-
-#define DROMOZOA_LOGIC_ERROR(...) dromozoa::error<std::logic_error>(__FILE__, __LINE__, __VA_ARGS__)
-#define DROMOZOA_RUNTIME_ERROR(...) dromozoa::error<std::runtime_error>(__FILE__, __LINE__, __VA_ARGS__)
 
 #endif

@@ -15,33 +15,28 @@
 // You should have received a copy of the GNU General Public License
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef DROMOZOA_WEB_ERROR_HPP
-#define DROMOZOA_WEB_ERROR_HPP
+#ifndef DROMOZOA_WEB_THREAD_REFERENCE_HPP
+#define DROMOZOA_WEB_THREAD_REFERENCE_HPP
 
-#include <sstream>
-#include <stdexcept>
-#include <string>
+#include "lua.hpp"
+#include "noncopyable.hpp"
 
 namespace dromozoa {
-  namespace detail{
-    template <class... T>
-    std::string make_error_impl(const char* file, int line, T... message) {
-      std::ostringstream out;
-      (out << ... << message) << " at " << file << ":" << line;
-      return out.str();
-    }
-  }
-
-  template <class T>
-  class error : public T {
+  class thread_reference : noncopyable {
   public:
-    template <class... U>
-    error(const char* file, int line, U... message)
-      : T(detail::make_error_impl(file, line, message...)) {}
+    thread_reference();
+    explicit thread_reference(lua_State*);
+    thread_reference(thread_reference&&);
+    ~thread_reference();
+    thread_reference& operator=(thread_reference&&);
+    lua_State* get() const;
+    explicit operator bool() const;
+  private:
+    lua_State* thread_;
+    int ref_;
+    void unref();
+    void reset();
   };
 }
-
-#define DROMOZOA_LOGIC_ERROR(...) dromozoa::error<std::logic_error>(__FILE__, __LINE__, __VA_ARGS__)
-#define DROMOZOA_RUNTIME_ERROR(...) dromozoa::error<std::runtime_error>(__FILE__, __LINE__, __VA_ARGS__)
 
 #endif

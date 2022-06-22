@@ -2,28 +2,28 @@
 //
 // This file is part of dromozoa-web.
 //
-// dromozoa-png is free software: you can redistribute it and/or modify
+// dromozoa-web is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// dromozoa-png is distributed in the hope that it will be useful,
+// dromozoa-web is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with dromozoa-png.  If not, see <http://www.gnu.org/licenses/>.
+// along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <emscripten.h>
 #include <emscripten/fetch.h>
-#include <lua.h>
-#include <lualib.h>
-#include <lauxlib.h>
 #include <chrono>
 #include <iostream>
 #include <exception>
 #include "error.hpp"
+#include "lua.hpp"
+
+extern "C" int luaopen_dromozoa(lua_State*);
 
 class context_t {
 public:
@@ -54,8 +54,16 @@ void download_failed(emscripten_fetch_t *fetch) {
   emscripten_fetch_close(fetch);
 }
 
+
 void context_t::load() {
   lua_State* L = state_;
+  luaL_openlibs(L);
+
+  lua_getglobal(L, "package");
+  lua_getfield(L, -1, "preload");
+  lua_pushcfunction(L, luaopen_dromozoa);
+  lua_setfield(L, -2, "dromozoa");
+  lua_pop(L, 2);
 
   static const char code[] =
   #include "main.lua"

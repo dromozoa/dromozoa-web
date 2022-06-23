@@ -32,23 +32,19 @@ namespace dromozoa {
   namespace {
     class fetch_t;
 
-    class fetch_ref_t {
+    class fetch_ref_t : noncopyable {
     public:
       explicit fetch_ref_t(fetch_t* ptr) : ptr_(ptr) {}
 
       fetch_t* get() const {
         if (!ptr_) {
-          throw DROMOZOA_RUNTIME_ERROR("attempt to use a closed dromozoa.fetch_ref");
+          throw DROMOZOA_LOGIC_ERROR("attempt to use a detached dromozoa.web.fetch_ref");
         }
         return ptr_;
       }
 
-      void close() {
-        ptr_ = nullptr;
-      }
-
-      explicit operator bool() const {
-        return ptr_;
+      static void detach(fetch_ref_t* self) {
+        self->ptr_ = nullptr;
       }
 
     private:
@@ -111,12 +107,7 @@ namespace dromozoa {
       }
 
     private:
-      // 1 : function: onsuccess
-      // 2 : thread:   onerror
-      // 3 : function: onprogress
-      // 4 : function: onreadystatechange
       thread_reference ref_;
-      // 1 : function: onerror
       lua_State* thread_;
       emscripten_fetch_t* fetch_;
 
@@ -131,12 +122,9 @@ namespace dromozoa {
         try {
           DROMOZOA_ASSERT(fetch_ == fetch);
           lua_pushvalue(L, index);
-          fetch_ref_t* that = new_userdata<fetch_ref_t>(L, "dromozoa.fetch_ref", this);
+          std::unique_ptr<fetch_ref_t, decltype(&fetch_ref_t::detach)> guard(new_userdata<fetch_ref_t>(L, "dromozoa.web.fetch_ref", this), fetch_ref_t::detach);
           if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
-            that->close();
             throw DROMOZOA_RUNTIME_ERROR(lua_tostring(L, -1));
-          } else {
-            that->close();
           }
         } catch (...) {
           push_exception_queue();
@@ -145,10 +133,10 @@ namespace dromozoa {
     };
 
     fetch_t* check_fetch(lua_State* L, int index) {
-      if (fetch_ref_t* that = static_cast<fetch_ref_t*>(luaL_testudata(L, index, "dromozoa.fetch_ref"))) {
-        return that->get();
+      if (auto* ref = static_cast<fetch_ref_t*>(luaL_testudata(L, index, "dromozoa.web.fetch_ref"))) {
+        return ref->get();
       }
-      return static_cast<fetch_t*>(luaL_checkudata(L, index, "dromozoa.fetch"));
+      return static_cast<fetch_t*>(luaL_checkudata(L, index, "dromozoa.web.fetch"));
     }
 
     void impl_gc(lua_State* L) {
@@ -156,9 +144,8 @@ namespace dromozoa {
     }
 
     void impl_call(lua_State* L) {
-      emscripten_fetch_attr_t attr;
+      emscripten_fetch_attr_t attr = {};
       emscripten_fetch_attr_init(&attr);
-      thread_reference ref = thread_reference(L);
 
       if (lua_getfield(L, 2, "request_method") != LUA_TNIL) {
         size_t size = 0;
@@ -171,6 +158,12 @@ namespace dromozoa {
       }
       lua_pop(L, 1);
 
+      // [1] function | onsuccess
+      // [2] thread   | onerror
+      // [3] function | onprogress
+      // [4] function | onreadystatechange
+      thread_reference ref = thread_reference(L);
+
       if (lua_getfield(L, 2, "onsuccess") != LUA_TNIL) {
         attr.onsuccess = fetch_t::onsuccess;
       }
@@ -179,6 +172,7 @@ namespace dromozoa {
       if (lua_getfield(L, 2, "onerror") != LUA_TNIL) {
         attr.onerror = fetch_t::onerror;
       }
+      // [1] function | onerror
       lua_State* thread = lua_newthread(ref.get());
       lua_xmove(L, thread, 1);
 
@@ -204,7 +198,7 @@ namespace dromozoa {
 
       const char* url = luaL_checkstring(L, 3);
 
-      fetch_t* self = new_userdata<fetch_t>(L, "dromozoa.fetch", std::move(ref));
+      fetch_t* self = new_userdata<fetch_t>(L, "dromozoa.web.fetch", std::move(ref));
       attr.userData = self;
       emscripten_fetch_t* fetch = emscripten_fetch(&attr, url);
       self->set_fetch(fetch);
@@ -264,12 +258,12 @@ namespace dromozoa {
   void initialize_fetch(lua_State* L) {
     lua_newtable(L);
     {
-      luaL_newmetatable(L, "dromozoa.fetch_ref");
+      luaL_newmetatable(L, "dromozoa.web.fetch_ref");
       lua_pushvalue(L, -2);
       lua_setfield(L, -2, "__index");
       lua_pop(L, 1);
 
-      luaL_newmetatable(L, "dromozoa.fetch");
+      luaL_newmetatable(L, "dromozoa.web.fetch");
       lua_pushvalue(L, -2);
       lua_setfield(L, -2, "__index");
       set_field(L, -1, "__close", function<impl_close>());

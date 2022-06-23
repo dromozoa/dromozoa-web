@@ -41,7 +41,7 @@ local coro = coroutine.create(function ()
   end
 
   print(fetch2)
-  dump_fetch("main", fetch2)
+  -- dump_fetch("main", fetch2)
 
 end)
 

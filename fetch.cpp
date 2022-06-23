@@ -17,7 +17,7 @@
 
 #include <string.h>
 #include <emscripten/fetch.h>
-#include <iostream>
+#include <memory>>
 #include <set>
 #include <utility>
 #include "assert.hpp"

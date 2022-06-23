@@ -55,7 +55,6 @@ void download_failed(emscripten_fetch_t *fetch) {
   emscripten_fetch_close(fetch);
 }
 
-
 void context_t::load() {
   lua_State* L = state_;
   luaL_openlibs(L);

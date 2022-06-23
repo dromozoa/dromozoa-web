@@ -2,31 +2,48 @@ R""--(
 
 local dromozoa = require "dromozoa"
 
-local fetch
-
 local coro = coroutine.create(function ()
+  local function dump_fetch(key, fetch)
+    print(key,
+        fetch:get_url(),
+        fetch:get_num_bytes(),
+        fetch:get_total_bytes(),
+        fetch:get_data_offset(),
+        fetch:get_ready_state(),
+        fetch:get_status(),
+        fetch:get_status_text())
+    -- print(fetch:get_data())
+    -- print(fetch:get_data_pointer())
+  end
+
+  local fetch
   fetch = assert(dromozoa.fetch({
     request_method = "GET";
     attributes = dromozoa.fetch.LOAD_TO_MEMORY;
     onsuccess = function ()
-      print("success", fetch:get_ready_state(), fetch:get_status())
+      dump_fetch("onsuccess", fetch)
     end;
-    -- onerror = function ()
-    --   print("error", fetch:get_ready_state(), fetch:get_status())
-    -- end;
+    onerror = function ()
+      dump_fetch("onerror", fetch)
+    end;
     onprogress = function ()
-      print("progress", fetch:get_ready_state(), fetch:get_status())
+      dump_fetch("onprogress", fetch)
       fetch:close()
     end;
-  }, "main.js?t=" .. os.time()))
+  }, "main.lua?t=" .. os.time()))
 
   print(fetch)
+  dump_fetch("main", fetch)
 
   for i = 1, 10 do
     print(i)
     coroutine.yield()
   end
 
+  fetch = nil
+
+  collectgarbage()
+  collectgarbage()
 end)
 
 return function ()

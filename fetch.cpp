@@ -18,7 +18,9 @@
 #include <string.h>
 #include <emscripten/fetch.h>
 #include <iostream>
+#include <set>
 #include <utility>
+#include "assert.hpp"
 #include "common.hpp"
 #include "error.hpp"
 #include "exception_queue.hpp"
@@ -28,62 +30,74 @@
 
 namespace dromozoa {
   namespace {
+    static std::set<emscripten_fetch_t*> active_fetch_set;
+
     class fetch_t : noncopyable {
     public:
-      fetch_t(thread_reference&& ref) : ref_(std::move(ref)), thread_(), fetch_() {
+      explicit fetch_t(thread_reference&& ref) : ref_(std::move(ref)), thread_(), fetch_() {
         if (lua_State* L = ref_.get()) {
           thread_ = lua_tothread(L, 2);
         }
       }
 
+      ~fetch_t() {
+        close();
+      }
+
       void set_fetch(emscripten_fetch_t* fetch) {
         fetch_ = fetch;
+        if (fetch_) {
+          active_fetch_set.insert(fetch_);
+        }
       }
 
-      unsigned short get_ready_state() const {
-        return fetch_->readyState;
-      }
-
-      unsigned short get_status() const {
-        return fetch_->status;
+      emscripten_fetch_t* get_fetch() const {
+        return fetch_;
       }
 
       void close() {
-        // emscripten_fetch_closeが戻った後もコールバックは呼ばれうる。
         if (fetch_) {
-          std::cout << "closing\n";
+          std::cout << "close\n";
           emscripten_fetch_close(fetch_);
           std::cout << "closed\n";
-          fetch_->userData = nullptr;
+          active_fetch_set.erase(fetch_);
           fetch_ = nullptr;
         }
       }
 
       static void onsuccess(emscripten_fetch_t* fetch) {
-        std::cout << "onsuccess\n";
-        if (auto* self = static_cast<fetch_t*>(fetch->userData)) {
-          self->on(self->ref_.get(), 1, fetch);
+        std::cout << "onsuccess " << fetch << " " << fetch->id << "\n";
+        if (active_fetch_set.find(fetch) != active_fetch_set.end()) {
+          if (auto* self = static_cast<fetch_t*>(fetch->userData)) {
+            self->on_impl(self->ref_.get(), 1, fetch);
+          }
         }
       }
 
       static void onerror(emscripten_fetch_t* fetch) {
-        std::cout << "onerror\n";
-        if (auto* self = static_cast<fetch_t*>(fetch->userData)) {
-          self->on(self->thread_, 1, fetch);
+        std::cout << "onerror " << fetch << " " << fetch->id << "\n";
+        if (active_fetch_set.find(fetch) != active_fetch_set.end()) {
+          if (auto* self = static_cast<fetch_t*>(fetch->userData)) {
+            self->on_impl(self->thread_, 1, fetch);
+          }
         }
       }
 
       static void onprogress(emscripten_fetch_t* fetch) {
-        std::cout << "onprogress\n";
-        if (auto* self = static_cast<fetch_t*>(fetch->userData)) {
-          self->on(self->ref_.get(), 3, fetch);
+        std::cout << "onprogress " << fetch << " " << fetch->id << "\n";
+        if (active_fetch_set.find(fetch) != active_fetch_set.end()) {
+          if (auto* self = static_cast<fetch_t*>(fetch->userData)) {
+            self->on_impl(self->ref_.get(), 3, fetch);
+          }
         }
       }
 
       static void onreadystatechange(emscripten_fetch_t* fetch) {
-        std::cout << "onreadystatechange\n";
-        if (auto* self = static_cast<fetch_t*>(fetch->userData)) {
-          self->on(self->ref_.get(), 4, fetch);
+        std::cout << "onreadystatechange " << fetch << " " << fetch->id << "\n";
+        if (active_fetch_set.find(fetch) != active_fetch_set.end()) {
+          if (auto* self = static_cast<fetch_t*>(fetch->userData)) {
+            self->on_impl(self->ref_.get(), 4, fetch);
+          }
         }
       }
 
@@ -97,18 +111,12 @@ namespace dromozoa {
       lua_State* thread_;
       emscripten_fetch_t* fetch_;
 
-      // emscripten_fetch_closeはキャンセルに使える（onprogressからよんだり？）
-      // emscripten_fetch_closeが返るまでのあいだに、onerrorが呼ばれる
-      // emscripten_fetch_closeを呼んだあと、fetch_callback_tをdeleteするのはOK
-      //   再入する可能性がある
-      //     onerrorの処理だけ、別のrefにする？
-      //     再入を検知して、そのときだけ、スレッドをつくる？
-      //     毎回、lua_newthreadする？
-      // emscripten_fetch_closeを呼ばなかったら？
-      // emscripten_fetch_tをLuaに保存しておくか
-
-      void on(lua_State* L, int index, emscripten_fetch_t* fetch) {
+      void on_impl(lua_State* L, int index, emscripten_fetch_t* fetch) {
         try {
+          // DROMOZOA_ASSERT(fetch_ == fetch);
+
+          std::cout << fetch_ << " == " << fetch << " ?\n";
+
           lua_pushvalue(L, index);
           if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
             throw DROMOZOA_RUNTIME_ERROR(lua_tostring(L, -1));
@@ -124,6 +132,7 @@ namespace dromozoa {
     }
 
     void impl_gc(lua_State* L) {
+      std::cout << "impl_gc\n";
       check_fetch(L, 1)->~fetch_t();
     }
 
@@ -149,13 +158,10 @@ namespace dromozoa {
       lua_xmove(L, ref.get(), 1);
 
       if (lua_getfield(L, 2, "onerror") != LUA_TNIL) {
-        lua_State* thread = lua_newthread(ref.get());
-        lua_xmove(L, thread, 1);
         attr.onerror = fetch_t::onerror;
-      } else {
-        lua_pop(L, 1);
-        lua_pushnil(ref.get());
       }
+      lua_State* thread = lua_newthread(ref.get());
+      lua_xmove(L, thread, 1);
 
       if (lua_getfield(L, 2, "onprogress") != LUA_TNIL) {
         attr.onprogress = fetch_t::onprogress;
@@ -185,12 +191,50 @@ namespace dromozoa {
       self->set_fetch(fetch);
     }
 
+    void impl_get_url(lua_State* L) {
+      push(L, check_fetch(L, 1)->get_fetch()->url);
+    }
+
+    void impl_get_data(lua_State* L) {
+      fetch_t* self = check_fetch(L, 1);
+      if (const char* data = self->get_fetch()->data) {
+        lua_pushlstring(L, data, self->get_fetch()->numBytes);
+      } else {
+        lua_pushnil(L);
+      }
+    }
+
+    void impl_get_data_pointer(lua_State* L) {
+      fetch_t* self = check_fetch(L, 1);
+      if (void* data = const_cast<char*>(self->get_fetch()->data)) {
+        lua_pushlightuserdata(L, data);
+      } else {
+        lua_pushnil(L);
+      }
+    }
+
+    void impl_get_num_bytes(lua_State* L) {
+      push(L, check_fetch(L, 1)->get_fetch()->numBytes);
+    }
+
+    void impl_get_total_bytes(lua_State* L) {
+      push(L, check_fetch(L, 1)->get_fetch()->totalBytes);
+    }
+
+    void impl_get_data_offset(lua_State* L) {
+      push(L, check_fetch(L, 1)->get_fetch()->dataOffset);
+    }
+
     void impl_get_ready_state(lua_State* L) {
-      push(L, check_fetch(L, 1)->get_ready_state());
+      push(L, check_fetch(L, 1)->get_fetch()->readyState);
     }
 
     void impl_get_status(lua_State* L) {
-      push(L, check_fetch(L, 1)->get_status());
+      push(L, check_fetch(L, 1)->get_fetch()->status);
+    }
+
+    void impl_get_status_text(lua_State* L) {
+      push(L, check_fetch(L, 1)->get_fetch()->statusText);
     }
 
     void impl_close(lua_State* L) {
@@ -204,13 +248,20 @@ namespace dromozoa {
       luaL_newmetatable(L, "dromozoa.fetch");
       lua_pushvalue(L, -2);
       lua_setfield(L, -2, "__index");
-      set_field(L, -2, "__gc", function<impl_gc>());
+      set_field(L, -1, "__gc", function<impl_gc>());
       lua_pop(L, 1);
 
       set_metafield(L, -1, "__call", function<impl_call>());
 
+      set_field(L, -1, "get_url", function<impl_get_url>());
+      set_field(L, -1, "get_data", function<impl_get_data>());
+      set_field(L, -1, "get_data_pointer", function<impl_get_data_pointer>());
+      set_field(L, -1, "get_num_bytes", function<impl_get_num_bytes>());
+      set_field(L, -1, "get_total_bytes", function<impl_get_total_bytes>());
+      set_field(L, -1, "get_data_offset", function<impl_get_data_offset>());
       set_field(L, -1, "get_ready_state", function<impl_get_ready_state>());
       set_field(L, -1, "get_status", function<impl_get_status>());
+      set_field(L, -1, "get_status_text", function<impl_get_status_text>());
       set_field(L, -1, "close", function<impl_close>());
 
       set_field(L, -1, "LOAD_TO_MEMORY", EMSCRIPTEN_FETCH_LOAD_TO_MEMORY);
@@ -221,6 +272,12 @@ namespace dromozoa {
       set_field(L, -1, "NO_DOWNLOAD", EMSCRIPTEN_FETCH_NO_DOWNLOAD);
       set_field(L, -1, "SYNCHRONOUS", EMSCRIPTEN_FETCH_SYNCHRONOUS);
       set_field(L, -1, "WAITABLE", EMSCRIPTEN_FETCH_WAITABLE);
+
+      set_field(L, -1, "UNSENT", 0);
+      set_field(L, -1, "OPENED", 1);
+      set_field(L, -1, "HEADERS_RECEIVED", 2);
+      set_field(L, -1, "LOADING", 3);
+      set_field(L, -1, "DONE", 4);
     }
     lua_setfield(L, -2, "fetch");
   }

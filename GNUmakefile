@@ -16,7 +16,7 @@
 # along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 CXX = em++
-CPPFLAGS += -Ilua/src -DLUA_USE_POSIX
+CPPFLAGS += -Ilua/src -DLUA_USE_POSIX -MMD
 CXXFLAGS += -Wall -W -std=c++17 -O2 -fexceptions -sNO_DISABLE_EXCEPTION_CATCHING
 LDFLAGS += -Llua/src -fexceptions -sFETCH
 LDLIBS += -llua
@@ -36,7 +36,7 @@ all-recursive:
 	(cd lua/src && $(MAKE) CC=em++ AR="emar rcu" RANLIB=emranlib MYCFLAGS="-fexceptions -sNO_DISABLE_EXCEPTION_CATCHING" MYLDFLAGS=-fexceptions LUA_T=lua.html LUAC_T=luac.html posix)
 
 clean:
-	$(RM) *.o $(TARGET) main.html main.js main.wasm
+	$(RM) *.d *.o $(TARGET) main.html main.js main.wasm
 
 clean-recursive:
 	(cd lua/src && $(MAKE) clean && $(RM) lua*.html lua*.js lua*.wasm)
@@ -47,4 +47,4 @@ $(TARGET): $(OBJS)
 .cpp.o:
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $<
 
-main.o: main.lua
+-include $(OBJS:.o=.d)

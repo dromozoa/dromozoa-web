@@ -11,9 +11,9 @@ local coro = coroutine.create(function ()
     onsuccess = function ()
       print("success", fetch:get_ready_state(), fetch:get_status())
     end;
-    onerror = function ()
-      print("error", fetch:get_ready_state(), fetch:get_status())
-    end;
+    -- onerror = function ()
+    --   print("error", fetch:get_ready_state(), fetch:get_status())
+    -- end;
     onprogress = function ()
       print("progress", fetch:get_ready_state(), fetch:get_status())
       fetch:close()

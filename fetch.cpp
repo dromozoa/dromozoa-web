@@ -30,18 +30,10 @@ namespace dromozoa {
   namespace {
     class fetch_t : noncopyable {
     public:
-      fetch_t(
-          thread_reference&& ref,
-          lua_State* error_thread,
-          int onsuccess,
-          int onprogress,
-          int onreadystatechange)
-        : ref_(std::move(ref)),
-          error_thread_(error_thread),
-          onsuccess_(onsuccess),
-          onprogress_(onprogress),
-          onreadystatechange_(onreadystatechange),
-          fetch_() {
+      fetch_t(thread_reference&& ref) : ref_(std::move(ref)), thread_(), fetch_() {
+        if (lua_State* L = ref_.get()) {
+          thread_ = lua_tothread(L, 2);
+        }
       }
 
       void set_fetch(emscripten_fetch_t* fetch) {
@@ -67,27 +59,31 @@ namespace dromozoa {
         }
       }
 
-      static void onerror(emscripten_fetch_t* fetch) {
+      static void onsuccess(emscripten_fetch_t* fetch) {
+        std::cout << "onsuccess\n";
         if (auto* self = static_cast<fetch_t*>(fetch->userData)) {
-          self->onerror_impl(fetch);
+          self->on(self->ref_.get(), 1, fetch);
         }
       }
 
-      static void onsuccess(emscripten_fetch_t* fetch) {
+      static void onerror(emscripten_fetch_t* fetch) {
+        std::cout << "onerror\n";
         if (auto* self = static_cast<fetch_t*>(fetch->userData)) {
-          self->on(self->onsuccess_, fetch);
+          self->on(self->thread_, 1, fetch);
         }
       }
 
       static void onprogress(emscripten_fetch_t* fetch) {
+        std::cout << "onprogress\n";
         if (auto* self = static_cast<fetch_t*>(fetch->userData)) {
-          self->on(self->onprogress_, fetch);
+          self->on(self->ref_.get(), 3, fetch);
         }
       }
 
       static void onreadystatechange(emscripten_fetch_t* fetch) {
+        std::cout << "onreadystatechange\n";
         if (auto* self = static_cast<fetch_t*>(fetch->userData)) {
-          self->on(self->onreadystatechange_, fetch);
+          self->on(self->ref_.get(), 4, fetch);
         }
       }
 
@@ -97,10 +93,8 @@ namespace dromozoa {
       // 3 : function: onprogress
       // 4 : function: onreadystatechange
       thread_reference ref_;
-      lua_State* error_thread_; // 1 : function : onerror
-      int onsuccess_;
-      int onprogress_;
-      int onreadystatechange_;
+      // 1 : function: onerror
+      lua_State* thread_;
       emscripten_fetch_t* fetch_;
 
       // emscripten_fetch_closeはキャンセルに使える（onprogressからよんだり？）
@@ -113,35 +107,11 @@ namespace dromozoa {
       // emscripten_fetch_closeを呼ばなかったら？
       // emscripten_fetch_tをLuaに保存しておくか
 
-      void onerror_impl(emscripten_fetch_t* fetch) {
+      void on(lua_State* L, int index, emscripten_fetch_t* fetch) {
         try {
-          if (fetch != fetch_) {
-            throw DROMOZOA_RUNTIME_ERROR("invalid fetch");
-          }
-          if (lua_State* L = error_thread_) {
-            lua_pushvalue(L, 1);
-            if (lua_pcall(error_thread_, 0, 0, 0) != LUA_OK) {
-              throw DROMOZOA_RUNTIME_ERROR(lua_tostring(error_thread_, -1));
-            }
-          }
-        } catch (...) {
-          push_exception_queue();
-        }
-      }
-
-      void on(int on, emscripten_fetch_t* fetch) {
-        try {
-          if (fetch != fetch_) {
-            throw DROMOZOA_RUNTIME_ERROR("invalid fetch");
-          }
-          if (!on) {
-            return;
-          }
-          if (lua_State* L = ref_.get()) {
-            lua_pushvalue(L, on);
-            if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
-              throw DROMOZOA_RUNTIME_ERROR(lua_tostring(L, -1));
-            }
+          lua_pushvalue(L, index);
+          if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
+            throw DROMOZOA_RUNTIME_ERROR(lua_tostring(L, -1));
           }
         } catch (...) {
           push_exception_queue();
@@ -160,13 +130,7 @@ namespace dromozoa {
     void impl_call(lua_State* L) {
       emscripten_fetch_attr_t attr;
       emscripten_fetch_attr_init(&attr);
-
-      thread_reference ref;
-      lua_State* error_thread = nullptr;
-      int ref_index = 0;
-      int onsuccess = 0;
-      int onprogress = 0;
-      int onreadystatechange = 0;
+      thread_reference ref = thread_reference(L);
 
       if (lua_getfield(L, 2, "request_method") != LUA_TNIL) {
         size_t size = 0;
@@ -179,76 +143,44 @@ namespace dromozoa {
       }
       lua_pop(L, 1);
 
+      if (lua_getfield(L, 2, "onsuccess") != LUA_TNIL) {
+        attr.onsuccess = fetch_t::onsuccess;
+      }
+      lua_xmove(L, ref.get(), 1);
+
+      if (lua_getfield(L, 2, "onerror") != LUA_TNIL) {
+        lua_State* thread = lua_newthread(ref.get());
+        lua_xmove(L, thread, 1);
+        attr.onerror = fetch_t::onerror;
+      } else {
+        lua_pop(L, 1);
+        lua_pushnil(ref.get());
+      }
+
+      if (lua_getfield(L, 2, "onprogress") != LUA_TNIL) {
+        attr.onprogress = fetch_t::onprogress;
+      }
+      lua_xmove(L, ref.get(), 1);
+
+      if (lua_getfield(L, 2, "onreadystatechange") != LUA_TNIL) {
+        attr.onreadystatechange = fetch_t::onreadystatechange;
+      }
+      lua_xmove(L, ref.get(), 1);
+
       if (lua_getfield(L, 2, "attributes") != LUA_TNIL) {
-        int result = 0;
-        lua_Integer value = lua_tointegerx(L, -1, &result);
-        if (!result) {
+        int is_integer = 0;
+        lua_Integer value = lua_tointegerx(L, -1, &is_integer);
+        if (!is_integer) {
             throw DROMOZOA_RUNTIME_ERROR("field 'attributes' is not an integer");
         }
         attr.attributes = value;
       }
       lua_pop(L, 1);
 
-      if (lua_getfield(L, 2, "onerror") != LUA_TNIL) {
-        if (!ref) {
-          ref = thread_reference(L);
-        }
-        error_thread = lua_newthread(ref.get());
-        ++ref_index;
-        lua_pushvalue(L, -1);
-        lua_xmove(L, error_thread, 1);
-        attr.onerror = fetch_t::onerror;
-      }
-      lua_pop(L, 1);
-
-      if (lua_getfield(L, 2, "onsuccess") != LUA_TNIL) {
-        if (!ref) {
-          ref = thread_reference(L);
-        }
-        lua_pushvalue(L, -1);
-        lua_xmove(L, ref.get(), 1);
-        onsuccess = ++ref_index;
-        attr.onsuccess = fetch_t::onsuccess;
-      }
-      lua_pop(L, 1);
-
-      if (lua_getfield(L, 2, "onprogress") != LUA_TNIL) {
-        if (!ref) {
-          ref = thread_reference(L);
-        }
-        lua_pushvalue(L, -1);
-        lua_xmove(L, ref.get(), 1);
-        onprogress = ++ref_index;
-        attr.onprogress = fetch_t::onprogress;
-      }
-      lua_pop(L, 1);
-
-      if (lua_getfield(L, 2, "onprogress") != LUA_TNIL) {
-        if (!ref) {
-          ref = thread_reference(L);
-        }
-        lua_pushvalue(L, -1);
-        lua_xmove(L, ref.get(), 1);
-        onprogress = ++ref_index;
-        attr.onreadystatechange = fetch_t::onreadystatechange;
-      }
-      lua_pop(L, 1);
-
-      if (lua_getfield(L, 2, "onreadystatechange") != LUA_TNIL) {
-        if (!ref) {
-          ref = thread_reference(L);
-        }
-        lua_pushvalue(L, -1);
-        lua_xmove(L, ref.get(), 1);
-        onreadystatechange = ++ref_index;
-      }
-      lua_pop(L, 1);
-
       const char* url = luaL_checkstring(L, 3);
 
-      fetch_t* self = new_userdata<fetch_t>(L, "dromozoa.fetch", std::move(ref), error_thread, onsuccess, onprogress, onreadystatechange);;
+      fetch_t* self = new_userdata<fetch_t>(L, "dromozoa.fetch", std::move(ref));
       attr.userData = self;
-
       emscripten_fetch_t* fetch = emscripten_fetch(&attr, url);
       self->set_fetch(fetch);
     }

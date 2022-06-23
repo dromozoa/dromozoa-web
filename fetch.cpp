@@ -17,7 +17,7 @@
 
 #include <string.h>
 #include <emscripten/fetch.h>
-#include <memory>>
+#include <memory>
 #include <set>
 #include <utility>
 #include "assert.hpp"
@@ -154,6 +154,8 @@ namespace dromozoa {
             throw DROMOZOA_RUNTIME_ERROR("field 'request_method' is too long");
           }
           memcpy(attr.requestMethod, data, size);
+        } else {
+          throw DROMOZOA_RUNTIME_ERROR("field 'request_method' is not a string");
         }
       }
       lua_pop(L, 1);
@@ -193,6 +195,40 @@ namespace dromozoa {
             throw DROMOZOA_RUNTIME_ERROR("field 'attributes' is not an integer");
         }
         attr.attributes = value;
+      }
+      lua_pop(L, 1);
+
+      if (lua_getfield(L, 2, "timeout_msecs") != LUA_TNIL) {
+        int is_integer = 0;
+        lua_Integer value = lua_tointegerx(L, -1, &is_integer);
+        if (!is_integer) {
+            throw DROMOZOA_RUNTIME_ERROR("field 'timeout_msecs' is not an integer");
+        }
+        attr.timeoutMSecs = value;
+      }
+      lua_pop(L, 1);
+
+      if (lua_getfield(L, 2, "with_credentials") != LUA_TNIL) {
+        attr.withCredentials = lua_toboolean(L, -1);
+      }
+      lua_pop(L, 1);
+
+      if (lua_getfield(L, 2, "timeout_msecs") != LUA_TNIL) {
+        int is_integer = 0;
+        lua_Integer value = lua_tointegerx(L, -1, &is_integer);
+        if (!is_integer) {
+            throw DROMOZOA_RUNTIME_ERROR("field 'timeout_msecs' is not an integer");
+        }
+        attr.timeoutMSecs = value;
+      }
+      lua_pop(L, 1);
+
+      if (lua_getfield(L, 2, "destination_path") != LUA_TNIL) {
+        if (const char* data = lua_tostring(L, -1)) {
+          attr.destinationPath = data;
+        } else {
+          throw DROMOZOA_RUNTIME_ERROR("field 'destination_path' is not a string");
+        }
       }
       lua_pop(L, 1);
 

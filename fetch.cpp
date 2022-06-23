@@ -92,8 +92,12 @@ namespace dromozoa {
       }
 
     private:
+      // 1 : function: onsuccess
+      // 2 : thread:   onerror
+      // 3 : function: onprogress
+      // 4 : function: onreadystatechange
       thread_reference ref_;
-      lua_State* error_thread_;
+      lua_State* error_thread_; // 1 : function : onerror
       int onsuccess_;
       int onprogress_;
       int onreadystatechange_;

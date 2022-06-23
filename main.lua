@@ -2,20 +2,31 @@ R""--(
 
 local dromozoa = require "dromozoa"
 
-local coro = coroutine.create(function ()
+local fetch
 
-  dromozoa.fetch()
-  local u = 0
-  for k, v in pairs(dromozoa.fetch) do
-    print(k, v)
-    u = u | v
-  end
-  print(("0x%0x"):format(u))
+local coro = coroutine.create(function ()
+  fetch = assert(dromozoa.fetch({
+    request_method = "GET";
+    attributes = dromozoa.fetch.LOAD_TO_MEMORY;
+    onsuccess = function ()
+      print("success", fetch:get_ready_state(), fetch:get_status())
+    end;
+    onerror = function ()
+      print("error", fetch:get_ready_state(), fetch:get_status())
+    end;
+    onprogress = function ()
+      print("progress", fetch:get_ready_state(), fetch:get_status())
+      fetch:close()
+    end;
+  }, "main.js?t=" .. os.time()))
+
+  print(fetch)
 
   for i = 1, 10 do
     print(i)
     coroutine.yield()
   end
+
 end)
 
 return function ()

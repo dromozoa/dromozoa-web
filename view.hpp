@@ -15,31 +15,26 @@
 // You should have received a copy of the GNU General Public License
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef DROMOZOA_WEB_ERROR_HPP
-#define DROMOZOA_WEB_ERROR_HPP
+#ifndef DROMOZOA_WEB_VIEW_HPP
+#define DROMOZOA_WEB_VIEW_HPP
 
-#include <sstream>
-#include <stdexcept>
-#include <string>
+#include <cstddef>
+#include "lua.hpp"
+#include "noncopyable.hpp"
 
 namespace dromozoa {
-  template <class... T>
-  std::string make_error_impl(const char* file, int line, T... message) {
-    std::ostringstream out;
-    (out << ... << message) << " at " << file << ":" << line;
-    return out.str();
-  }
-
-  template <class T>
-  class error : public T {
+  class view_t : noncopyable {
   public:
-    template <class... U>
-    error(const char* file, int line, U... message)
-      : T(make_error_impl(file, line, message...)) {}
+    view_t(const char*, std::size_t);
+    const char* data() const;
+    std::size_t size() const;
+    explicit operator bool() const;
+  private:
+    const char* data_;
+    std::size_t size_;
   };
-}
 
-#define DROMOZOA_LOGIC_ERROR(...) dromozoa::error<std::logic_error>(__FILE__, __LINE__, __VA_ARGS__)
-#define DROMOZOA_RUNTIME_ERROR(...) dromozoa::error<std::runtime_error>(__FILE__, __LINE__, __VA_ARGS__)
+  view_t* new_view(lua_State*, const char*, std::size_t);
+}
 
 #endif

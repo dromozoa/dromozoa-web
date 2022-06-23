@@ -21,6 +21,7 @@
 #include <iostream>
 #include <exception>
 #include "error.hpp"
+#include "exception_queue.hpp"
 #include "lua.hpp"
 
 extern "C" int luaopen_dromozoa(lua_State*);
@@ -74,6 +75,7 @@ void context_t::load() {
   }
   lua_pcall(L, 0, 1, 0);
 
+/*
   emscripten_fetch_attr_t attr;
   emscripten_fetch_attr_init(&attr);
   memcpy(attr.requestMethod, "GET", 4);
@@ -87,11 +89,24 @@ void context_t::load() {
   std::ostringstream out;
   out << "README.md?t=" << clock_t::to_time_t(t);
   emscripten_fetch(&attr, out.str().c_str());
+*/
 
   std::cout << "load done\n";
 }
 
 void context_t::each() {
+  while (std::exception_ptr eptr = dromozoa::pop_exception_queue()) {
+    try {
+      std::rethrow_exception(eptr);
+    } catch (const std::runtime_error& e) {
+      std::cerr << "runtime_error " << e.what() << "\n";
+    } catch (const std::exception& e) {
+      std::cerr << "exception " << e.what() << "\n";
+    } catch (...) {
+      std::cerr << "unknown exception\n";
+    }
+  }
+
   lua_State* L = state_;
   if (lua_type(L, -1) == LUA_TFUNCTION) {
     lua_pushvalue(L, -1);

@@ -1,4 +1,5 @@
 *.a
+*.d
 *.o
 .*.swp
 /lua/src/lua*.html

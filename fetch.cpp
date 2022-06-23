@@ -46,6 +46,8 @@ namespace dromozoa {
         if (lua_State* L = ref_.get()) {
           if (onerror_) {
             thread_ = lua_newthread(L);
+            lua_pushvalue(L, onerror_);
+            lua_xmove(L, thread_, 1);
           }
         }
       }
@@ -63,31 +65,40 @@ namespace dromozoa {
       }
 
       void close() {
+        // emscripten_fetch_closeが戻った後もコールバックは呼ばれうる。
         if (fetch_) {
+          std::cerr << "closing\n";
           emscripten_fetch_close(fetch_);
+          fetch_->userData = nullptr;
           fetch_ = nullptr;
+          std::cerr << "closed\n";
         }
       }
 
       static void onsuccess(emscripten_fetch_t* fetch) {
+        std::cerr << "onsuccess " << fetch << " " << fetch->userData << "\n";
         if (auto* self = static_cast<fetch_t*>(fetch->userData)) {
           self->on(self->onsuccess_, false, fetch);
         }
       }
 
       static void onerror(emscripten_fetch_t* fetch) {
+        std::cerr << "onerror " << fetch << " " << fetch->userData << "\n";
         if (auto* self = static_cast<fetch_t*>(fetch->userData)) {
+          std::cerr << "onerror " << self->fetch_ << "\n";
           self->on(self->onerror_, true, fetch);
         }
       }
 
       static void onprogress(emscripten_fetch_t* fetch) {
+        std::cerr << "onprogress " << fetch << " " << fetch->userData << "\n";
         if (auto* self = static_cast<fetch_t*>(fetch->userData)) {
           self->on(self->onprogress_, false, fetch);
         }
       }
 
       static void onreadystatechange(emscripten_fetch_t* fetch) {
+        std::cerr << "onreadystatechange " << fetch << " " << fetch->userData << "\n";
         if (auto* self = static_cast<fetch_t*>(fetch->userData)) {
           self->on(self->onreadystatechange_, false, fetch);
         }
@@ -113,14 +124,14 @@ namespace dromozoa {
       // emscripten_fetch_tをLuaに保存しておくか
 
       void on(int on, bool iserror, emscripten_fetch_t* fetch) {
+        std::cerr << "on" << on << "," << iserror << " : " << fetch << "\n";
         try {
           if (!on) {
             return;
           }
           if (lua_State* L = ref_.get()) {
             if (iserror) {
-              lua_pushvalue(L, on);
-              lua_xmove(L, thread_, 1);
+              lua_pushvalue(thread_, 1);
               if (lua_pcall(thread_, 0, 0, 0) != LUA_OK) {
                 throw DROMOZOA_RUNTIME_ERROR(lua_tostring(L, -1));
               }
@@ -227,6 +238,12 @@ typedef struct emscripten_fetch_attr_t {
 
 
      */
+
+    void impl_gc(lua_State* L) {
+      fetch_t* self = static_cast<fetch_t*>(luaL_checkudata(L, 1, "dromozoa.fetch"));
+      std::cerr << "gc " << self << "\n";
+      self->~fetch_t();
+    }
 
     void impl_call(lua_State* L) {
       emscripten_fetch_attr_t attr;
@@ -345,6 +362,7 @@ typedef struct emscripten_fetch_attr_t {
       luaL_newmetatable(L, "dromozoa.fetch");
       lua_pushvalue(L, -2);
       lua_setfield(L, -2, "__index");
+      set_field(L, -2, "__gc", function<impl_gc>());
       lua_pop(L, 1);
 
       set_metafield(L, -1, "__call", function<impl_call>());

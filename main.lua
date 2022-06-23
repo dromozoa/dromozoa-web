@@ -2,8 +2,9 @@ R""--(
 
 local dromozoa = require "dromozoa"
 
+local fetch
+
 local coro = coroutine.create(function ()
-  local fetch
   fetch = dromozoa.fetch({
     request_method = "GET";
     attributes = dromozoa.fetch.LOAD_TO_MEMORY;
@@ -15,7 +16,7 @@ local coro = coroutine.create(function ()
     end;
     onprogress = function ()
       print("progress", fetch:get_ready_state(), fetch:get_status())
-      -- fetch:close()
+      fetch:close()
     end;
   }, "main.js?t=" .. os.time())
 
@@ -25,7 +26,6 @@ local coro = coroutine.create(function ()
     print(i)
     coroutine.yield()
   end
-
 
 end)
 

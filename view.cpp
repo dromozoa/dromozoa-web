@@ -21,11 +21,12 @@
 namespace dromozoa {
   namespace {
     view_t* check_view(lua_State* L, int arg) {
-      view_t* self = check_udata<view_t>(L, arg, "brigid.view");
-      if (self->closed()) {
-        luaL_argerror(L, arg, "attempt to use a closed brigid.view");
-      }
-      return self;
+      // view_t* self = check_udata<view_t>(L, arg, "brigid.view");
+      // if (self->closed()) {
+      //   luaL_argerror(L, arg, "attempt to use a closed brigid.view");
+      // }
+      // return self;
+      return nullptr;
     }
 
     void impl_tostring(lua_State* L) {

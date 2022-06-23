@@ -3,16 +3,23 @@ R""--(
 local dromozoa = require "dromozoa"
 
 local coro = coroutine.create(function ()
-  dromozoa.fetch({
+  local fetch
+  fetch = dromozoa.fetch({
     request_method = "GET";
     attributes = dromozoa.fetch.LOAD_TO_MEMORY;
     onsuccess = function ()
-      print "success"
+      print("success", fetch:get_ready_state(), fetch:get_status())
     end;
     onerror = function ()
-      print "error"
+      print("error", fetch:get_ready_state(), fetch:get_status())
     end;
-  }, "README.md?t=" .. os.time())
+    onprogress = function ()
+      print("progress", fetch:get_ready_state(), fetch:get_status())
+      -- fetch:close()
+    end;
+  }, "main.js?t=" .. os.time())
+
+  print(fetch)
 
   for i = 1, 10 do
     print(i)

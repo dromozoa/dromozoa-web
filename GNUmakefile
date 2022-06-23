@@ -47,3 +47,4 @@ $(TARGET): $(OBJS)
 .cpp.o:
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $<
 
+main.o: main.lua

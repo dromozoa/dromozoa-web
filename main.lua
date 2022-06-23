@@ -5,7 +5,7 @@ local dromozoa = require "dromozoa"
 local fetch
 
 local coro = coroutine.create(function ()
-  fetch = dromozoa.fetch({
+  fetch = assert(dromozoa.fetch({
     request_method = "GET";
     attributes = dromozoa.fetch.LOAD_TO_MEMORY;
     onsuccess = function ()
@@ -18,7 +18,7 @@ local coro = coroutine.create(function ()
       print("progress", fetch:get_ready_state(), fetch:get_status())
       fetch:close()
     end;
-  }, "main.js?t=" .. os.time())
+  }, "main.js?t=" .. os.time()))
 
   print(fetch)
 

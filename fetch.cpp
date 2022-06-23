@@ -67,38 +67,31 @@ namespace dromozoa {
       void close() {
         // emscripten_fetch_closeが戻った後もコールバックは呼ばれうる。
         if (fetch_) {
-          std::cerr << "closing\n";
           emscripten_fetch_close(fetch_);
           fetch_->userData = nullptr;
           fetch_ = nullptr;
-          std::cerr << "closed\n";
         }
       }
 
       static void onsuccess(emscripten_fetch_t* fetch) {
-        std::cerr << "onsuccess " << fetch << " " << fetch->userData << "\n";
         if (auto* self = static_cast<fetch_t*>(fetch->userData)) {
           self->on(self->onsuccess_, false, fetch);
         }
       }
 
       static void onerror(emscripten_fetch_t* fetch) {
-        std::cerr << "onerror " << fetch << " " << fetch->userData << "\n";
         if (auto* self = static_cast<fetch_t*>(fetch->userData)) {
-          std::cerr << "onerror " << self->fetch_ << "\n";
           self->on(self->onerror_, true, fetch);
         }
       }
 
       static void onprogress(emscripten_fetch_t* fetch) {
-        std::cerr << "onprogress " << fetch << " " << fetch->userData << "\n";
         if (auto* self = static_cast<fetch_t*>(fetch->userData)) {
           self->on(self->onprogress_, false, fetch);
         }
       }
 
       static void onreadystatechange(emscripten_fetch_t* fetch) {
-        std::cerr << "onreadystatechange " << fetch << " " << fetch->userData << "\n";
         if (auto* self = static_cast<fetch_t*>(fetch->userData)) {
           self->on(self->onreadystatechange_, false, fetch);
         }
@@ -124,7 +117,6 @@ namespace dromozoa {
       // emscripten_fetch_tをLuaに保存しておくか
 
       void on(int on, bool iserror, emscripten_fetch_t* fetch) {
-        std::cerr << "on" << on << "," << iserror << " : " << fetch << "\n";
         try {
           if (!on) {
             return;
@@ -148,101 +140,12 @@ namespace dromozoa {
       }
     };
 
-    /*
-
-typedef struct emscripten_fetch_attr_t {
-  // 'POST', 'GET', etc.
-  char requestMethod[32];
-
-  // Custom data that can be tagged along the process.
-  void *userData;
-
-  void (*onsuccess)(struct emscripten_fetch_t *fetch);
-  void (*onerror)(struct emscripten_fetch_t *fetch);
-  void (*onprogress)(struct emscripten_fetch_t *fetch);
-  void (*onreadystatechange)(struct emscripten_fetch_t *fetch);
-
-  // EMSCRIPTEN_FETCH_* attributes
-  uint32_t attributes;
-
-  // Specifies the amount of time the request can take before failing due to a
-  // timeout.
-  unsigned long timeoutMSecs;
-
-  // Indicates whether cross-site access control requests should be made using
-  // credentials.
-  EM_BOOL withCredentials;
-
-  // Specifies the destination path in IndexedDB where to store the downloaded
-  // content body. If this is empty, the transfer is not stored to IndexedDB at
-  // all.  Note that this struct does not contain space to hold this string, it
-  // only carries a pointer.
-  // Calling emscripten_fetch() will make an internal copy of this string.
-  const char *destinationPath;
-
-  // Specifies the authentication username to use for the request, if necessary.
-  // Note that this struct does not contain space to hold this string, it only
-  // carries a pointer.
-  // Calling emscripten_fetch() will make an internal copy of this string.
-  const char *userName;
-
-  // Specifies the authentication username to use for the request, if necessary.
-  // Note that this struct does not contain space to hold this string, it only
-  // carries a pointer.
-  // Calling emscripten_fetch() will make an internal copy of this string.
-  const char *password;
-
-  // Points to an array of strings to pass custom headers to the request. This
-  // array takes the form
-  // {"key1", "value1", "key2", "value2", "key3", "value3", ..., 0 }; Note
-  // especially that the array needs to be terminated with a null pointer.
-  const char * const *requestHeaders;
-
-  // Pass a custom MIME type here to force the browser to treat the received
-  // data with the given type.
-  const char *overriddenMimeType;
-
-  // If non-zero, specifies a pointer to the data that is to be passed as the
-  // body (payload) of the request that is being performed. Leave as zero if no
-  // request body needs to be sent.  The memory pointed to by this field is
-  // provided by the user, and needs to be valid throughout the duration of the
-  // fetch operation. If passing a non-zero pointer into this field, make sure
-  // to implement *both* the onsuccess and onerror handlers to be notified when
-  // the fetch finishes to know when this memory block can be freed. Do not pass
-  // a pointer to memory on the stack or other temporary area here.
-  const char *requestData;
-
-  // Specifies the length of the buffer pointed by 'requestData'. Leave as 0 if
-  // no request body needs to be sent.
-  size_t requestDataSize;
-} emscripten_fetch_attr_t;
-
-
-        {
-          request_method = string?;
-          onsuccess = function?;
-          onerror = function?;
-          onprogress = function?;
-          onreadystatechange = function?;
-
-          attributes = integer?;
-          with_credentials = boolean?;
-          destination_path = string?;
-          username = string?;
-          password = string?;
-          request_headers = [string]?;
-          overidden_mime_type = string?;
-          request_data = string?;
-        }
-
-
-
-     */
+    fetch_t* check_fetch(lua_State* L, int index) {
+      return static_cast<fetch_t*>(luaL_checkudata(L, index, "dromozoa.fetch"));
+    }
 
     void impl_gc(lua_State* L) {
-      fetch_t* self = static_cast<fetch_t*>(luaL_checkudata(L, 1, "dromozoa.fetch"));
-      std::cerr << "gc " << self << "\n";
-      self->~fetch_t();
+      check_fetch(L, 1)->~fetch_t();
     }
 
     void impl_call(lua_State* L) {
@@ -341,18 +244,15 @@ typedef struct emscripten_fetch_attr_t {
     }
 
     void impl_get_ready_state(lua_State* L) {
-      fetch_t* self = static_cast<fetch_t*>(luaL_checkudata(L, 1, "dromozoa.fetch"));
-      push(L, self->get_ready_state());
+      push(L, check_fetch(L, 1)->get_ready_state());
     }
 
     void impl_get_status(lua_State* L) {
-      fetch_t* self = static_cast<fetch_t*>(luaL_checkudata(L, 1, "dromozoa.fetch"));
-      push(L, self->get_status());
+      push(L, check_fetch(L, 1)->get_status());
     }
 
     void impl_close(lua_State* L) {
-      fetch_t* self = static_cast<fetch_t*>(luaL_checkudata(L, 1, "dromozoa.fetch"));
-      self->close();
+      check_fetch(L, 1)->close();
     }
   }
 

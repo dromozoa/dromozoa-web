@@ -69,25 +69,25 @@ namespace dromozoa {
 
       static void onerror(emscripten_fetch_t* fetch) {
         if (auto* self = static_cast<fetch_t*>(fetch->userData)) {
-          self->on(-1, true, fetch);
+          self->onerror_impl(fetch);
         }
       }
 
       static void onsuccess(emscripten_fetch_t* fetch) {
         if (auto* self = static_cast<fetch_t*>(fetch->userData)) {
-          self->on(self->onsuccess_, false, fetch);
+          self->on(self->onsuccess_, fetch);
         }
       }
 
       static void onprogress(emscripten_fetch_t* fetch) {
         if (auto* self = static_cast<fetch_t*>(fetch->userData)) {
-          self->on(self->onprogress_, false, fetch);
+          self->on(self->onprogress_, fetch);
         }
       }
 
       static void onreadystatechange(emscripten_fetch_t* fetch) {
         if (auto* self = static_cast<fetch_t*>(fetch->userData)) {
-          self->on(self->onreadystatechange_, false, fetch);
+          self->on(self->onreadystatechange_, fetch);
         }
       }
 
@@ -109,23 +109,34 @@ namespace dromozoa {
       // emscripten_fetch_closeを呼ばなかったら？
       // emscripten_fetch_tをLuaに保存しておくか
 
-      void on(int on, bool iserror, emscripten_fetch_t* fetch) {
+      void onerror_impl(emscripten_fetch_t* fetch) {
         try {
+          if (fetch != fetch_) {
+            throw DROMOZOA_RUNTIME_ERROR("invalid fetch");
+          }
+          if (lua_State* L = error_thread_) {
+            lua_pushvalue(L, 1);
+            if (lua_pcall(error_thread_, 0, 0, 0) != LUA_OK) {
+              throw DROMOZOA_RUNTIME_ERROR(lua_tostring(error_thread_, -1));
+            }
+          }
+        } catch (...) {
+          push_exception_queue();
+        }
+      }
+
+      void on(int on, emscripten_fetch_t* fetch) {
+        try {
+          if (fetch != fetch_) {
+            throw DROMOZOA_RUNTIME_ERROR("invalid fetch");
+          }
           if (!on) {
             return;
           }
-          std::cout << "on" << on << "\n";
           if (lua_State* L = ref_.get()) {
-            if (iserror) {
-              lua_pushvalue(error_thread_, 1);
-              if (lua_pcall(error_thread_, 0, 0, 0) != LUA_OK) {
-                throw DROMOZOA_RUNTIME_ERROR(lua_tostring(error_thread_, -1));
-              }
-            } else {
-              lua_pushvalue(L, on);
-              if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
-                throw DROMOZOA_RUNTIME_ERROR(lua_tostring(L, -1));
-              }
+            lua_pushvalue(L, on);
+            if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
+              throw DROMOZOA_RUNTIME_ERROR(lua_tostring(L, -1));
             }
           }
         } catch (...) {

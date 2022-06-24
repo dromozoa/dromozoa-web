@@ -23,6 +23,36 @@
 #include "noncopyable.hpp"
 
 /*
+  Mixin NonElementParentNode
+  Mixin DocumentOrShadowRoot
+  Mixin ParentNode
+  Mixin NonDocumentTypeChildNode
+  Mixin ChildNode
+  Mixin Slottable
+
+  Mixin NonElementParentNode
+    Document includes NonElementParentNode;
+    DocumentFragment includes NonElementParentNode;
+  Mixin DocumentOrShadowRoot
+    Document includes DocumentOrShadowRoot;
+    ShadowRoot includes DocumentOrShadowRoot;
+  Mixin ParentNode
+    Document includes ParentNode;
+    DocumentFragment includes ParentNode;
+    Element includes ParentNode;
+  Mixin NonDocumentTypeChildNode
+    Element includes NonDocumentTypeChildNode;
+    CharacterData includes NonDocumentTypeChildNode;
+  Mixin ChildNode
+    DocumentType includes ChildNode;
+    Element includes ChildNode;
+    CharacterData includes ChildNode;
+  Mixin Slottable
+    Element includes Slottable;
+    Text includes Slottable;
+
+
+
     document
       create_element
       create_document_fragment
@@ -48,8 +78,6 @@
     document { id }
 
     dromozoa_dom_data = new Map();
-
-    TODO __indexチェーンにする
 
 
  */

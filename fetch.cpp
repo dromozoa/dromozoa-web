@@ -212,12 +212,33 @@ namespace dromozoa {
         attr.password = password->c_str();
       }
 
-      // TODO requestHeadersの対応
-      // Points to an array of strings to pass custom headers to the request. This
-      // array takes the form
-      // {"key1", "value1", "key2", "value2", "key3", "value3", ..., 0 }; Note
-      // especially that the array needs to be terminated with a null pointer.
-      // const char * const *requestHeaders;
+      std::vector<std::string> request_header_strings;
+      std::vector<const char*> request_headers;
+      if (lua_getfield(L, 2, "request_headers") != LUA_TNIL) {
+        if (!lua_istable(L, -1)) {
+          luaL_error(L, "field 'request_headers' is not a table");
+        }
+        for (lua_Integer i = 1; ; ++i) {
+          if (lua_geti(L, -1, i) == LUA_TNIL) {
+            lua_pop(L, 1);
+            break;
+          }
+          std::size_t size = 0;
+          if (const char* data = lua_tolstring(L, -1, &size)) {
+            request_header_strings.emplace_back(data, size);
+          } else {
+            std::cerr << "ERROR!" << i << "\n";
+            luaL_error(L, "field 'request_headers[%d]' is not a string", i);
+          }
+          lua_pop(L, 1);
+        }
+        for (const auto& header : request_header_strings) {
+          request_headers.push_back(header.c_str());
+        }
+        request_headers.push_back(nullptr);
+        attr.requestHeaders = request_headers.data();
+      }
+      lua_pop(L, 1);
 
       auto overridden_mime_type = get_field_string(L, 2, "overridden_mime_type");
       if (overridden_mime_type) {

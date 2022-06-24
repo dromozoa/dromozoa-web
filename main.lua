@@ -33,6 +33,11 @@ local coro = coroutine.create(function ()
       dump_fetch("onprogress", fetch)
       -- fetch:close()
     end;
+    request_headers = {
+      "X-test1", 42;
+      "X-test2", "foobarbaz";
+      "X-test3", function () end;
+    };
     request_data = "foo=bar&baz=qux";
   }, "main.lua?t=" .. os.time()))
 

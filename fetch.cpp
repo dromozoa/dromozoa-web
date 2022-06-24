@@ -147,11 +147,11 @@ namespace dromozoa {
       emscripten_fetch_attr_t attr = {};
       emscripten_fetch_attr_init(&attr);
 
-      if (auto value = get_field_string(L, 2, "request_method")) {
-        if (value->size() >= sizeof(attr.requestMethod)) {
+      if (auto request_method = get_field_string(L, 2, "request_method")) {
+        if (request_method->size() >= sizeof(attr.requestMethod)) {
           luaL_error(L, "field 'request_method' is too long");
         }
-        memcpy(attr.requestMethod, value->data(), value->size());
+        memcpy(attr.requestMethod, request_method->data(), request_method->size());
       }
 
       // [1] function | onsuccess
@@ -182,37 +182,32 @@ namespace dromozoa {
       }
       lua_xmove(L, ref.get(), 1);
 
-      if (auto value = get_field_integer<decltype(attr.attributes)>(L, 2, "attributes")) {
-        attr.attributes = *value;
+      if (auto attributes = get_field_integer<decltype(attr.attributes)>(L, 2, "attributes")) {
+        attr.attributes = *attributes;
       }
 
-      if (lua_getfield(L, 2, "timeout_msecs") != LUA_TNIL) {
-        int is_integer = 0;
-        lua_Integer value = lua_tointegerx(L, -1, &is_integer);
-        if (!is_integer) {
-            throw DROMOZOA_RUNTIME_ERROR("field 'timeout_msecs' is not an integer");
-        }
-        attr.timeoutMSecs = value;
+      if (auto timeout_msecs = get_field_integer<decltype(attr.timeoutMSecs)>(L, 2, "timeout_msecs")) {
+        attr.timeoutMSecs = *timeout_msecs;
       }
-      lua_pop(L, 1);
 
       if (lua_getfield(L, 2, "with_credentials") != LUA_TNIL) {
         attr.withCredentials = lua_toboolean(L, -1);
       }
       lua_pop(L, 1);
 
-      if (lua_getfield(L, 2, "timeout_msecs") != LUA_TNIL) {
-        int is_integer = 0;
-        lua_Integer value = lua_tointegerx(L, -1, &is_integer);
-        if (!is_integer) {
-            throw DROMOZOA_RUNTIME_ERROR("field 'timeout_msecs' is not an integer");
-        }
-        attr.timeoutMSecs = value;
+      auto destination_path = get_field_string(L, 2, "destination_path");
+      if (destination_path) {
+        attr.destinationPath = destination_path->c_str();
       }
-      lua_pop(L, 1);
 
-      if (auto value = get_field_string(L, 2, "destination_path")) {
-        attr.destinationPath = value->c_str();
+      auto username = get_field_string(L, 2, "username");
+      if (username) {
+        attr.userName = username->c_str();
+      }
+
+      auto password = get_field_string(L, 2, "password");
+      if (password) {
+        attr.password = password->c_str();
       }
 
       const char* url = luaL_checkstring(L, 3);

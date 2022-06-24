@@ -27,8 +27,22 @@
 #include <type_traits>
 #include <utility>
 #include "lua.hpp"
+#include "noncopyable.hpp"
 
 namespace dromozoa {
+  class stack_gurad : noncopyable {
+  public:
+    explicit stack_gurad(lua_State* L) : state_(L), top_(lua_gettop(L)) {}
+
+    ~stack_gurad() {
+      lua_settop(state_, top_);
+    }
+
+  private:
+    lua_State* state_;
+    int top_;
+  };
+
   template <class T, T (*)(lua_State*)>
   struct function_wrapper;
 
@@ -152,8 +166,6 @@ namespace dromozoa {
     return data;
   }
 
-  // inline std::optional<lua_Integer> get_field_integer(
-
   template <class T, std::enable_if_t<(std::is_integral_v<T> && std::is_signed_v<T> && sizeof(lua_Integer) <= sizeof(T)), std::nullptr_t> = nullptr>
   inline std::optional<T> integral_cast(lua_Integer source) {
     return source;
@@ -163,62 +175,61 @@ namespace dromozoa {
   inline std::optional<T> integral_cast(lua_Integer source) {
     static constexpr lua_Integer min = std::numeric_limits<T>::min();
     static constexpr lua_Integer max = std::numeric_limits<T>::max();
-    std::optional<T> result;
     if (min <= source && source <= max) {
-      result = static_cast<T>(source);
+      return static_cast<T>(source);
+    } else {
+      return std::nullopt;
     }
-    return result;
   }
 
   template <class T, std::enable_if_t<(std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(lua_Integer) <= sizeof(T)), std::nullptr_t> = nullptr>
   inline std::optional<T> integral_cast(lua_Integer source) {
-    std::optional<T> result;
     if (0 <= source) {
-      result = static_cast<T>(source);
+      return static_cast<T>(source);
+    } else {
+      return std::nullopt;
     }
-    return result;
   }
 
   template <class T, std::enable_if_t<(std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(lua_Integer) > sizeof(T)), std::nullptr_t> = nullptr>
   inline std::optional<T> integral_cast(lua_Integer source) {
     static constexpr lua_Integer max = std::numeric_limits<T>::max();
-    std::optional<T> result;
     if (0 <= source && source < max) {
-      result = static_cast<T>(source);
+      return static_cast<T>(source);
+    } else {
+      return std::nullopt;
     }
-    return result;
   }
 
   template <class T>
   inline std::optional<T> get_field_integer(lua_State* L, int index, const char* key) {
-    std::optional<T> result;
+    stack_gurad guard(L);
     if (lua_getfield(L, index, key) != LUA_TNIL) {
       int is_integer = 0;
       lua_Integer value = lua_tointegerx(L, -1, &is_integer);
       if (!is_integer) {
         luaL_error(L, "field '%s' is not an integer", key);
       }
-      result = integral_cast<T>(value);
-      if (!result) {
+      if (std::optional<T> result = integral_cast<T>(value)) {
+        return result;
+      } else {
         luaL_error(L, "field '%s' out of bounds", key);
       }
     }
-    lua_pop(L, 1);
-    return result;
+    return std::nullopt;
   }
 
   inline std::optional<std::string> get_field_string(lua_State* L, int index, const char* key) {
-    std::optional<std::string> result;
+    stack_gurad guard(L);
     if (lua_getfield(L, index, key) != LUA_TNIL) {
       std::size_t size = 0;
       if (const char* data = lua_tolstring(L, -1, &size)) {
-        result = std::string(data, size);
+        return std::string(data, size);
       } else {
         luaL_error(L, "field '%s' is not a string", key);
       }
     }
-    lua_pop(L, 1);
-    return result;
+    return std::nullopt;
   }
 }
 

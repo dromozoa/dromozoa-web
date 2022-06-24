@@ -77,9 +77,18 @@ local coro = coroutine.create(function ()
 end)
 
 local coro = coroutine.create(function ()
-  local document = dw.dom.get_document()
+  local document = dw.dom.document()
 
   dw.core.run_script[[ console.log(dromozoa_web_dom.get(1)); ]]
+
+  local element = document:query_selector ".not_found"
+  print(element)
+
+  local element = document:query_selector ".emscripten"
+  print(element)
+
+  local node_list = document:query_selector_all "div"
+  print(node_list)
 
   document = nil
   collectgarbage()

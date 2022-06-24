@@ -113,6 +113,11 @@ namespace dromozoa {
     }
   }
 
+  template <class T, std::enable_if_t<std::is_floating_point_v<T>, std::nullptr_t> = nullptr>
+  inline void push(lua_State* L, T value) {
+    lua_pushnumber(L, static_cast<lua_Number>(value));
+  }
+
   inline void push(lua_State* L, const char* value) {
     lua_pushstring(L, value);
   }

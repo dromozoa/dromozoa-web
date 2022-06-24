@@ -29,8 +29,7 @@ OBJS = \
 	exception_queue.o \
 	fetch.o \
 	main.o \
-	module.o \
-	thread_reference.o
+	module.o
 TARGET = main.html
 
 all: all-recursive $(TARGET)

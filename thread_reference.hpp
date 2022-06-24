@@ -24,18 +24,42 @@
 namespace dromozoa {
   class thread_reference : noncopyable {
   public:
-    thread_reference();
-    explicit thread_reference(lua_State*);
-    thread_reference(thread_reference&&);
-    ~thread_reference();
-    thread_reference& operator=(thread_reference&&);
-    lua_State* get() const;
-    explicit operator bool() const;
+    explicit thread_reference(lua_State* L) : thread_(), ref_(LUA_NOREF) {
+      thread_ = lua_newthread(L);
+      ref_ = luaL_ref(L, LUA_REGISTRYINDEX);
+    }
+
+    thread_reference(thread_reference&& that) : thread_(that.thread_), ref_(that.ref_) {
+      that.reset();
+    }
+
+    ~thread_reference() {
+      unref();
+    }
+
+    lua_State* get() const {
+      return thread_;
+    }
+
+    explicit operator bool() const {
+      return thread_;
+    }
+
   private:
     lua_State* thread_;
     int ref_;
-    void unref();
-    void reset();
+
+    void unref() {
+      if (lua_State* L = thread_) {
+        luaL_unref(L, LUA_REGISTRYINDEX, ref_);
+        reset();
+      }
+    }
+
+    void reset() {
+      thread_ = nullptr;
+      ref_ = LUA_NOREF;
+    }
   };
 }
 

@@ -227,7 +227,6 @@ namespace dromozoa {
           if (const char* data = lua_tolstring(L, -1, &size)) {
             request_header_strings.emplace_back(data, size);
           } else {
-            std::cerr << "ERROR!" << i << "\n";
             luaL_error(L, "field 'request_headers[%d]' is not a string", i);
           }
           lua_pop(L, 1);

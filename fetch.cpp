@@ -359,3 +359,51 @@ namespace dromozoa {
     lua_setfield(L, -2, "fetch");
   }
 }
+
+void luaopen_dromozoa_web_fetch(lua_State* L) {
+  using namespace dromozoa;
+
+  lua_newtable(L);
+  {
+    luaL_newmetatable(L, "dromozoa.web.fetch_ref");
+    lua_pushvalue(L, -2);
+    lua_setfield(L, -2, "__index");
+    lua_pop(L, 1);
+
+    luaL_newmetatable(L, "dromozoa.web.fetch");
+    lua_pushvalue(L, -2);
+    lua_setfield(L, -2, "__index");
+    set_field(L, -1, "__close", function<impl_close>());
+    set_field(L, -1, "__gc", function<impl_gc>());
+    lua_pop(L, 1);
+
+    set_metafield(L, -1, "__call", function<impl_call>());
+
+    set_field(L, -1, "get_id", function<impl_get_id>());
+    set_field(L, -1, "get_url", function<impl_get_url>());
+    set_field(L, -1, "get_data", function<impl_get_data>());
+    set_field(L, -1, "get_data_pointer", function<impl_get_data_pointer>());
+    set_field(L, -1, "get_num_bytes", function<impl_get_num_bytes>());
+    set_field(L, -1, "get_total_bytes", function<impl_get_total_bytes>());
+    set_field(L, -1, "get_data_offset", function<impl_get_data_offset>());
+    set_field(L, -1, "get_ready_state", function<impl_get_ready_state>());
+    set_field(L, -1, "get_status", function<impl_get_status>());
+    set_field(L, -1, "get_status_text", function<impl_get_status_text>());
+    set_field(L, -1, "close", function<impl_close>());
+
+    set_field(L, -1, "LOAD_TO_MEMORY", EMSCRIPTEN_FETCH_LOAD_TO_MEMORY);
+    set_field(L, -1, "STREAM_DATA", EMSCRIPTEN_FETCH_STREAM_DATA);
+    set_field(L, -1, "PERSIST_FILE", EMSCRIPTEN_FETCH_PERSIST_FILE);
+    set_field(L, -1, "APPEND", EMSCRIPTEN_FETCH_APPEND);
+    set_field(L, -1, "REPLACE", EMSCRIPTEN_FETCH_REPLACE);
+    set_field(L, -1, "NO_DOWNLOAD", EMSCRIPTEN_FETCH_NO_DOWNLOAD);
+    set_field(L, -1, "SYNCHRONOUS", EMSCRIPTEN_FETCH_SYNCHRONOUS);
+    set_field(L, -1, "WAITABLE", EMSCRIPTEN_FETCH_WAITABLE);
+
+    set_field(L, -1, "UNSENT", 0);
+    set_field(L, -1, "OPENED", 1);
+    set_field(L, -1, "HEADERS_RECEIVED", 2);
+    set_field(L, -1, "LOADING", 3);
+    set_field(L, -1, "DONE", 4);
+  }
+}

@@ -1,6 +1,12 @@
 R""--(
 
-local dromozoa = require "dromozoa"
+-- local dromozoa = require "dromozoa"
+
+local dromozoa = {
+  web = {
+    fetch = require "dromozoa.web.fetch";
+  };
+}
 
 local coro = coroutine.create(function ()
   local function dump_fetch(key, fetch)
@@ -19,9 +25,9 @@ local coro = coroutine.create(function ()
 
   local fetch2
 
-  local fetch <close> = assert(dromozoa.fetch({
+  local fetch <close> = assert(dromozoa.web.fetch({
     request_method = "POST";
-    attributes = dromozoa.fetch.LOAD_TO_MEMORY;
+    attributes = dromozoa.web.fetch.LOAD_TO_MEMORY;
     onsuccess = function (fetch)
       fetch2 = fetch
       dump_fetch("onsuccess", fetch)

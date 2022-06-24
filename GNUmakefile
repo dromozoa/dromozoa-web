@@ -26,6 +26,7 @@ LDLIBS += -llua
 # LDFLAGS += -Llua/src -fexceptions -sFETCH -gsource-map --source-map-base http://127.0.0.1/dromozoa-web/
 
 OBJS = \
+	core.o \
 	exception_queue.o \
 	fetch.o \
 	main.o \

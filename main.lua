@@ -4,6 +4,7 @@ R""--(
 
 local dromozoa = {
   web = {
+    core = require "dromozoa.web.core";
     fetch = require "dromozoa.web.fetch";
   };
 }
@@ -56,6 +57,24 @@ local coro = coroutine.create(function ()
   print(fetch2)
   -- dump_fetch("main", fetch2)
 
+end)
+
+local coro = coroutine.create(function ()
+  -- dromozoa.web.core.run_script[[ alert("foo") ]]
+
+  print(dromozoa.web.core.run_script_string[[ document.location.href ]])
+  print(dromozoa.web.core.run_script_string[[ document.title ]])
+
+  print(dromozoa.web.core.get_device_pixel_ratio())
+  print(dromozoa.web.core.get_window_title())
+  dromozoa.web.core.set_window_title "あいうえお"
+
+  print(dromozoa.web.core.get_screen_size())
+
+  for i = 1, 10 do
+    print(i, dromozoa.web.core.get_now(), dromozoa.web.core.random())
+    coroutine.yield()
+  end
 end)
 
 return function ()

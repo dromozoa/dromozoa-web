@@ -18,6 +18,7 @@
 #ifndef DROMOZOA_WEB_COMMON_HPP
 #define DROMOZOA_WEB_COMMON_HPP
 
+#include <cstddef>
 #include <limits>
 #include <new>
 #include <exception>
@@ -26,7 +27,6 @@
 #include <string>
 #include <type_traits>
 #include <utility>
-#include <vector>
 #include "lua.hpp"
 #include "noncopyable.hpp"
 #include "stack_guard.hpp"

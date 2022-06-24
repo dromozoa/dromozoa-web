@@ -147,18 +147,12 @@ namespace dromozoa {
       emscripten_fetch_attr_t attr = {};
       emscripten_fetch_attr_init(&attr);
 
-      if (lua_getfield(L, 2, "request_method") != LUA_TNIL) {
-        size_t size = 0;
-        if (const char* data = lua_tolstring(L, -1, &size)) {
-          if (size >= sizeof(attr.requestMethod)) {
-            throw DROMOZOA_RUNTIME_ERROR("field 'request_method' is too long");
-          }
-          memcpy(attr.requestMethod, data, size);
-        } else {
-          throw DROMOZOA_RUNTIME_ERROR("field 'request_method' is not a string");
+      if (auto value = get_field_string(L, 2, "request_method")) {
+        if (value->size() >= sizeof(attr.requestMethod)) {
+          luaL_error(L, "field 'request_method' is too long");
         }
+        memcpy(attr.requestMethod, value->data(), value->size());
       }
-      lua_pop(L, 1);
 
       // [1] function | onsuccess
       // [2] thread   | onerror
@@ -188,15 +182,9 @@ namespace dromozoa {
       }
       lua_xmove(L, ref.get(), 1);
 
-      if (lua_getfield(L, 2, "attributes") != LUA_TNIL) {
-        int is_integer = 0;
-        lua_Integer value = lua_tointegerx(L, -1, &is_integer);
-        if (!is_integer) {
-            throw DROMOZOA_RUNTIME_ERROR("field 'attributes' is not an integer");
-        }
-        attr.attributes = value;
+      if (auto value = get_field_integer<decltype(attr.attributes)>(L, 2, "attributes")) {
+        attr.attributes = *value;
       }
-      lua_pop(L, 1);
 
       if (lua_getfield(L, 2, "timeout_msecs") != LUA_TNIL) {
         int is_integer = 0;
@@ -223,14 +211,9 @@ namespace dromozoa {
       }
       lua_pop(L, 1);
 
-      if (lua_getfield(L, 2, "destination_path") != LUA_TNIL) {
-        if (const char* data = lua_tostring(L, -1)) {
-          attr.destinationPath = data;
-        } else {
-          throw DROMOZOA_RUNTIME_ERROR("field 'destination_path' is not a string");
-        }
+      if (auto value = get_field_string(L, 2, "destination_path")) {
+        attr.destinationPath = value->c_str();
       }
-      lua_pop(L, 1);
 
       const char* url = luaL_checkstring(L, 3);
 

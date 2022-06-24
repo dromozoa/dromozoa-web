@@ -15,28 +15,23 @@
 // You should have received a copy of the GNU General Public License
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <exception>
+#include "common.hpp"
 #include "lua.hpp"
 
 namespace dromozoa {
+  namespace {
+    template <class T_key, class T_value>
+    void preload_impl(lua_State* L, T_key&& key, T_value&& value) {
+      lua_getglobal(L, "package");
+      lua_getfield(L, -1, "preload");
+      set_field(L, -1, std::forward<T_key>(key), std::forward<T_value>(value));
+      lua_pop(L, 2);
+    }
+  }
+
   void initialize_fetch(lua_State*);
 
-  void initialize(lua_State* L) {
-    initialize_fetch(L);
-  }
-}
-
-extern "C" int luaopen_dromozoa(lua_State* L) {
-  int top = lua_gettop(L);
-  try {
-    lua_newtable(L);
-    dromozoa::initialize(L);
-    return 1;
-  } catch (const std::exception& e) {
-    lua_settop(L, top);
-    return luaL_error(L, "%s", e.what());
-  } catch (...) {
-    lua_settop(L, top);
-    return luaL_error(L, "unknown exception");
+  void preload_module(lua_State* L) {
+    preload_impl(L, "dromozoa.web.fetch", function<initialize_fetch>());
   }
 }

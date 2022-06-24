@@ -24,10 +24,9 @@
 #include "exception_queue.hpp"
 #include "lua.hpp"
 
-// extern "C" int luaopen_dromozoa(lua_State*);
-
-
-void luaopen_dromozoa_web_fetch(lua_State*);
+namespace dromozoa {
+  void preload_module(lua_State*);
+}
 
 class context_t {
 public:
@@ -55,14 +54,13 @@ void context_t::load() {
   try {
     if (lua_State* L = state_) {
       luaL_openlibs(L);
+      dromozoa::preload_module(L);
 
       // lua_getglobal(L, "package");
       // lua_getfield(L, -1, "preload");
       // lua_pushcfunction(L, luaopen_dromozoa);
       // lua_setfield(L, -2, "dromozoa");
       // lua_pop(L, 2);
-
-      dromozoa::preload(L, "dromozoa.web.fetch", dromozoa::function<luaopen_dromozoa_web_fetch>());
 
       static const char code[] =
       #include "main.lua"

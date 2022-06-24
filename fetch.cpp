@@ -73,6 +73,9 @@ namespace dromozoa {
       }
 
       emscripten_fetch_t* get_fetch() const {
+        if (!fetch_) {
+          throw DROMOZOA_LOGIC_ERROR("attempt to use a closed dromozoa.web.fetch");
+        }
         return fetch_;
       }
 

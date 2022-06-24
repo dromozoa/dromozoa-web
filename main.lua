@@ -1,4 +1,3 @@
-R""--(
 -- Copyright (C) 2022 Tomoyuki Fujimori <moyu@dromozoa.com>
 --
 -- This file is part of dromozoa-web.
@@ -17,7 +16,13 @@ R""--(
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 
+for i = 1, 10 do
+  coroutine.yield()
+  print(i)
+end
+
 -- local dromozoa = require "dromozoa"
+--[====[
 
 local dw = {
   core = require "dromozoa.web.core";
@@ -138,4 +143,4 @@ return function ()
   end
 end
 
---)"--"
+]====]

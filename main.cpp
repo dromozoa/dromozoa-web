@@ -63,7 +63,7 @@ void context_t::load() {
       // lua_pop(L, 2);
 
       static const char code[] =
-      #include "main.lua"
+      #include "boot.lua"
       ;
 
       if (luaL_loadbuffer(L, code, strlen(code), "=(load)") != LUA_OK) {

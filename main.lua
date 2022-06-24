@@ -2,11 +2,10 @@ R""--(
 
 -- local dromozoa = require "dromozoa"
 
-local dromozoa = {
-  web = {
-    core = require "dromozoa.web.core";
-    fetch = require "dromozoa.web.fetch";
-  };
+local dw = {
+  core = require "dromozoa.web.core";
+  dom = require "dromozoa.web.dom";
+  fetch = require "dromozoa.web.fetch";
 }
 
 local coro = coroutine.create(function ()
@@ -26,9 +25,9 @@ local coro = coroutine.create(function ()
 
   local fetch2
 
-  local fetch <close> = assert(dromozoa.web.fetch({
+  local fetch <close> = assert(dw.fetch({
     request_method = "POST";
-    attributes = dromozoa.web.fetch.LOAD_TO_MEMORY;
+    attributes = dw.fetch.LOAD_TO_MEMORY;
     onsuccess = function (fetch)
       fetch2 = fetch
       dump_fetch("onsuccess", fetch)
@@ -60,22 +59,40 @@ local coro = coroutine.create(function ()
 end)
 
 local coro = coroutine.create(function ()
-  -- dromozoa.web.core.run_script[[ alert("foo") ]]
+  -- dw.core.run_script[[ alert("foo") ]]
 
-  print(dromozoa.web.core.run_script_string[[ document.location.href ]])
-  print(dromozoa.web.core.run_script_string[[ document.title ]])
+  print(dw.core.run_script_string[[ document.location.href ]])
+  print(dw.core.run_script_string[[ document.title ]])
 
-  print(dromozoa.web.core.get_device_pixel_ratio())
-  print(dromozoa.web.core.get_window_title())
-  dromozoa.web.core.set_window_title "あいうえお"
+  print(dw.core.get_device_pixel_ratio())
+  print(dw.core.get_window_title())
+  dw.core.set_window_title "あいうえお"
 
-  print(dromozoa.web.core.get_screen_size())
+  print(dw.core.get_screen_size())
 
   for i = 1, 10 do
-    print(i, dromozoa.web.core.get_now(), dromozoa.web.core.random())
+    print(i, dw.core.get_now(), dw.core.random())
     coroutine.yield()
   end
 end)
+
+local coro = coroutine.create(function ()
+  local document = dw.dom.get_document()
+
+  dw.core.run_script[[ console.log(dromozoa_web_dom.get(1)); ]]
+
+  document = nil
+  collectgarbage()
+  collectgarbage()
+
+  dw.core.run_script[[ console.log(dromozoa_web_dom.get(1)); ]]
+
+  for i = 1, 10 do
+    print(i, dw.core.get_now(), dw.core.random())
+    coroutine.yield()
+  end
+end)
+
 
 return function ()
   if not coro then

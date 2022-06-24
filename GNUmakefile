@@ -27,6 +27,7 @@ LDLIBS += -llua
 
 OBJS = \
 	core.o \
+	dom.o \
 	exception_queue.o \
 	fetch.o \
 	main.o \

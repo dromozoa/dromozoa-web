@@ -30,10 +30,12 @@ namespace dromozoa {
   }
 
   void initialize_core(lua_State*);
+  void initialize_dom(lua_State*);
   void initialize_fetch(lua_State*);
 
   void preload_module(lua_State* L) {
     preload_impl(L, "dromozoa.web.core", function<initialize_core>());
+    preload_impl(L, "dromozoa.web.dom", function<initialize_dom>());
     preload_impl(L, "dromozoa.web.fetch", function<initialize_fetch>());
   }
 }

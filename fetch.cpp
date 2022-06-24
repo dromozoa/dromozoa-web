@@ -210,6 +210,19 @@ namespace dromozoa {
         attr.password = password->c_str();
       }
 
+      // request header
+
+      auto overridden_mime_type = get_field_string(L, 2, "overridden_mime_type");
+      if (overridden_mime_type) {
+        attr.overriddenMimeType = overridden_mime_type->c_str();
+      }
+
+      auto request_data = get_field_string(L, 2, "request_data");
+      if (request_data) {
+        attr.requestData = request_data->data();
+        attr.requestDataSize = request_data->size();
+      }
+
       const char* url = luaL_checkstring(L, 3);
 
       fetch_t* self = new_userdata<fetch_t>(L, "dromozoa.web.fetch", std::move(ref));

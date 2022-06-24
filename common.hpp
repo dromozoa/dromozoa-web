@@ -29,29 +29,9 @@
 #include <vector>
 #include "lua.hpp"
 #include "noncopyable.hpp"
+#include "stack_guard.hpp"
 
 namespace dromozoa {
-  class stack_guard : noncopyable {
-  public:
-    explicit stack_guard(lua_State* L) : state_(L), top_(lua_gettop(L)) {}
-
-    ~stack_guard() {
-      if (state_) {
-        lua_settop(state_, top_);
-      }
-    }
-
-    lua_State* release() {
-      lua_State* state = state_;
-      state_ = nullptr;
-      return state;
-    }
-
-  private:
-    lua_State* state_;
-    int top_;
-  };
-
   template <class T, T (*)(lua_State*)>
   struct function_wrapper;
 
@@ -74,9 +54,9 @@ namespace dromozoa {
   struct function_wrapper<void, T> {
     static int value(lua_State* L) {
       try {
-        int top = lua_gettop(L);
+        auto top = lua_gettop(L);
         T(L);
-        int result = lua_gettop(L) - top;
+        auto result = lua_gettop(L) - top;
         if (result > 0) {
           return result;
         } else {
@@ -109,7 +89,7 @@ namespace dromozoa {
 
   template <class T, std::enable_if_t<(std::is_integral_v<T> && sizeof(T) < sizeof(lua_Integer) + std::is_signed_v<T>), std::nullptr_t> = nullptr>
   inline void push(lua_State* L, T value) {
-    lua_pushinteger(L, value);
+    lua_pushinteger(L, static_cast<lua_Integer>(value));
   }
 
   template <class T, std::enable_if_t<(std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) > sizeof(lua_Integer)), std::nullptr_t> = nullptr>
@@ -169,42 +149,42 @@ namespace dromozoa {
 
   template <class T, class... T_args>
   inline T* new_userdata(lua_State* L, const char* name, T_args&&... args) {
-    T* data = static_cast<T*>(lua_newuserdata(L, sizeof(T)));
+    auto* data = static_cast<T*>(lua_newuserdata(L, sizeof(T)));
     new(data) T(std::forward<T_args>(args)...);
     luaL_setmetatable(L, name);
     return data;
   }
 
   template <class T, std::enable_if_t<(std::is_integral_v<T> && std::is_signed_v<T> && sizeof(lua_Integer) <= sizeof(T)), std::nullptr_t> = nullptr>
-  inline std::optional<T> integral_cast(lua_Integer source) {
-    return source;
+  inline std::optional<T> integral_cast(lua_Integer value) {
+    return static_cast<T>(value);
   }
 
   template <class T, std::enable_if_t<(std::is_integral_v<T> && std::is_signed_v<T> && sizeof(lua_Integer) > sizeof(T)), std::nullptr_t> = nullptr>
-  inline std::optional<T> integral_cast(lua_Integer source) {
+  inline std::optional<T> integral_cast(lua_Integer value) {
     static constexpr lua_Integer min = std::numeric_limits<T>::min();
     static constexpr lua_Integer max = std::numeric_limits<T>::max();
-    if (min <= source && source <= max) {
-      return static_cast<T>(source);
+    if (min <= value && value <= max) {
+      return static_cast<T>(value);
     } else {
       return std::nullopt;
     }
   }
 
   template <class T, std::enable_if_t<(std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(lua_Integer) <= sizeof(T)), std::nullptr_t> = nullptr>
-  inline std::optional<T> integral_cast(lua_Integer source) {
-    if (0 <= source) {
-      return static_cast<T>(source);
+  inline std::optional<T> integral_cast(lua_Integer value) {
+    if (0 <= value) {
+      return static_cast<T>(value);
     } else {
       return std::nullopt;
     }
   }
 
   template <class T, std::enable_if_t<(std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(lua_Integer) > sizeof(T)), std::nullptr_t> = nullptr>
-  inline std::optional<T> integral_cast(lua_Integer source) {
+  inline std::optional<T> integral_cast(lua_Integer value) {
     static constexpr lua_Integer max = std::numeric_limits<T>::max();
-    if (0 <= source && source < max) {
-      return static_cast<T>(source);
+    if (0 <= value && value < max) {
+      return static_cast<T>(value);
     } else {
       return std::nullopt;
     }
@@ -215,11 +195,11 @@ namespace dromozoa {
     stack_guard guard(L);
     if (lua_getfield(L, index, key) != LUA_TNIL) {
       int is_integer = 0;
-      lua_Integer value = lua_tointegerx(L, -1, &is_integer);
+      auto value = lua_tointegerx(L, -1, &is_integer);
       if (!is_integer) {
         luaL_error(guard.release(), "field '%s' is not an integer", key);
       }
-      if (std::optional<T> result = integral_cast<T>(value)) {
+      if (auto result = integral_cast<T>(value)) {
         return result;
       } else {
         luaL_error(guard.release(), "field '%s' out of bounds", key);
@@ -232,7 +212,7 @@ namespace dromozoa {
     stack_guard guard(L);
     if (lua_getfield(L, index, key) != LUA_TNIL) {
       std::size_t size = 0;
-      if (const char* data = lua_tolstring(L, -1, &size)) {
+      if (const auto* data = lua_tolstring(L, -1, &size)) {
         return std::string(data, size);
       } else {
         luaL_error(guard.release(), "field '%s' is not a string", key);

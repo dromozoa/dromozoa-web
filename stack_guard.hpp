@@ -15,26 +15,32 @@
 // You should have received a copy of the GNU General Public License
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef DROMOZOA_WEB_VIEW_HPP
-#define DROMOZOA_WEB_VIEW_HPP
+#ifndef DROMOZOA_WEB_STACK_GUARD_HPP
+#define DROMOZOA_WEB_STACK_GUARD_HPP
 
-#include <cstddef>
 #include "lua.hpp"
-#include "noncopyable.hpp"
 
 namespace dromozoa {
-  class view_t : noncopyable {
+  class stack_guard : noncopyable {
   public:
-    view_t(const char*, std::size_t);
-    const char* data() const;
-    std::size_t size() const;
-    explicit operator bool() const;
-  private:
-    const char* data_;
-    std::size_t size_;
-  };
+    explicit stack_guard(lua_State* L) : state_(L), top_(lua_gettop(L)) {}
 
-  view_t* new_view(lua_State*, const char*, std::size_t);
+    ~stack_guard() {
+      if (state_) {
+        lua_settop(state_, top_);
+      }
+    }
+
+    lua_State* release() {
+      lua_State* state = state_;
+      state_ = nullptr;
+      return state;
+    }
+
+  private:
+    lua_State* state_;
+    int top_;
+  };
 }
 
 #endif

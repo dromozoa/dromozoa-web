@@ -1,31 +1,60 @@
 R""--(
 
-local dromozoa = require "dromozoa"
+-- local dromozoa = require "dromozoa"
 
-local fetch
+local dromozoa = {
+  web = {
+    fetch = require "dromozoa.web.fetch";
+  };
+}
 
 local coro = coroutine.create(function ()
-  fetch = assert(dromozoa.fetch({
-    request_method = "GET";
-    attributes = dromozoa.fetch.LOAD_TO_MEMORY;
-    onsuccess = function ()
-      print("success", fetch:get_ready_state(), fetch:get_status())
-    end;
-    onerror = function ()
-      print("error", fetch:get_ready_state(), fetch:get_status())
-    end;
-    onprogress = function ()
-      print("progress", fetch:get_ready_state(), fetch:get_status())
-      fetch:close()
-    end;
-  }, "main.js?t=" .. os.time()))
+  local function dump_fetch(key, fetch)
+    print(key,
+        fetch,
+        fetch:get_url(),
+        fetch:get_num_bytes(),
+        fetch:get_total_bytes(),
+        fetch:get_data_offset(),
+        fetch:get_ready_state(),
+        fetch:get_status(),
+        fetch:get_status_text())
+    -- print(fetch:get_data())
+    -- print(fetch:get_data_pointer())
+  end
 
-  print(fetch)
+  local fetch2
+
+  local fetch <close> = assert(dromozoa.web.fetch({
+    request_method = "POST";
+    attributes = dromozoa.web.fetch.LOAD_TO_MEMORY;
+    onsuccess = function (fetch)
+      fetch2 = fetch
+      dump_fetch("onsuccess", fetch)
+    end;
+    onerror = function (fetch)
+      dump_fetch("onerror", fetch)
+    end;
+    onprogress = function (fetch)
+      dump_fetch("onprogress", fetch)
+      -- error "die"
+      -- fetch:close()
+    end;
+    request_headers = {
+      "X-test1", 42;
+      "X-test2", "foobarbaz";
+      -- "X-test3", function () end;
+    };
+    request_data = "foo=bar&baz=qux";
+  }, "main.lua?t=" .. os.time()))
 
   for i = 1, 10 do
     print(i)
     coroutine.yield()
   end
+
+  print(fetch2)
+  -- dump_fetch("main", fetch2)
 
 end)
 

@@ -15,19 +15,21 @@
 // You should have received a copy of the GNU General Public License
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <string.h>
 #include <emscripten/fetch.h>
+#include <cstddef>
+#include <cstring>
 #include <memory>
+#include <optional>
 #include <set>
+#include <string>
 #include <utility>
+#include <vector>
 #include "common.hpp"
 #include "error.hpp"
 #include "exception_queue.hpp"
 #include "lua.hpp"
 #include "noncopyable.hpp"
 #include "thread_reference.hpp"
-
-#include <iostream>
 
 namespace dromozoa {
   namespace {
@@ -58,9 +60,7 @@ namespace dromozoa {
     public:
       explicit fetch_t(thread_reference&& ref, std::optional<std::string>&& request_data)
         : ref_(std::move(ref)), request_data_(std::move(request_data)), thread_(), fetch_() {
-        if (lua_State* L = ref_.get()) {
-          thread_ = lua_tothread(L, 2);
-        }
+        thread_ = lua_tothread(ref_.get(), 2);
       }
 
       ~fetch_t() {
@@ -86,25 +86,25 @@ namespace dromozoa {
 
       static void onsuccess(emscripten_fetch_t* fetch) {
         if (auto* self = cast(fetch)) {
-          self->on_impl(self->ref_.get(), 1, fetch);
+          self->on_impl(self->ref_.get(), 1);
         }
       }
 
       static void onerror(emscripten_fetch_t* fetch) {
         if (auto* self = cast(fetch)) {
-          self->on_impl(self->thread_, 1, fetch);
+          self->on_impl(self->thread_, 1);
         }
       }
 
       static void onprogress(emscripten_fetch_t* fetch) {
         if (auto* self = cast(fetch)) {
-          self->on_impl(self->ref_.get(), 3, fetch);
+          self->on_impl(self->ref_.get(), 3);
         }
       }
 
       static void onreadystatechange(emscripten_fetch_t* fetch) {
         if (auto* self = cast(fetch)) {
-          self->on_impl(self->ref_.get(), 4, fetch);
+          self->on_impl(self->ref_.get(), 4);
         }
       }
 
@@ -121,7 +121,7 @@ namespace dromozoa {
         return nullptr;
       }
 
-      void on_impl(lua_State* L, int index, emscripten_fetch_t*) {
+      void on_impl(lua_State* L, int index) {
         try {
           lua_pushvalue(L, index);
           std::unique_ptr<fetch_ref_t, decltype(&fetch_ref_t::detach)> guard(new_userdata<fetch_ref_t>(L, "dromozoa.web.fetch_ref", this), fetch_ref_t::detach);
@@ -153,14 +153,14 @@ namespace dromozoa {
         if (request_method->size() >= sizeof(attr.requestMethod)) {
           luaL_error(L, "field 'request_method' is too long");
         }
-        memcpy(attr.requestMethod, request_method->data(), request_method->size());
+        std::memcpy(attr.requestMethod, request_method->data(), request_method->size());
       }
 
       // [1] function | onsuccess
       // [2] thread   | onerror
       // [3] function | onprogress
       // [4] function | onreadystatechange
-      thread_reference ref = thread_reference(L);
+      thread_reference ref(L);
 
       if (lua_getfield(L, 2, "onsuccess") != LUA_TNIL) {
         attr.onsuccess = fetch_t::onsuccess;
@@ -219,17 +219,16 @@ namespace dromozoa {
           luaL_error(L, "field 'request_headers' is not a table");
         }
         for (lua_Integer i = 1; ; ++i) {
+          stack_guard guard(L);
           if (lua_geti(L, -1, i) == LUA_TNIL) {
-            lua_pop(L, 1);
             break;
           }
           std::size_t size = 0;
-          if (const char* data = lua_tolstring(L, -1, &size)) {
+          if (const auto* data = lua_tolstring(L, -1, &size)) {
             request_header_strings.emplace_back(data, size);
           } else {
-            luaL_error(L, "field 'request_headers[%d]' is not a string", i);
+            luaL_error(guard.release(), "non-string value at index %I in field 'request_headers'", i);
           }
-          lua_pop(L, 1);
         }
         for (const auto& header : request_header_strings) {
           request_headers.push_back(header.c_str());
@@ -250,7 +249,7 @@ namespace dromozoa {
         attr.requestDataSize = request_data->size();
       }
 
-      const char* url = luaL_checkstring(L, 3);
+      const auto* url = luaL_checkstring(L, 3);
 
       fetch_t* self = new_userdata<fetch_t>(L, "dromozoa.web.fetch", std::move(ref), std::move(request_data));
       attr.userData = self;
@@ -268,7 +267,7 @@ namespace dromozoa {
 
     void impl_get_data(lua_State* L) {
       fetch_t* self = check_fetch(L, 1);
-      if (const char* data = self->get_fetch()->data) {
+      if (const auto* data = self->get_fetch()->data) {
         lua_pushlstring(L, data, self->get_fetch()->numBytes);
       } else {
         lua_pushnil(L);
@@ -277,7 +276,7 @@ namespace dromozoa {
 
     void impl_get_data_pointer(lua_State* L) {
       fetch_t* self = check_fetch(L, 1);
-      if (void* data = const_cast<char*>(self->get_fetch()->data)) {
+      if (auto* data = const_cast<char*>(self->get_fetch()->data)) {
         lua_pushlightuserdata(L, data);
       } else {
         lua_pushnil(L);

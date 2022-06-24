@@ -31,12 +31,20 @@
 #include "noncopyable.hpp"
 
 namespace dromozoa {
-  class stack_gurad : noncopyable {
+  class stack_guard : noncopyable {
   public:
-    explicit stack_gurad(lua_State* L) : state_(L), top_(lua_gettop(L)) {}
+    explicit stack_guard(lua_State* L) : state_(L), top_(lua_gettop(L)) {}
 
-    ~stack_gurad() {
-      lua_settop(state_, top_);
+    ~stack_guard() {
+      if (state_) {
+        lua_settop(state_, top_);
+      }
+    }
+
+    lua_State* release() {
+      lua_State* state = state_;
+      state_ = nullptr;
+      return state;
     }
 
   private:
@@ -204,30 +212,30 @@ namespace dromozoa {
 
   template <class T>
   inline std::optional<T> get_field_integer(lua_State* L, int index, const char* key) {
-    stack_gurad guard(L);
+    stack_guard guard(L);
     if (lua_getfield(L, index, key) != LUA_TNIL) {
       int is_integer = 0;
       lua_Integer value = lua_tointegerx(L, -1, &is_integer);
       if (!is_integer) {
-        luaL_error(L, "field '%s' is not an integer", key);
+        luaL_error(guard.release(), "field '%s' is not an integer", key);
       }
       if (std::optional<T> result = integral_cast<T>(value)) {
         return result;
       } else {
-        luaL_error(L, "field '%s' out of bounds", key);
+        luaL_error(guard.release(), "field '%s' out of bounds", key);
       }
     }
     return std::nullopt;
   }
 
   inline std::optional<std::string> get_field_string(lua_State* L, int index, const char* key) {
-    stack_gurad guard(L);
+    stack_guard guard(L);
     if (lua_getfield(L, index, key) != LUA_TNIL) {
       std::size_t size = 0;
       if (const char* data = lua_tolstring(L, -1, &size)) {
         return std::string(data, size);
       } else {
-        luaL_error(L, "field '%s' is not a string", key);
+        luaL_error(guard.release(), "field '%s' is not a string", key);
       }
     }
     return std::nullopt;

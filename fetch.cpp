@@ -126,7 +126,7 @@ namespace dromozoa {
           lua_pushvalue(L, index);
           std::unique_ptr<fetch_ref_t, decltype(&fetch_ref_t::detach)> guard(new_userdata<fetch_ref_t>(L, "dromozoa.web.fetch_ref", this), fetch_ref_t::detach);
           if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
-            throw DROMOZOA_RUNTIME_ERROR(lua_tostring(L, -1));
+            throw DROMOZOA_LOGIC_ERROR("canot lua_pcall: ", lua_tostring(L, -1));
           }
         } catch (...) {
           push_exception_queue();

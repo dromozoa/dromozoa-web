@@ -31,6 +31,7 @@ local coro = coroutine.create(function ()
     end;
     onprogress = function (fetch)
       dump_fetch("onprogress", fetch)
+      -- error "die"
       -- fetch:close()
     end;
     request_headers = {

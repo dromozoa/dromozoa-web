@@ -18,6 +18,7 @@
 #include <emscripten.h>
 #include <string_view>
 #include "common.hpp"
+#include "error.hpp"
 #include "lua.hpp"
 #include "noncopyable.hpp"
 
@@ -48,6 +49,9 @@
 
     dromozoa_dom_data = new Map();
 
+    TODO __indexチェーンにする
+
+
  */
 
 namespace dromozoa {
@@ -56,16 +60,23 @@ namespace dromozoa {
 
     class object_t : noncopyable {
     public:
-      explicit object_t() : id_(++object_id) {}
+      explicit object_t(int id) : id_(id) {}
 
       ~object_t() {
-        EM_ASM({
-          dromozoa_web_dom.delete($0);
-        }, id_);
+        close();
       }
 
       int get_id() const {
         return id_;
+      }
+
+      void close() {
+        if (id_) {
+          EM_ASM({
+            dromozoa_web_dom.delete($0);
+          }, id_);
+          id_ = 0;
+        }
       }
 
     private:
@@ -88,30 +99,59 @@ namespace dromozoa {
       return nullptr;
     }
 
+    void impl_close(lua_State* L) {
+      check_object(L, 1)->close();
+    }
+
     void impl_gc(lua_State* L) {
       check_object(L, 1)->~object_t();
     }
 
+    void initialize_interface(lua_State* L, const char* name) {
+      luaL_newmetatable(L, name);
+      lua_pushvalue(L, -2);
+      lua_setfield(L, -2, "__index");
+      set_field(L, -1, "__close", function<impl_close>());
+      set_field(L, -1, "__gc", function<impl_gc>());
+      lua_pop(L, 1);
+    }
+
     void impl_document_call(lua_State* L) {
-      auto* self = new_userdata<object_t>(L, "dromozoa.web.dom.document");
+      auto id = ++object_id;
       EM_ASM({
         dromozoa_web_dom.set($0, document);
-      }, self->get_id());
+      }, id);
+      new_userdata<object_t>(L, "dromozoa.web.dom.document", id);
     }
 
     void impl_query_selector(lua_State* L) {
       auto* self = check_object(L, 1);
       const auto* selectors = luaL_checkstring(L, 2);
 
-      auto* that = new_userdata<object_t>(L, "dromozoa.web.dom.element");
-      int result = EM_ASM_INT({
+      auto id = ++object_id;
+      auto result = EM_ASM_INT({
         const result = dromozoa_web_dom.get($1).querySelector(UTF8ToString($2));
-        dromozoa_web_dom.set($0, result);
-        return result ? 1 : 0;
-      }, that->get_id(), self->get_id(), selectors);
-      if (!result) {
-        lua_pop(L, 1);
+        if (result) {
+          dromozoa_web_dom.set($0, result);
+          return 1;
+        } else {
+          return 0;
+        }
+      }, id, self->get_id(), selectors);
+
+      if (result) {
+        new_userdata<object_t>(L, "dromozoa.web.dom.element", id);
+      } else {
         lua_pushnil(L);
+      }
+    }
+
+    const char* node_type_to_name(int node_type) {
+      switch (node_type) {
+        case 1: return "dromozoa.web.dom.element";
+        case 9: return "dromozoa.web.dom.document";
+        // case 11: return "dromozoa.web.dom.document_fragment";
+        default: return "dromozoa.web.dom.node";
       }
     }
 
@@ -119,10 +159,28 @@ namespace dromozoa {
       auto* self = check_object(L, 1);
       const auto* selectors = luaL_checkstring(L, 2);
 
-      auto* that = new_userdata<object_t>(L, "dromozoa.web.dom.node_list");
+      auto id = ++object_id;
+      auto result = EM_ASM_INT({
+        const result = dromozoa_web_dom.get($1).querySelectorAll(UTF8ToString($2));
+        dromozoa_web_dom.set($0, result);
+        return result.length;
+      }, id, self->get_id(), selectors);
+
+      lua_newtable(L);
+      for (int i = 0; i < result; ++i) {
+        auto item_id = ++object_id;
+        auto result = EM_ASM_INT({
+          const result = dromozoa_web_dom.get($1).item($2);
+          dromozoa_web_dom.set($0, result);
+          return result.nodeType;
+        }, item_id, id, i);
+        new_userdata<object_t>(L, node_type_to_name(result), item_id);
+        lua_seti(L, -2, i + 1);
+      }
+
       EM_ASM({
-        dromozoa_web_dom.set($0, dromozoa_web_dom.get($1).querySelectorAll(UTF8ToString($2)));
-      }, that->get_id(), self->get_id(), selectors);
+        dromozoa_web_dom.delete($0);
+      }, id);
     }
 
     void initialize_parent_node(lua_State* L) {
@@ -140,39 +198,18 @@ namespace dromozoa {
     {
       lua_newtable(L);
       {
-        luaL_newmetatable(L, "dromozoa.web.dom.document");
-        lua_pushvalue(L, -2);
-        lua_setfield(L, -2, "__index");
-        set_field(L, -1, "__gc", function<impl_gc>());
-        lua_pop(L, 1);
-
+        initialize_interface(L, "dromozoa.web.dom.document");
         set_metafield(L, -1, "__call", function<impl_document_call>());
-
         initialize_parent_node(L);
       }
       lua_setfield(L, -2, "document");
 
       lua_newtable(L);
       {
-        luaL_newmetatable(L, "dromozoa.web.dom.element");
-        lua_pushvalue(L, -2);
-        lua_setfield(L, -2, "__index");
-        set_field(L, -1, "__gc", function<impl_gc>());
-        lua_pop(L, 1);
-
+        initialize_interface(L, "dromozoa.web.dom.element");
         initialize_parent_node(L);
       }
       lua_setfield(L, -2, "element");
-
-      lua_newtable(L);
-      {
-        luaL_newmetatable(L, "dromozoa.web.dom.node_list");
-        lua_pushvalue(L, -2);
-        lua_setfield(L, -2, "__index");
-        set_field(L, -1, "__gc", function<impl_gc>());
-        lua_pop(L, 1);
-      }
-      lua_setfield(L, -2, "node_list");
     }
   }
 }

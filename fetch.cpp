@@ -141,6 +141,10 @@ namespace dromozoa {
       return static_cast<fetch_t*>(luaL_checkudata(L, index, "dromozoa.web.fetch"));
     }
 
+    void impl_close(lua_State* L) {
+      check_fetch(L, 1)->close();
+    }
+
     void impl_gc(lua_State* L) {
       check_fetch(L, 1)->~fetch_t();
     }
@@ -305,10 +309,6 @@ namespace dromozoa {
 
     void impl_get_status_text(lua_State* L) {
       push(L, check_fetch(L, 1)->get_fetch()->statusText);
-    }
-
-    void impl_close(lua_State* L) {
-      check_fetch(L, 1)->close();
     }
   }
 

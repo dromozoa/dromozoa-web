@@ -88,7 +88,11 @@ local coro = coroutine.create(function ()
   print(element)
 
   local node_list = document:query_selector_all "div"
-  print(node_list)
+  print(node_list, #node_list)
+  for i = 1, #node_list do
+    local element = node_list[i]
+    print(element)
+  end
 
   document = nil
   collectgarbage()

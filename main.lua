@@ -20,7 +20,7 @@ local coro = coroutine.create(function ()
   local fetch2
 
   local fetch <close> = assert(dromozoa.fetch({
-    request_method = "GET";
+    request_method = "POST";
     attributes = dromozoa.fetch.LOAD_TO_MEMORY;
     onsuccess = function (fetch)
       fetch2 = fetch
@@ -33,6 +33,7 @@ local coro = coroutine.create(function ()
       dump_fetch("onprogress", fetch)
       -- fetch:close()
     end;
+    request_data = "foo=bar&baz=qux";
   }, "main.lua?t=" .. os.time()))
 
   for i = 1, 10 do

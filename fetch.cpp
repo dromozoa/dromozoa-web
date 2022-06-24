@@ -20,13 +20,14 @@
 #include <memory>
 #include <set>
 #include <utility>
-#include "assert.hpp"
 #include "common.hpp"
 #include "error.hpp"
 #include "exception_queue.hpp"
 #include "lua.hpp"
 #include "noncopyable.hpp"
 #include "thread_reference.hpp"
+
+#include <iostream>
 
 namespace dromozoa {
   namespace {
@@ -55,7 +56,8 @@ namespace dromozoa {
 
     class fetch_t : noncopyable {
     public:
-      explicit fetch_t(thread_reference&& ref) : ref_(std::move(ref)), thread_(), fetch_() {
+      explicit fetch_t(thread_reference&& ref, std::optional<std::string>&& request_data)
+        : ref_(std::move(ref)), request_data_(std::move(request_data)), thread_(), fetch_() {
         if (lua_State* L = ref_.get()) {
           thread_ = lua_tothread(L, 2);
         }
@@ -108,6 +110,7 @@ namespace dromozoa {
 
     private:
       thread_reference ref_;
+      std::optional<std::string> request_data_;
       lua_State* thread_;
       emscripten_fetch_t* fetch_;
 
@@ -118,9 +121,8 @@ namespace dromozoa {
         return nullptr;
       }
 
-      void on_impl(lua_State* L, int index, emscripten_fetch_t* fetch) {
+      void on_impl(lua_State* L, int index, emscripten_fetch_t*) {
         try {
-          DROMOZOA_ASSERT(fetch_ == fetch);
           lua_pushvalue(L, index);
           std::unique_ptr<fetch_ref_t, decltype(&fetch_ref_t::detach)> guard(new_userdata<fetch_ref_t>(L, "dromozoa.web.fetch_ref", this), fetch_ref_t::detach);
           if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
@@ -210,7 +212,12 @@ namespace dromozoa {
         attr.password = password->c_str();
       }
 
-      // request header
+      // TODO requestHeadersの対応
+      // Points to an array of strings to pass custom headers to the request. This
+      // array takes the form
+      // {"key1", "value1", "key2", "value2", "key3", "value3", ..., 0 }; Note
+      // especially that the array needs to be terminated with a null pointer.
+      // const char * const *requestHeaders;
 
       auto overridden_mime_type = get_field_string(L, 2, "overridden_mime_type");
       if (overridden_mime_type) {
@@ -225,10 +232,14 @@ namespace dromozoa {
 
       const char* url = luaL_checkstring(L, 3);
 
-      fetch_t* self = new_userdata<fetch_t>(L, "dromozoa.web.fetch", std::move(ref));
+      fetch_t* self = new_userdata<fetch_t>(L, "dromozoa.web.fetch", std::move(ref), std::move(request_data));
       attr.userData = self;
       emscripten_fetch_t* fetch = emscripten_fetch(&attr, url);
       self->set_fetch(fetch);
+    }
+
+    void impl_get_id(lua_State* L) {
+      push(L, check_fetch(L, 1)->get_fetch()->id);
     }
 
     void impl_get_url(lua_State* L) {
@@ -299,6 +310,7 @@ namespace dromozoa {
 
       set_metafield(L, -1, "__call", function<impl_call>());
 
+      set_field(L, -1, "get_id", function<impl_get_id>());
       set_field(L, -1, "get_url", function<impl_get_url>());
       set_field(L, -1, "get_data", function<impl_get_data>());
       set_field(L, -1, "get_data_pointer", function<impl_get_data_pointer>());

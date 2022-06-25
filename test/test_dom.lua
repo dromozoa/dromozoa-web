@@ -32,6 +32,17 @@ for i = 1, #attribute_names do
   print(name, textarea:get_attribute(name))
 end
 
+print(textarea:get_attribute "no-such-attr")
+
+attribute_names = nil
+
+collectgarbage()
+collectgarbage()
+
+local div <close> = document:create_element "div"
+div:append "テストだよ" :prepend "前に挿入"
+body:append(div)
+
 local s = core.get_now()
 for i = 1, 240 do
   -- 4秒ごとに明滅する
@@ -46,3 +57,7 @@ end
 
 textarea:remove_attribute("style")
 
+body:append(document:create_element "div" :append "おわったよ")
+
+collectgarbage()
+collectgarbage()

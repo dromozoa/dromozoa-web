@@ -113,20 +113,28 @@ namespace dromozoa {
       int id_;
     };
 
-    object_t* check_object(lua_State* L, int index) {
+    object_t* test_object(lua_State* L, int index) {
       stack_guard guard(L);
-      const auto* name = luaL_typename(L, index);
       if (auto* self = static_cast<object_t*>(lua_touserdata(L, index))) {
         if (luaL_getmetafield(L, index, "__name") != LUA_TNIL) {
-          if ((name = lua_tostring(L, -1))) {
+          if (const auto* name = lua_tostring(L, -1)) {
             if (std::string_view(name).starts_with("dromozoa.web.dom.")) {
               return self;
             }
           }
         }
       }
-      luaL_error(guard.release(), "dromozoa.web.dom.* expected, got %s", name);
       return nullptr;
+    }
+
+
+
+    object_t* check_object(lua_State* L, int index) {
+      auto* self = test_object(L, index);
+      if (!self) {
+        luaL_error(L, "dromozoa.web.dom.* expected, got %s", luaL_typename(L, index));
+      }
+      return self;
     }
 
     const char* node_type_to_name(int node_type) {
@@ -170,6 +178,17 @@ namespace dromozoa {
         dromozoa_web_dom.set($0, document);
       }, id);
       new_userdata<object_t>(L, "dromozoa.web.dom.document", id);
+    }
+
+    void impl_create_element(lua_State* L) {
+      auto* self = check_object(L, 1);
+      const auto* name = luaL_checkstring(L, 2);
+
+      auto id = ++object_id;
+      EM_ASM({
+        dromozoa_web_dom.set($0, dromozoa_web_dom.get($1).createElement(UTF8ToString($2)));
+      }, id, self->get_id(), name);
+      new_userdata<object_t>(L, "dromozoa.web.dom.element", id);
     }
 
     ///////////////////////////////////////////////////////////////////////
@@ -253,6 +272,34 @@ namespace dromozoa {
 
     ///////////////////////////////////////////////////////////////////////
 
+    void impl_prepend(lua_State* L) {
+      auto* self = check_object(L, 1);
+      if (object_t* node = test_object(L, 2)) {
+        EM_ASM({
+          dromozoa_web_dom.get($0).prepend(dromozoa_web_dom.get($1));
+        }, self->get_id(), node->get_id());
+      } else {
+        const auto* text = luaL_checkstring(L, 2);
+        EM_ASM({
+          dromozoa_web_dom.get($0).prepend(UTF8ToString($1));
+        }, self->get_id(), text);
+      }
+    }
+
+    void impl_append(lua_State* L) {
+      auto* self = check_object(L, 1);
+      if (object_t* node = test_object(L, 2)) {
+        EM_ASM({
+          dromozoa_web_dom.get($0).append(dromozoa_web_dom.get($1));
+        }, self->get_id(), node->get_id());
+      } else {
+        const auto* text = luaL_checkstring(L, 2);
+        EM_ASM({
+          dromozoa_web_dom.get($0).append(UTF8ToString($1));
+        }, self->get_id(), text);
+      }
+    }
+
     void impl_query_selector(lua_State* L) {
       auto* self = check_object(L, 1);
       const auto* selectors = luaL_checkstring(L, 2);
@@ -304,6 +351,8 @@ namespace dromozoa {
     }
 
     void initialize_parent_node(lua_State* L) {
+      set_field(L, -1, "prepend", function<impl_prepend>());
+      set_field(L, -1, "append", function<impl_append>());
       set_field(L, -1, "query_selector", function<impl_query_selector>());
       set_field(L, -1, "query_selector_all", function<impl_query_selector_all>());
     }
@@ -320,6 +369,7 @@ namespace dromozoa {
       {
         initialize_interface(L, "dromozoa.web.dom.document");
         set_metafield(L, -1, "__call", function<impl_document_call>());
+        set_field(L, -1, "create_element", function<impl_create_element>());
         initialize_parent_node(L);
       }
       lua_setfield(L, -2, "document");

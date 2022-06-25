@@ -32,7 +32,7 @@ OBJS = \
 	exception_queue.o \
 	fetch.o \
 	module.o
-TARGET = main.html
+TARGET = index.html
 
 all: all-recursive $(TARGET)
 
@@ -40,7 +40,7 @@ all-recursive:
 	(cd lua/src && $(MAKE) CC=em++ AR="emar rcu" RANLIB=emranlib MYCFLAGS="-fexceptions -sNO_DISABLE_EXCEPTION_CATCHING" MYLDFLAGS=-fexceptions LUA_T=lua.html LUAC_T=luac.html posix)
 
 clean:
-	$(RM) *.d *.o $(TARGET) main.html main.js main.wasm
+	$(RM) *.d *.o $(TARGET) index.html index.js index.wasm
 
 clean-recursive:
 	(cd lua/src && $(MAKE) clean && $(RM) lua*.html lua*.js lua*.wasm)

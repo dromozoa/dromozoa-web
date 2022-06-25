@@ -15,29 +15,12 @@
 // You should have received a copy of the GNU General Public License
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "common.hpp"
 #include "lua.hpp"
 
 namespace dromozoa {
-  namespace {
-    template <class T_key, class T_value>
-    void preload_impl(lua_State* L, T_key&& key, T_value&& value) {
-      lua_getglobal(L, "package");
-      lua_getfield(L, -1, "preload");
-      set_field(L, -1, std::forward<T_key>(key), std::forward<T_value>(value));
-      lua_pop(L, 2);
+  void initialize_event(lua_State* L) {
+    lua_newtable(L);
+    {
     }
-  }
-
-  void initialize_core(lua_State*);
-  void initialize_dom(lua_State*);
-  void initialize_event(lua_State*);
-  void initialize_fetch(lua_State*);
-
-  void preload_modules(lua_State* L) {
-    preload_impl(L, "dromozoa.web.core", function<initialize_core>());
-    preload_impl(L, "dromozoa.web.dom", function<initialize_dom>());
-    preload_impl(L, "dromozoa.web.event", function<initialize_event>());
-    preload_impl(L, "dromozoa.web.fetch", function<initialize_fetch>());
   }
 }

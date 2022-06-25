@@ -26,7 +26,7 @@
 #include "noncopyable.hpp"
 
 namespace dromozoa {
-  void preload_module(lua_State*);
+  void preload_modules(lua_State*);
 
   class boot_t : noncopyable {
   public:
@@ -56,7 +56,7 @@ namespace dromozoa {
       try {
         if (auto* L = state_) {
           luaL_openlibs(L);
-          preload_module(L);
+          preload_modules(L);
 
           static const char code[] =
           #include "boot.lua"

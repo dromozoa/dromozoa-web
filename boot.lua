@@ -20,14 +20,10 @@ local core = require "dromozoa.web.core"
 local fetch = require "dromozoa.web.fetch"
 
 local main_thread = coroutine.create(function ()
-  local main_filename = "main.lua"
+  local main_filename = core.run_script_string [[new URLSearchParams(document.location.search).get("main") || "main.lua"]]
   local main_fetch
   local main_chunk
-
-  local location_hash = core.run_script_string [[document.location.hash]]
-  if location_hash:find "^#" then
-    main_filename = location_hash:sub(2)
-  end
+  local main_error
 
   main_fetch = fetch({
     request_method = "GET";
@@ -38,7 +34,7 @@ local main_thread = coroutine.create(function ()
       main_fetch = nil
     end;
     onerror = function (f)
-      io.stdout:write(("fetch error: %s: %d %s\n"):format(main_filename, f:get_status(), f:get_status_text()))
+      main_error = ("cannot fetch: %s: %d %s\n"):format(main_filename, f:get_status(), f:get_status_text())
       f:close()
       main_fetch = nil
     end;
@@ -47,11 +43,14 @@ local main_thread = coroutine.create(function ()
   while true do
     coroutine.yield()
     if not main_fetch then
-      if not main_chunk then
-        return
-      end
-      return assert(load(main_chunk, main_filename))()
+      break
     end
+  end
+
+  if main_chunk then
+    return assert(load(main_chunk, main_filename))()
+  else
+    error(main_error)
   end
 end)
 

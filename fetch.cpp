@@ -73,6 +73,9 @@ namespace dromozoa {
       }
 
       emscripten_fetch_t* get_fetch() const {
+        if (!fetch_) {
+          throw DROMOZOA_LOGIC_ERROR("attempt to use a closed dromozoa.web.fetch");
+        }
         return fetch_;
       }
 
@@ -139,6 +142,10 @@ namespace dromozoa {
         return ref->get();
       }
       return static_cast<fetch_t*>(luaL_checkudata(L, index, "dromozoa.web.fetch"));
+    }
+
+    void impl_close(lua_State* L) {
+      check_fetch(L, 1)->close();
     }
 
     void impl_gc(lua_State* L) {
@@ -305,10 +312,6 @@ namespace dromozoa {
 
     void impl_get_status_text(lua_State* L) {
       push(L, check_fetch(L, 1)->get_fetch()->statusText);
-    }
-
-    void impl_close(lua_State* L) {
-      check_fetch(L, 1)->close();
     }
   }
 

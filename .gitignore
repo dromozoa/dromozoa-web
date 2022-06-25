@@ -5,6 +5,6 @@
 /lua/src/lua*.html
 /lua/src/lua*.js
 /lua/src/lua*.wasm
-/main.html
-/main.js
-/main.wasm
+/index.html
+/index.js
+/index.wasm

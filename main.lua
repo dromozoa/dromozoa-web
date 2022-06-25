@@ -1,12 +1,33 @@
-R""--(
+-- Copyright (C) 2022 Tomoyuki Fujimori <moyu@dromozoa.com>
+--
+-- This file is part of dromozoa-web.
+--
+-- dromozoa-web is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- dromozoa-web is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
+
+
+for i = 1, 10 do
+  coroutine.yield()
+  print(i)
+end
 
 -- local dromozoa = require "dromozoa"
+--[====[
 
-local dromozoa = {
-  web = {
-    core = require "dromozoa.web.core";
-    fetch = require "dromozoa.web.fetch";
-  };
+local dw = {
+  core = require "dromozoa.web.core";
+  dom = require "dromozoa.web.dom";
+  fetch = require "dromozoa.web.fetch";
 }
 
 local coro = coroutine.create(function ()
@@ -26,9 +47,9 @@ local coro = coroutine.create(function ()
 
   local fetch2
 
-  local fetch <close> = assert(dromozoa.web.fetch({
+  local fetch <close> = assert(dw.fetch({
     request_method = "POST";
-    attributes = dromozoa.web.fetch.LOAD_TO_MEMORY;
+    attributes = dw.fetch.LOAD_TO_MEMORY;
     onsuccess = function (fetch)
       fetch2 = fetch
       dump_fetch("onsuccess", fetch)
@@ -60,22 +81,53 @@ local coro = coroutine.create(function ()
 end)
 
 local coro = coroutine.create(function ()
-  -- dromozoa.web.core.run_script[[ alert("foo") ]]
+  -- dw.core.run_script[[ alert("foo") ]]
 
-  print(dromozoa.web.core.run_script_string[[ document.location.href ]])
-  print(dromozoa.web.core.run_script_string[[ document.title ]])
+  print(dw.core.run_script_string[[ document.location.href ]])
+  print(dw.core.run_script_string[[ document.title ]])
 
-  print(dromozoa.web.core.get_device_pixel_ratio())
-  print(dromozoa.web.core.get_window_title())
-  dromozoa.web.core.set_window_title "あいうえお"
+  print(dw.core.get_device_pixel_ratio())
+  print(dw.core.get_window_title())
+  dw.core.set_window_title "あいうえお"
 
-  print(dromozoa.web.core.get_screen_size())
+  print(dw.core.get_screen_size())
 
   for i = 1, 10 do
-    print(i, dromozoa.web.core.get_now(), dromozoa.web.core.random())
+    print(i, dw.core.get_now(), dw.core.random())
     coroutine.yield()
   end
 end)
+
+local coro = coroutine.create(function ()
+  local document = dw.dom.document()
+
+  dw.core.run_script[[ console.log(dromozoa_web_dom.get(1)); ]]
+
+  local element = document:query_selector ".not_found"
+  print(element)
+
+  local element = document:query_selector ".emscripten"
+  print(element)
+
+  local node_list = document:query_selector_all "div"
+  print(node_list, #node_list)
+  for i = 1, #node_list do
+    local element = node_list[i]
+    print(element)
+  end
+
+  document = nil
+  collectgarbage()
+  collectgarbage()
+
+  dw.core.run_script[[ console.log(dromozoa_web_dom.get(1)); ]]
+
+  for i = 1, 10 do
+    print(i, dw.core.get_now(), dw.core.random())
+    coroutine.yield()
+  end
+end)
+
 
 return function ()
   if not coro then
@@ -91,4 +143,4 @@ return function ()
   end
 end
 
---)"--"
+]====]

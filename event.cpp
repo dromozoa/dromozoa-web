@@ -16,72 +16,51 @@
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <emscripten/html5.h>
+#include <iostream>
 #include <sstream>
+#include <string>
 #include "common.hpp"
 #include "error.hpp"
 #include "exception_queue.hpp"
 #include "lua.hpp"
 #include "thread_reference.hpp"
 
-/*
-  イベントハンドラ全体でひとつのthreadを使う
-  コールバックは、REGISTRY["dromozoa.web.event"]テーブルに保存する
-  メタテーブルと名前衝突しないように注意
-
-  スタックにテーブルを用意して、文字列と関数をおいておく。
-  key = { object, function };
-
-
-  {
-    key = { function, key };
-
-
-
-  }
-
- */
-
 namespace dromozoa {
   namespace {
-    thread_reference ref;
-
-    std::string make_callback_key(const char* target, int event_type) {
-      std::ostringstream out;
-      out << target << "/" << event_type;
-      return out.str();
-    }
-
-    struct event_t {
+    class callback_base_t {
     public:
-      explicit event_t(const std::string& key) : key_(key) {}
+      virtual ~callback_base_t() {
+        std::cout << "~callback_base_t()\n";
+      }
+    };
 
-      static EM_BOOL callback(int event_type, const EmscriptenMouseEvent* event, void* data) {
-        if (auto* self = static_cast<event_t*>(data)) {
+    template <class T>
+    class callback_t : public callback_base_t {
+    public:
+      explicit callback_t(thread_reference&& ref) : ref_(std::move(ref)) {}
+
+      static EM_BOOL callback(int event_type, const T* event, void* data) {
+        std::cout << "callback " << event_type << " " << event << " " << data << "\n";
+
+        if (auto* self = static_cast<callback_t<T>*>(data)) {
           return self->callback_impl(event_type, event);
         }
         return false;
       }
 
     private:
-      std::string key_;
+      thread_reference ref_;
 
-      bool callback_impl(int event_type, const EmscriptenMouseEvent* event) {
+      bool callback_impl(int event_type, const T* event) {
         try {
-          if (lua_State* L = ref.get()) {
-            stack_guard guard(L);
-            push(L, key_);
-            if (lua_gettable(L, 1) != LUA_TNIL) {
-              if (lua_geti(L, -1, 1) != LUA_TNIL) {
-                if (lua_pcall(L, 0, 1, 0) != LUA_OK) {
-                  throw DROMOZOA_LOGIC_ERROR("cannot lua_pcall: ", lua_tostring(L, -1));
-                }
-                if (lua_isboolean(L, -1) && !lua_toboolean(L, -1)) {
-                  return false;
-                } else {
-                  return true;
-                }
-              }
-            }
+          lua_State* L = ref_.get();
+          std::cout << "pcall " << L << "\n";
+          lua_pushvalue(L, 1);
+          if (lua_pcall(L, 0, 1, 0) != LUA_OK) {
+            throw DROMOZOA_LOGIC_ERROR("canot lua_pcall: ", lua_tostring(L, -1));
+          }
+          if (lua_toboolean(L, -1) || !lua_isboolean(L, -1)) {
+            return true;
           }
         } catch (...) {
           push_exception_queue();
@@ -90,53 +69,63 @@ namespace dromozoa {
       }
     };
 
+    std::string make_callback_key(int event_type, const char* target) {
+      std::ostringstream out;
+      out << event_type << ".";
+      if (target == EMSCRIPTEN_EVENT_TARGET_DOCUMENT) {
+        out << "EMSCRIPTEN_EVENT_TARGET_DOCUMENT";
+      } else if (target == EMSCRIPTEN_EVENT_TARGET_WINDOW) {
+        out << "EMSCRIPTEN_EVENT_TARGET_WINDOW";
+      } else if (target == EMSCRIPTEN_EVENT_TARGET_SCREEN) {
+        out << "EMSCRIPTEN_EVENT_TARGET_SCREEN";
+      } else {
+        out << target;
+      }
+      return out.str();
+    }
+
     void impl_gc(lua_State* L) {
-      static_cast<event_t*>(luaL_checkudata(L, 1, "dromozoa.web.event"))->~event_t();
+      static_cast<callback_base_t*>(luaL_checkudata(L, 1, "dromozoa.web.event.callback"))->~callback_base_t();
     }
 
     void impl_set_click_callback(lua_State* L) {
       const auto* target = luaL_checkstring(L, 1);
       auto use_capture = lua_toboolean(L, 2);
+      bool is_noneornil = lua_isnoneornil(L, 3);
 
-      std::string key = make_callback_key(target, EMSCRIPTEN_EVENT_CLICK);
+      callback_t<EmscriptenMouseEvent>* self = nullptr;
 
-      event_t* self = nullptr;
-
-      lua_pushvalue(ref.get(), 1);
-      push(ref.get(), key);
-      if (lua_isnil(L, 3)) {
-        // nil
-        lua_pushnil(ref.get());
+      lua_getfield(L, LUA_REGISTRYINDEX, "dromozoa.web.event.callbacks");
+      std::cout << "top " << lua_gettop(L) << "\n";
+      push(L, make_callback_key(EMSCRIPTEN_EVENT_CLICK, target));
+      if (is_noneornil) {
+        std::cout << "is none or nil\n";
+        lua_pushnil(L);
       } else {
-        // { string, userdata }
-        lua_newtable(ref.get());
+        std::cout << "is not nil\n";
+        thread_reference ref(L);
         lua_pushvalue(L, 3);
         lua_xmove(L, ref.get(), 1);
-        lua_seti(ref.get(), -2, 1);
-        self = new_userdata<event_t>(ref.get(), "dromozoa.web.event", key);
-        lua_seti(ref.get(), -2, 2);
+        self = new_userdata<callback_t<EmscriptenMouseEvent> >(L, "dromozoa.web.event.callback", std::move(ref));
       }
-      lua_settable(ref.get(), -3);
-      lua_pop(ref.get(), 1);
+      lua_settable(L, -3);
 
-      // 第三引数がnilだったら、削除する
-      if (lua_isnil(L, 3)) {
-        emscripten_set_click_callback(target, self, use_capture, nullptr);
+      std::cout << "impl_set_click_callback " << target << " " << self << "\n";
+      if (self) {
+        emscripten_set_click_callback(target, self, use_capture, callback_t<EmscriptenMouseEvent>::callback);
       } else {
-        emscripten_set_click_callback(target, self, use_capture, event_t::callback);
+        emscripten_set_click_callback(target, self, use_capture, nullptr);
       }
     }
   }
 
   void initialize_event(lua_State* L) {
-    ref = thread_reference(L);
-    lua_newtable(ref.get());
+    lua_newtable(L);
+    lua_setfield(L, LUA_REGISTRYINDEX, "dromozoa.web.event.callbacks");
 
     lua_newtable(L);
     {
-      luaL_newmetatable(L, "dromozoa.web.event");
-      lua_pushvalue(L, -2);
-      lua_setfield(L, -2, "__index");
+      luaL_newmetatable(L, "dromozoa.web.event.callback");
       set_field(L, -1, "__gc", function<impl_gc>());
       lua_pop(L, 1);
 

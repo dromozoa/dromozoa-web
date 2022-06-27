@@ -20,13 +20,49 @@ local dom = require "dromozoa.web.dom"
 local event = require "dromozoa.web.event"
 
 local document = dom.document()
+local body = document:query_selector "body"
 local textarea = document:query_selector "textarea"
 
 -- textarea:set_attribute("id", "ta")
 
-print(document:query_selector "#output")
+local div = document:create_element "div"
+div:set_attribute("id", "mydiv")
+div:append "CLICK ME!"
+body:append(div)
 
-event.set_click_callback("#output", false, function ()
-  print "click"
+local div = document:create_element "div"
+div:set_attribute("id", "mydiv2")
+div:append "CLICK YOU!"
+body:append(div)
+
+
+local function cb()
+  print "click.output"
+end
+
+event.set_click_callback("#output", false, cb)
+
+local toggle = false
+
+event.set_click_callback("#mydiv", false, function ()
+  print "click.mydiv"
+  toggle = not toggle
+  if toggle then
+    event.set_click_callback("#output", false)
+  else
+    event.set_click_callback("#output", false, cb)
+  end
+  local R = debug.getregistry()
+  for k, v in pairs(R["dromozoa.web.event.callbacks"]) do
+    print(k, v)
+  end
+
+  collectgarbage()
+  collectgarbage()
+end)
+
+event.set_click_callback("#mydiv2", false, function ()
+  print "click.mydiv2"
+  event.set_click_callback("#mydiv2")
 end)
 

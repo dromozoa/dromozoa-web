@@ -58,7 +58,7 @@ namespace dromozoa {
 
     class fetch_t : noncopyable {
     public:
-      explicit fetch_t(thread_reference&& ref, std::optional<std::string>&& request_data)
+      fetch_t(thread_reference&& ref, std::optional<std::string>&& request_data)
         : ref_(std::move(ref)), request_data_(std::move(request_data)), thread_(), fetch_() {
         thread_ = lua_tothread(ref_.get(), 2);
       }

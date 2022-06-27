@@ -127,8 +127,6 @@ namespace dromozoa {
       return nullptr;
     }
 
-
-
     object_t* check_object(lua_State* L, int index) {
       auto* self = test_object(L, index);
       if (!self) {

@@ -27,8 +27,7 @@
 
 namespace dromozoa {
   namespace {
-    void push_event(lua_State* L, const EmscriptenMouseEvent* event) {
-      lua_newtable(L);
+    void set_event(lua_State* L, const EmscriptenMouseEvent* event) {
       set_field(L, -1, "timestamp", event->timestamp);
       set_field(L, -1, "screen_x", event->screenX);
       set_field(L, -1, "screen_y", event->screenY);
@@ -44,6 +43,14 @@ namespace dromozoa {
       set_field(L, -1, "movement_y", event->movementY);
       set_field(L, -1, "target_x", event->targetX);
       set_field(L, -1, "target_y", event->targetY);
+    }
+
+    void set_event(lua_State* L, const EmscriptenWheelEvent* event) {
+      set_event(L, &event->mouse);
+      set_field(L, -1, "delta_x", event->deltaX);
+      set_field(L, -1, "delta_y", event->deltaY);
+      set_field(L, -1, "delta_z", event->deltaZ);
+      set_field(L, -1, "delta_mode", event->deltaMode);
     }
 
     class callback_base_t {
@@ -71,7 +78,8 @@ namespace dromozoa {
           lua_State* L = ref_.get();
           lua_pushvalue(L, 1);
           push(L, event_type);
-          push_event(L, event);
+          lua_newtable(L);
+          set_event(L, event);
           if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
             throw DROMOZOA_LOGIC_ERROR("canot lua_pcall: ", lua_tostring(L, -1));
           }
@@ -100,34 +108,88 @@ namespace dromozoa {
       return out.str();
     }
 
-    void impl_gc(lua_State* L) {
-      static_cast<callback_base_t*>(luaL_checkudata(L, 1, "dromozoa.web.event.callback"))->~callback_base_t();
+    void push_result(lua_State* L, int result) {
+      switch (result) {
+      case EMSCRIPTEN_RESULT_SUCCESS:
+      case EMSCRIPTEN_RESULT_DEFERRED:
+        push(L, true);
+        break;
+      default:
+        lua_pushnil(L);
+      }
+      push(L, result);
     }
 
-    void impl_set_click_callback(lua_State* L) {
+    template <class T>
+    void set_callback(
+        lua_State* L,
+        int event_type,
+        EMSCRIPTEN_RESULT (*set_on_thread)(const char*, void*, EM_BOOL, EM_BOOL (*)(int, const T*, void*), pthread_t),
+        pthread_t thread = EM_CALLBACK_THREAD_CONTEXT_CALLING_THREAD) {
       const auto* target = luaL_checkstring(L, 1);
       auto use_capture = lua_toboolean(L, 2);
       bool deregister = lua_isnoneornil(L, 3);
 
-      callback_t<EmscriptenMouseEvent>* self = nullptr;
+      callback_t<T>* self = nullptr;
 
       lua_getfield(L, LUA_REGISTRYINDEX, "dromozoa.web.event.callbacks");
-      push(L, make_callback_key(EMSCRIPTEN_EVENT_CLICK, target));
+      push(L, make_callback_key(event_type, target));
       if (deregister) {
         lua_pushnil(L);
       } else {
         thread_reference ref(L);
         lua_pushvalue(L, 3);
         lua_xmove(L, ref.get(), 1);
-        self = new_userdata<callback_t<EmscriptenMouseEvent> >(L, "dromozoa.web.event.callback", std::move(ref));
+        self = new_userdata<callback_t<T> >(L, "dromozoa.web.event.callback", std::move(ref));
       }
       lua_settable(L, -3);
+      lua_pop(L, 1);
 
-      if (self) {
-        emscripten_set_click_callback(target, self, use_capture, callback_t<EmscriptenMouseEvent>::callback);
-      } else {
-        emscripten_set_click_callback(target, self, use_capture, nullptr);
-      }
+      push_result(L, set_on_thread(target, self, use_capture, self ? callback_t<T>::callback : nullptr, thread));
+    }
+
+    void impl_gc(lua_State* L) {
+      static_cast<callback_base_t*>(luaL_checkudata(L, 1, "dromozoa.web.event.callback"))->~callback_base_t();
+    }
+
+    void impl_set_click_callback(lua_State* L) {
+      set_callback<EmscriptenMouseEvent>(L, EMSCRIPTEN_EVENT_CLICK, emscripten_set_click_callback_on_thread);
+    }
+
+    void impl_set_mousedown_callback(lua_State* L) {
+      set_callback<EmscriptenMouseEvent>(L, EMSCRIPTEN_EVENT_MOUSEDOWN, emscripten_set_mousedown_callback_on_thread);
+    }
+
+    void impl_set_mouseup_callback(lua_State* L) {
+      set_callback<EmscriptenMouseEvent>(L, EMSCRIPTEN_EVENT_MOUSEUP, emscripten_set_mouseup_callback_on_thread);
+    }
+
+    void impl_set_dblclick_callback(lua_State* L) {
+      set_callback<EmscriptenMouseEvent>(L, EMSCRIPTEN_EVENT_DBLCLICK, emscripten_set_dblclick_callback_on_thread);
+    }
+
+    void impl_set_mousemove_callback(lua_State* L) {
+      set_callback<EmscriptenMouseEvent>(L, EMSCRIPTEN_EVENT_MOUSEMOVE, emscripten_set_mousemove_callback_on_thread);
+    }
+
+    void impl_set_mouseenter_callback(lua_State* L) {
+      set_callback<EmscriptenMouseEvent>(L, EMSCRIPTEN_EVENT_MOUSEENTER, emscripten_set_mouseenter_callback_on_thread);
+    }
+
+    void impl_set_mouseleave_callback(lua_State* L) {
+      set_callback<EmscriptenMouseEvent>(L, EMSCRIPTEN_EVENT_MOUSELEAVE, emscripten_set_mouseleave_callback_on_thread);
+    }
+
+    void impl_set_mouseover_callback(lua_State* L) {
+      set_callback<EmscriptenMouseEvent>(L, EMSCRIPTEN_EVENT_MOUSEOVER, emscripten_set_mouseover_callback_on_thread);
+    }
+
+    void impl_set_mouseout_callback(lua_State* L) {
+      set_callback<EmscriptenMouseEvent>(L, EMSCRIPTEN_EVENT_MOUSEOUT, emscripten_set_mouseout_callback_on_thread);
+    }
+
+    void impl_set_wheel_callback(lua_State* L) {
+      set_callback<EmscriptenWheelEvent>(L, EMSCRIPTEN_EVENT_WHEEL, emscripten_set_wheel_callback_on_thread);
     }
   }
 
@@ -142,8 +204,16 @@ namespace dromozoa {
       lua_pop(L, 1);
 
       set_field(L, -1, "set_click_callback", function<impl_set_click_callback>());
-
-      set_field(L, -1, "CLICK", EMSCRIPTEN_EVENT_CLICK);
+      set_field(L, -1, "set_mousedown_callback", function<impl_set_mousedown_callback>());
+      set_field(L, -1, "set_mouseup_callback", function<impl_set_mouseup_callback>());
+      set_field(L, -1, "set_dblclick_callback", function<impl_set_dblclick_callback>());
+      set_field(L, -1, "set_mousemove_callback", function<impl_set_mousemove_callback>());
+      set_field(L, -1, "set_mouseenter_callback", function<impl_set_mouseenter_callback>());
+      set_field(L, -1, "set_mouseleave_callback", function<impl_set_mouseleave_callback>());
+      set_field(L, -1, "set_mouseover_callback", function<impl_set_mouseover_callback>());
+      set_field(L, -1, "set_mouseout_callback", function<impl_set_mouseout_callback>());
+      set_field(L, -1, "set_mouseout_callback", function<impl_set_mouseout_callback>());
+      set_field(L, -1, "set_wheel_callback", function<impl_set_wheel_callback>());
     }
   }
 }

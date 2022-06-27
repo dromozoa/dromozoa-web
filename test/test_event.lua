@@ -36,8 +36,11 @@ div:append "CLICK YOU!"
 body:append(div)
 
 
-local function cb()
-  print "click.output"
+local function cb(event_type, event)
+  print("click.output", event_type)
+  for k, v in pairs(event) do
+    print(k, v)
+  end
 end
 
 event.set_click_callback("#output", false, cb)

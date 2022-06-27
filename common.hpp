@@ -126,6 +126,10 @@ namespace dromozoa {
     lua_pushlstring(L, value.data(), value.size());
   }
 
+  inline void push(lua_State* L, bool value) {
+    lua_pushboolean(L, value);
+  }
+
   template <class T, T (*T_function)(lua_State*)>
   inline void push(lua_State* L, function_wrapper<T, T_function>) {
     lua_pushcfunction(L, (function_wrapper<T, T_function>::value));

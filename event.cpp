@@ -27,11 +27,6 @@
 
 namespace dromozoa {
   namespace {
-    class callback_base_t {
-    public:
-      virtual ~callback_base_t() {}
-    };
-
     void push_event(lua_State* L, const EmscriptenMouseEvent* event) {
       lua_newtable(L);
       set_field(L, -1, "timestamp", event->timestamp);
@@ -50,6 +45,11 @@ namespace dromozoa {
       set_field(L, -1, "target_x", event->targetX);
       set_field(L, -1, "target_y", event->targetY);
     }
+
+    class callback_base_t {
+    public:
+      virtual ~callback_base_t() {}
+    };
 
     template <class T>
     class callback_t : public callback_base_t {
@@ -142,6 +142,8 @@ namespace dromozoa {
       lua_pop(L, 1);
 
       set_field(L, -1, "set_click_callback", function<impl_set_click_callback>());
+
+      set_field(L, -1, "CLICK", EMSCRIPTEN_EVENT_CLICK);
     }
   }
 }

@@ -36,9 +36,9 @@ div:append "CLICK YOU!"
 body:append(div)
 
 
-local function cb(event_type, event)
-  print("click.output", event_type)
-  for k, v in pairs(event) do
+local function cb(event_type, event_data)
+  print("click.output", event_type, event.CLICK)
+  for k, v in pairs(event_data) do
     print(k, v)
   end
 end

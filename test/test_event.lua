@@ -35,9 +35,10 @@ div:set_attribute("id", "mydiv2")
 div:append "CLICK YOU!"
 body:append(div)
 
+body:append(document:create_element "div" :set_attribute("id", "mydiv3") : set_attribute("style", "padding: 1em; background-color: yellow") :append "さわってみて")
 
 local function cb(event_type, event_data)
-  print("click.output", event_type, event.CLICK)
+  print("click.output", event_type)
   for k, v in pairs(event_data) do
     print(k, v)
   end
@@ -64,8 +65,29 @@ event.set_click_callback("#mydiv", false, function ()
   collectgarbage()
 end)
 
-event.set_click_callback("#mydiv2", false, function ()
+print(event.set_click_callback("#mydiv2", false, function ()
   print "click.mydiv2"
   event.set_click_callback("#mydiv2")
-end)
+end))
 
+
+local events = {
+  "click";
+  "mousedown";
+  "mouseup";
+  "dblclick";
+  "mousemove";
+  "mouseenter";
+  "mouseleave";
+  "mouseover";
+  "mouseout";
+}
+
+for i = 1, #events do
+  local ev = events[i]
+  event["set_" .. ev .. "_callback"]("#mydiv3", false, function () print(ev) end)
+end
+
+event.set_wheel_callback("#mydiv2", false, function (event_type, event)
+  print(event.delta_x, event.delta_y, event.delta_z)
+end)

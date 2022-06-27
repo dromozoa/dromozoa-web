@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>dromozoa-web</title>
+  </head>
+  <body>
+    <script>
+      var Module = {
+        preRun: [],
+        postRun: [],
+        print: function (text) {
+          console.log(text);
+        },
+        setStatus: function (text) {
+          console.log("[STATUS] " + text);
+        },
+        totalDependencies: 0,
+        monitorRunDependencies: function (left) {
+          Module.totalDependencies = Math.max(Module.totalDependencies, left);
+          Module.setStatus("Preparing... (" + (Module.totalDependencies - left) + "/" + Module.totalDependencies + ")");
+          if (!left) {
+            Module.setStatus("All downloads complete.");
+          }
+        }
+      };
+      window.onerror = function () {
+        Module.setStatus('Exception thrown');
+      };
+      Module.setStatus('Downloading...');
+    </script>
+    {{{ SCRIPT }}}
+  </body>
+</html>

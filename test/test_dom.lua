@@ -20,21 +20,21 @@ local dom = require "dromozoa.web.dom"
 
 local document <close> = dom.document()
 local body <close> = document:query_selector "body"
-local textarea <close> = document:query_selector "textarea"
+-- local textarea <close> = document:query_selector "textarea"
 
-print(textarea)
-print(textarea.get_attribute_names)
-local attribute_names = textarea:get_attribute_names()
+-- print(textarea)
+-- print(textarea.get_attribute_names)
+-- local attribute_names = textarea:get_attribute_names()
 
-print(attribute_names)
-for i = 1, #attribute_names do
-  local name = attribute_names[i]
-  print(name, textarea:get_attribute(name))
-end
+-- print(attribute_names)
+-- for i = 1, #attribute_names do
+--   local name = attribute_names[i]
+--   print(name, textarea:get_attribute(name))
+-- end
 
-print(textarea:get_attribute "no-such-attr")
+-- print(textarea:get_attribute "no-such-attr")
 
-attribute_names = nil
+-- attribute_names = nil
 
 collectgarbage()
 collectgarbage()
@@ -46,18 +46,19 @@ body:append(div)
 local s = core.get_now()
 for i = 1, 240 do
   -- 4秒ごとに明滅する
-  local t = core.get_now()
-  local x = ((t - s) % 4000) / 2000 * math.pi
-  local y = math.min(math.floor((math.cos(x) + 1) * 128), 255)
-  local z = 255 - y
+  -- local t = core.get_now()
+  -- local x = ((t - s) % 4000) / 2000 * math.pi
+  -- local y = math.min(math.floor((math.cos(x) + 1) * 128), 255)
+  -- local z = 255 - y
 
-  textarea:set_attribute("style", ("background-color: #%02X%02X%02X; color: #FF%02X%02X"):format(z, z, z, y, y))
+  -- textarea:set_attribute("style", ("background-color: #%02X%02X%02X; color: #FF%02X%02X"):format(z, z, z, y, y))
   coroutine.yield()
 end
 
-textarea:remove_attribute("style")
+-- textarea:remove_attribute("style")
 
 body:append(document:create_element "div" :append "おわったよ")
+print "おわったよ"
 
 collectgarbage()
 collectgarbage()

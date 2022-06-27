@@ -18,7 +18,7 @@
 CXX = em++
 CPPFLAGS += -Ilua/src -DLUA_USE_POSIX -MMD
 CXXFLAGS += -Wall -W -std=c++20 -O2 -fexceptions -sNO_DISABLE_EXCEPTION_CATCHING
-LDFLAGS += -Llua/src -fexceptions -sFETCH
+LDFLAGS += -Llua/src -fexceptions -sFETCH --shell-file shell.html
 LDLIBS += -llua
 
 # source-map
@@ -46,8 +46,8 @@ clean:
 clean-recursive:
 	(cd lua/src && $(MAKE) clean && $(RM) lua*.html lua*.js lua*.wasm)
 
-$(TARGET): $(OBJS)
-	$(CXX) $(CPPFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@
+$(TARGET): $(OBJS) shell.html
+	$(CXX) $(CPPFLAGS) $(LDFLAGS) $(OBJS) $(LDLIBS) -o $@
 
 .cpp.o:
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $<

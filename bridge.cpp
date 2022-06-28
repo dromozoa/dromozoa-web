@@ -34,6 +34,27 @@ namespace dromozoa {
       LuaからJavaScriptのオブジェクトを操作する
 
       EM_ASMから、C関数を呼び出して、直接、Luaのスタックに乗せる
+
+      event_target:addEventListener(type, listener, use_capture)
+
+      -- onceサポート？
+      [node, type, listener, use_capture]
+
+      __gcでnodeが消されたら、イベントリスナのマップも削除する？
+      →これはダメ
+      →documentからもdocument_fragmentからもたどれなくなったら？
+      node.isConnectedでどうにかならない？
+      →document_fragmentについてるときはisConnectedはfalse
+      →parentNodeをたどる？
+      →getRootNode()
+
+      Map.deleteは存在していなくてもエラーにならない。
+
+      map[node] = {
+        type: [ listener, use_capture ]
+      }
+
+      listenerはLuaにバインドしている
      */
 
     thread_reference ref;
@@ -64,6 +85,10 @@ namespace dromozoa {
       int id_ = 0;
     };
 
+    object_t* test_object(lua_State* L, int index) {
+      return static_cast<object_t*>(luaL_testudata(L, index, "dromozoa.web.bridge.object"));
+    }
+
     object_t* check_object(lua_State* L, int index) {
       return static_cast<object_t*>(luaL_checkudata(L, index, "dromozoa.web.bridge.object"));
     }
@@ -71,6 +96,19 @@ namespace dromozoa {
     template <class T>
     std::unique_ptr<char, decltype(&std::free)> make_unique_cstr(T ptr) {
       return std::unique_ptr<char, decltype(&std::free)>(reinterpret_cast<char*>(ptr), std::free);
+    }
+
+    void impl_eq(lua_State* L) {
+      auto* self = test_object(L, 1);
+      auto* that = test_object(L, 2);
+      if (self && that) {
+        EM_ASM({
+          const D = dromozoa_web_bridge;
+          D.push_boolean($0, D.objects.get($1) === D.objects.get($2));
+        }, L, self->get_id(), that->get_id());
+      } else {
+        lua_pushboolean(L, self == that);
+      }
     }
 
     void impl_index(lua_State* L) {
@@ -206,7 +244,7 @@ namespace dromozoa {
             }, id, i - 2, lua_tostring(L, i));
             break;
           default:
-            if (object_t* arg = static_cast<object_t*>(luaL_testudata(L, i, "dromozoa.web.bridge.object"))) {
+            if (object_t* arg = test_object(L, i)) {
               std::cout << "args[" << i - 1 << "] " << arg->get_id() << "\n";
               EM_ASM({
                 dromozoa_web_bridge.objects.get($0)[$1] = dromozoa_web_bridge.objects.get($2);
@@ -250,9 +288,6 @@ namespace dromozoa {
             }
         }
       }, L, self->get_id(), id);
-
-      // function.apply(this, []);
-
     }
 
     void impl_close(lua_State* L) {
@@ -294,6 +329,7 @@ namespace dromozoa {
     });
 
     luaL_newmetatable(L, "dromozoa.web.bridge.object");
+    set_field(L, -1, "__eq", function<impl_eq>());
     set_field(L, -1, "__index", function<impl_index>());
     set_field(L, -1, "__newindex", function<impl_newindex>());
     set_field(L, -1, "__call", function<impl_call>());

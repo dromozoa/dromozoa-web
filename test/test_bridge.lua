@@ -32,11 +32,45 @@ print("document", document)
 print("document.createElement", document.createElement)
 local div = document.createElement(document, "div")
 div:append "テストだよ"
+div.id = "x"
 div.style.color = "red"
 div.style.backgroundColor = "black"
 document.body:append(div)
--- local div = document:createElement("div")
 
--- local window = bridge.get_window()
-window.console:log "てすとだよ！！！！"
+local div2 = document:createElement("div")
+div2.id = "y"
+div2:append "これもテスト"
+document.body:append(div2)
+
+local div3 = document:getElementById "x"
+print(div, div2, div3)
+print("div==div2", div == div2)
+print("div==div3", div == div3)
+print("div==nil", div == nil)
+
+div3:remove()
+-- document.body:append(div3)
+
+local df = document:createDocumentFragment()
+
+print("!1", document:getElementById "x")
+print("!2", df:getElementById "x")
+print("!3", div3.isConnected)
+print("!4", div3:getRootNode().nodeName)
+
+df:append(div3)
+
+print("!1", document:getElementById "x")
+print("!2", df:getElementById "x")
+print("!3", div3.isConnected)
+print("!4", div3:getRootNode().nodeName)
+
+document.body:append(df)
+
+print("!1", document:getElementById "x")
+print("!2", df:getElementById "x")
+print("!3", div3.isConnected)
+print("!4", div3:getRootNode().nodeName)
+
+-- window.console:log "てすとだよ！！！！"
 

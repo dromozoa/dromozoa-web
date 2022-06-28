@@ -53,24 +53,24 @@ div3:remove()
 
 local df = document:createDocumentFragment()
 
-print("!1", document:getElementById "x")
-print("!2", df:getElementById "x")
-print("!3", div3.isConnected)
-print("!4", div3:getRootNode().nodeName)
+-- print("!1", document:getElementById "x")
+-- print("!2", df:getElementById "x")
+-- print("!3", div3.isConnected)
+-- print("!4", div3:getRootNode().nodeName)
 
 df:append(div3)
 
-print("!1", document:getElementById "x")
-print("!2", df:getElementById "x")
-print("!3", div3.isConnected)
-print("!4", div3:getRootNode().nodeName)
+-- print("!1", document:getElementById "x")
+-- print("!2", df:getElementById "x")
+-- print("!3", div3.isConnected)
+-- print("!4", div3:getRootNode().nodeName)
 
 document.body:append(df)
 
-print("!1", document:getElementById "x")
-print("!2", df:getElementById "x")
-print("!3", div3.isConnected)
-print("!4", div3:getRootNode().nodeName)
+-- print("!1", document:getElementById "x")
+-- print("!2", df:getElementById "x")
+-- print("!3", div3.isConnected)
+-- print("!4", div3:getRootNode().nodeName)
 
 div3:addEventListener("click", function (ev)
   print(ev)

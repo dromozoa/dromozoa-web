@@ -61,6 +61,11 @@ namespace dromozoa {
       }
 
       listenerはLuaにバインドしている
+
+      callback_type関数をつくる
+        とりあえず、EventListener？
+
+
      */
 
     thread_reference ref;
@@ -144,7 +149,7 @@ namespace dromozoa {
             break;
           default:
             if (v === null) {
-              D.push_nil($0);
+              D.push_null($0);
             } else {
               const id = D.generate_id();
               D.objects.set(id, v);
@@ -193,7 +198,7 @@ namespace dromozoa {
             dromozoa_web_bridge.objects.get($0)[UTF8ToString($1)] = UTF8ToString($2);
           }, self->get_id(), key, lua_tostring(L, 3));
           break;
-        default:
+        case LUA_TUSERDATA:
           if (object_t* that = test_object(L, 3)) {
             EM_ASM({
               dromozoa_web_bridge.objects.get($0)[UTF8ToString($1)] = dromozoa_web_bridge.objects.get($2);
@@ -201,6 +206,18 @@ namespace dromozoa {
           } else {
             std::cerr << "unsupported type\n";
           }
+          break;
+        case LUA_TLIGHTUSERDATA:
+          if (void* that = lua_touserdata(L, 3)) {
+            std::cerr << "unsupported type\n";
+          } else {
+            EM_ASM({
+              dromozoa_web_bridge.objects.get($0)[UTF8ToString($1)] = null;
+            }, self->get_id(), key);
+          }
+          break;
+        default:
+          std::cerr << "unsupported type\n";
       }
     }
 
@@ -255,20 +272,15 @@ namespace dromozoa {
               dromozoa_web_bridge.objects.get($0)[$1] = UTF8ToString($2);
             }, id, i - 2, lua_tostring(L, i));
             break;
-          default:
-            if (object_t* that = test_object(L, i)) {
-              // std::cout << "args[" << i - 1 << "] " << that->get_id() << "\n";
-              EM_ASM({
-                dromozoa_web_bridge.objects.get($0)[$1] = dromozoa_web_bridge.objects.get($2);
-              }, id, i - 2, that->get_id());
-            } else {
-              // 関数呼び出し可能であると仮定する
-              // いまのところ、refは解放されない。
-              // D.objectsは__gcで解放される
+          case LUA_TFUNCTION:
+            // 関数呼び出し可能であると仮定する
+            // いまのところ、refは解放されない。
+            // D.objectsは__gcで解放される
+            {
               lua_pushvalue(L, i);
-              std::cout << luaL_typename(L, -1) << "\n";
+              // std::cout << luaL_typename(L, -1) << "\n";
               int ref = luaL_ref(L, LUA_REGISTRYINDEX);
-              std::cout << "luaL_ref " << ref << "\n";
+              // std::cout << "luaL_ref " << ref << "\n";
               EM_ASM({
                 const ref = $2;
                 dromozoa_web_bridge.objects.get($0)[$1] = function (ev) {
@@ -282,6 +294,28 @@ namespace dromozoa {
                 };
               }, id, i - 2, ref);
             }
+            break;
+          case LUA_TUSERDATA:
+            if (object_t* that = test_object(L, i)) {
+              // std::cout << "args[" << i - 1 << "] " << that->get_id() << "\n";
+              EM_ASM({
+                dromozoa_web_bridge.objects.get($0)[$1] = dromozoa_web_bridge.objects.get($2);
+              }, id, i - 2, that->get_id());
+            } else {
+              std::cerr << "unsupported type\n";
+            }
+            break;
+          case LUA_TLIGHTUSERDATA:
+            if (void* that = lua_touserdata(L, i)) {
+              std::cerr << "unsupported type\n";
+            } else {
+              EM_ASM({
+                dromozoa_web_bridge.objects.get($0)[$1] = null;
+              }, id, i - 2);
+            }
+            break;
+          default:
+            std::cerr << "unsupported type\n";
         }
       }
 
@@ -310,7 +344,7 @@ namespace dromozoa {
             break;
           default:
             if (v === null) {
-              D.push_nil($0);
+              D.push_null($0);
             } else {
               const id = D.generate_id();
               D.objects.set(id, v);
@@ -354,6 +388,7 @@ namespace dromozoa {
       D.push_function = cwrap("dromozoa_web_push_function", null, ["number"]);
       D.call_function = cwrap("dromozoa_web_call_function", null, ["pointer", "number"]);
       D.push_nil = cwrap("dromozoa_web_push_nil", null, ["pointer"]);
+      D.push_null = cwrap("dromozoa_web_push_null", null, ["pointer"]);
       D.push_integer = cwrap("dromozoa_web_push_integer", null, ["pointer", "number"]);
       D.push_number = cwrap("dromozoa_web_push_number", null, ["pointer", "number"]);
       D.push_boolean = cwrap("dromozoa_web_push_boolean", null, ["pointer", "number"]);
@@ -373,6 +408,9 @@ namespace dromozoa {
     lua_newtable(L);
     {
       set_field(L, -1, "get_window", function<impl_get_window>());
+
+      lua_pushlightuserdata(L, nullptr);
+      lua_setfield(L, -2, "null");
     }
   }
 }
@@ -431,13 +469,13 @@ extern "C" {
   }
 
   void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_function(void* state, int ref) {
-    std::cout << "push_function " << state << " " << ref << "\n";
-    auto r = lua_geti(static_cast<lua_State*>(state), LUA_REGISTRYINDEX, ref);
-    std::cout << "lua_geti " << r << "\n";
+    // std::cout << "push_function " << state << " " << ref << "\n";
+    lua_geti(static_cast<lua_State*>(state), LUA_REGISTRYINDEX, ref);
+    // std::cout << "lua_geti " << r << "\n";
   }
 
   void EMSCRIPTEN_KEEPALIVE dromozoa_web_call_function(void* state, int nargs) {
-    std::cout << "call_function " << state << " " << nargs << "\n";
+    // std::cout << "call_function " << state << " " << nargs << "\n";
     if (lua_State* L = static_cast<lua_State*>(state)) {
       if (lua_pcall(L, nargs, 0, 0) != LUA_OK) {
         std::cerr << "cannot lua_pcall: " << lua_tostring(L, -1) << "\n";
@@ -448,6 +486,10 @@ extern "C" {
   void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_nil(void* state) {
     // std::cout << "push_nil " << state << "\n";
     lua_pushnil(static_cast<lua_State*>(state));
+  }
+
+  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_null(void* state) {
+    lua_pushlightuserdata(static_cast<lua_State*>(state), nullptr);
   }
 
   void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_integer(void* state, int value) {

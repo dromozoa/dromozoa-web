@@ -28,4 +28,15 @@ print(document.title)
 
 document.title = "あいうえお"
 
+print("document", document)
+print("document.createElement", document.createElement)
+local div = document.createElement(document, "div")
+div:append "テストだよ"
+div.style.color = "red"
+div.style.backgroundColor = "black"
+document.body:append(div)
+-- local div = document:createElement("div")
+
+-- local window = bridge.get_window()
+window.console:log "てすとだよ！！！！"
 

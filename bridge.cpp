@@ -16,6 +16,7 @@
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <emscripten.h>
+#include <cstddef>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
@@ -31,11 +32,11 @@ namespace dromozoa {
       JS側にvoid pointerでコンテキストを持たせる？
 
       LuaからJavaScriptのオブジェクトを操作する
+
+      EM_ASMから、C関数を呼び出して、直接、Luaのスタックに乗せる
      */
 
     thread_reference ref;
-
-    int object_id = 0;
 
     class object_t : noncopyable {
     public:
@@ -52,7 +53,8 @@ namespace dromozoa {
       void close() {
         if (id_) {
           EM_ASM({
-            dromozoa_web_bridge.objects.delete($0);
+            const D = dromozoa_web_bridge;
+            D.objects.delete($0);
           }, id_);
           id_ = 0;
         }
@@ -74,36 +76,38 @@ namespace dromozoa {
     void impl_index(lua_State* L) {
       auto* self = check_object(L, 1);
       const auto* key = luaL_checkstring(L, 2);
-      std::cout << "impl_index " << self << " " << key << "\n";
-
-      int id = ++object_id;
-      int type = EM_ASM_INT({
-        const objects = dromozoa_web_bridge.objects;
-        const result = objects.get($1)[UTF8ToString($2)];
-        objects.set($0, result);
-        return dromozoa_web_bridge.type_to_int(result);
-      }, id, self->get_id(), key);
-
-      if (type == 0 || type == 1) {
-        lua_pushnil(L);
-      } else if (type == 5) {
-        auto result = EM_ASM_INT({
-          return dromozoa_web_bridge.objects.get($0);
-        }, id);
-        push(L, result);
-      } else if (type == 8) {
-        auto result = make_unique_cstr(EM_ASM_INT({
-          return dromozoa_web_bridge.malloc_utf8(dromozoa_web_bridge.objects.get($0));
-        }, id));
-        push(L, result.get());
-      } else {
-        new_userdata<object_t>(L, "dromozoa.web.bridge.object", id);
-        return;
-      }
+      std::cout << "impl_index " << self << "=" << self->get_id() << " " << key << "\n";
 
       EM_ASM({
-        dromozoa_web_bridge.objects.delete($0);
-      }, id);
+        const D = dromozoa_web_bridge;
+        const v = D.objects.get($1)[UTF8ToString($2)];
+        switch (typeof v) {
+          case "undefined":
+            D.push_nil($0);
+            break;
+          case "boolean":
+            D.push_boolean($0, !!v);
+            break;
+          case "number":
+            if (Number.isInteger(v)) {
+              D.push_integer($0, v);
+            } else {
+              D.push_number($0, v);
+            }
+            break;
+          case "string":
+            D.push_string($0, v);
+            break;
+          default:
+            if (v === null) {
+              D.push_nil($0);
+            } else {
+              const id = D.generate_id();
+              D.objects.set(id, v);
+              D.push_object($0, id);
+            }
+        }
+      }, L, self->get_id(), key);
     }
 
     void impl_newindex(lua_State* L) {
@@ -112,12 +116,143 @@ namespace dromozoa {
       std::cout << "impl_newindex " << self << " " << key << "\n";
 
       switch (lua_type(L, 3)) {
+        case LUA_TNONE:
+        case LUA_TNIL:
+          EM_ASM({
+            dromozoa_web_bridge.objects.get($0)[UTF8ToString($1)] = undefined;
+          }, self->get_id(), key);
+          break;
+        case LUA_TNUMBER:
+          if (lua_isinteger(L, 3)) {
+            EM_ASM({
+              dromozoa_web_bridge.objects.get($0)[UTF8ToString($1)] = $2;
+            }, self->get_id(), key, lua_tointeger(L, 3));
+          } else {
+            EM_ASM({
+              dromozoa_web_bridge.objects.get($0)[UTF8ToString($1)] = $2;
+            }, self->get_id(), key, lua_tonumber(L, 3));
+          }
+          break;
+        case LUA_TBOOLEAN:
+          if (lua_toboolean(L, 3)) {
+            EM_ASM({
+              dromozoa_web_bridge.objects.get($0)[UTF8ToString($1)] = true;
+            }, self->get_id(), key);
+          } else {
+            EM_ASM({
+              dromozoa_web_bridge.objects.get($0)[UTF8ToString($1)] = false;
+            }, self->get_id(), key);
+          }
+          break;
         case LUA_TSTRING:
           EM_ASM({
             dromozoa_web_bridge.objects.get($0)[UTF8ToString($1)] = UTF8ToString($2);
           }, self->get_id(), key, lua_tostring(L, 3));
           break;
+        default:
+          std::cerr << "unsupported type\n";
       }
+    }
+
+    void impl_call(lua_State* L) {
+      auto* self = check_object(L, 1);
+      std::cout << "impl_call " << self << "=" << self->get_id() << "\n";
+
+      int top = lua_gettop(L);
+      for (int i = 2; i <= top; ++i) {
+        std::cout << "  [" << i - 1 << "] " << luaL_typename(L, i) << "\n";
+      }
+
+      int id = EM_ASM_INT({
+        const D = dromozoa_web_bridge;
+        const id = D.generate_id();
+        D.objects.set(id, []);
+        return id;
+      });
+
+      for (int i = 2; i <= top; ++i) {
+        switch (lua_type(L, i)) {
+          case LUA_TNONE: // これは出現しない
+          case LUA_TNIL:
+            EM_ASM({
+              dromozoa_web_bridge.objects.get($0)[$1] = undefined;
+            }, id, i - 2);
+            break;
+          case LUA_TNUMBER:
+            if (lua_isinteger(L, i)) {
+              EM_ASM({
+                dromozoa_web_bridge.objects.get($0)[$1] = $2;
+              }, id, i - 2, lua_tointeger(L, i));
+            } else {
+              EM_ASM({
+                dromozoa_web_bridge.objects.get($0)[UTF8ToString($1)] = $2;
+              }, id, i - 2, lua_tonumber(L, i));
+            }
+            break;
+          case LUA_TBOOLEAN:
+            if (lua_toboolean(L, i)) {
+              EM_ASM({
+                dromozoa_web_bridge.objects.get($0)[$1] = true;
+              }, id, i - 2);
+            } else {
+              EM_ASM({
+                dromozoa_web_bridge.objects.get($0)[$1] = false;
+              }, id, i - 2);
+            }
+            break;
+          case LUA_TSTRING:
+            EM_ASM({
+              dromozoa_web_bridge.objects.get($0)[$1] = UTF8ToString($2);
+            }, id, i - 2, lua_tostring(L, i));
+            break;
+          default:
+            if (object_t* arg = static_cast<object_t*>(luaL_testudata(L, i, "dromozoa.web.bridge.object"))) {
+              std::cout << "args[" << i - 1 << "] " << arg->get_id() << "\n";
+              EM_ASM({
+                dromozoa_web_bridge.objects.get($0)[$1] = dromozoa_web_bridge.objects.get($2);
+              }, id, i - 2, arg->get_id());
+            } else {
+              std::cerr << "unsupported type\n";
+            }
+        }
+      }
+
+      EM_ASM({
+        const D = dromozoa_web_bridge;
+        const args = D.objects.get($2);
+        D.objects.delete($2);
+        const arg = args.shift();
+        const v = D.objects.get($1).apply(arg, args);
+        switch (typeof v) {
+          case "undefined":
+            D.push_nil($0);
+            break;
+          case "boolean":
+            D.push_boolean($0, !!v);
+            break;
+          case "number":
+            if (Number.isInteger(v)) {
+              D.push_integer($0, v);
+            } else {
+              D.push_number($0, v);
+            }
+            break;
+          case "string":
+            D.push_string($0, v);
+            break;
+          default:
+            if (v === null) {
+              D.push_nil($0);
+            } else {
+              const id = D.generate_id();
+              D.objects.set(id, v);
+              D.push_object($0, id);
+            }
+        }
+      }, L, self->get_id(), id);
+
+      // function.apply(this, []);
+
     }
 
     void impl_close(lua_State* L) {
@@ -133,11 +268,12 @@ namespace dromozoa {
     }
 
     void impl_get_window(lua_State* L) {
-      int id = ++object_id;
       EM_ASM({
-        dromozoa_web_bridge.objects.set($0, window);
-      }, id);
-      new_userdata<object_t>(L, "dromozoa.web.bridge.object", id);
+        const D = dromozoa_web_bridge;
+        const id = D.generate_id();
+        D.objects.set(id, window);
+        D.push_object($0, id);
+      }, L);
     }
   }
 
@@ -145,52 +281,22 @@ namespace dromozoa {
     ref = thread_reference(L);
 
     EM_ASM({
-      window.dromozoa_web_bridge = {};
-      dromozoa_web_bridge.objects = new Map();
-      dromozoa_web_bridge.type_to_int = function (v) {
-        switch (typeof v) {
-          case "undefined":
-            return 0;
-          case "object":
-            if (v === null) {
-              return 1;
-            } else {
-              return 2;
-            }
-          case "boolean":
-            if (v === true) {
-              return 3;
-            } else {
-              return 4;
-            }
-          case "number":
-            if (Number.isInteger(v)) {
-              return 5;
-            } else {
-              return 6;
-            }
-          case "bigint":
-            return 7;
-          case "string":
-            return 8;
-          case "symbol":
-            return 9;
-          case "function":
-            return 10;
-        }
-        return 11;
-      };
-      dromozoa_web_bridge.malloc_utf8 = function (s) {
-        const size = lengthBytesUTF8(s) + 1;
-        const data = _malloc(size);
-        stringToUTF8(s, data, size);
-        return data;
-      };
+      const D = window.dromozoa_web_bridge = {};
+      D.id = 0;
+      D.generate_id = function () { return ++D.id; };
+      D.objects = new Map();
+      D.push_nil = cwrap("dromozoa_web_push_nil", null, ["pointer"]);
+      D.push_integer = cwrap("dromozoa_web_push_integer", null, ["pointer", "number"]);
+      D.push_number = cwrap("dromozoa_web_push_number", null, ["pointer", "number"]);
+      D.push_boolean = cwrap("dromozoa_web_push_boolean", null, ["pointer", "number"]);
+      D.push_string = cwrap("dromozoa_web_push_string", null, ["pointer", "string"]);
+      D.push_object = cwrap("dromozoa_web_push_object", null, ["pointer", "number"]);
     });
 
     luaL_newmetatable(L, "dromozoa.web.bridge.object");
     set_field(L, -1, "__index", function<impl_index>());
     set_field(L, -1, "__newindex", function<impl_newindex>());
+    set_field(L, -1, "__call", function<impl_call>());
     set_field(L, -1, "__close", function<impl_close>());
     set_field(L, -1, "__gc", function<impl_gc>());
     lua_pop(L, 1);
@@ -249,5 +355,36 @@ extern "C" {
         std::cerr << "cannot lua_pcall: " << lua_tostring(L, -1) << "\n";
       }
     }
+  }
+
+  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_nil(void* state) {
+    std::cout << "push_nil " << state << "\n";
+    lua_pushnil(static_cast<lua_State*>(state));
+  }
+
+  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_integer(void* state, int value) {
+    std::cout << "push_integer " << state << " " << value << "\n";
+    lua_pushinteger(static_cast<lua_State*>(state), value);
+  }
+
+  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_number(void* state, double value) {
+    std::cout << "push_number " << state << " " << value << "\n";
+    lua_pushnumber(static_cast<lua_State*>(state), value);
+  }
+
+  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_boolean(void* state, int value) {
+    std::cout << "push_boolean " << state << " " << value << "\n";
+    lua_pushboolean(static_cast<lua_State*>(state), value);
+  }
+
+  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_string(void* state, const char* value) {
+    std::cout << "push_string " << state << " " << value << "\n";
+    lua_pushstring(static_cast<lua_State*>(state), value);
+  }
+
+  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_object(void* state, int id) {
+    std::cout << "push_object " << state << " " << id << "\n";
+    using namespace dromozoa;
+    new_userdata<object_t>(static_cast<lua_State*>(state), "dromozoa.web.bridge.object", id);
   }
 }

@@ -72,5 +72,21 @@ print("!2", df:getElementById "x")
 print("!3", div3.isConnected)
 print("!4", div3:getRootNode().nodeName)
 
+div3:addEventListener("click", function (ev)
+  print(ev)
+  print(ev.target.nodeName, ev.target.id)
+end)
+
+local link = document:createElement "a"
+link.href = "index.html"
+link:append "index.html"
+div3:append(link)
+
+link:addEventListener("click", function (ev)
+  print "link clicked"
+  ev:preventDefault()
+  ev:stopPropagation()
+end)
+
 -- window.console:log "てすとだよ！！！！"
 

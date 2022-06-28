@@ -18,7 +18,7 @@
 CXX = em++
 CPPFLAGS += -Ilua/src -DLUA_USE_POSIX -MMD
 CXXFLAGS += -Wall -W -std=c++20 -O2 -fexceptions -sNO_DISABLE_EXCEPTION_CATCHING
-LDFLAGS += -Llua/src -fexceptions -sFETCH --shell-file shell.html
+LDFLAGS += -Llua/src -fexceptions -sEXPORTED_RUNTIME_METHODS=ccall,cwrap -sFETCH --shell-file shell.html
 LDLIBS += -llua
 
 # source-map
@@ -27,6 +27,7 @@ LDLIBS += -llua
 
 OBJS = \
 	boot.o \
+	bridge.o \
 	core.o \
 	dom.o \
 	event.o \

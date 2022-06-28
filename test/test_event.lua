@@ -21,9 +21,14 @@ local event = require "dromozoa.web.event"
 
 local document = dom.document()
 local body = document:query_selector "body"
--- local textarea = document:query_selector "textarea"
 
--- textarea:set_attribute("id", "ta")
+local textarea = document:create_element "textarea" :append "テキストエリア"
+textarea
+  :set_attribute("id", "output")
+  :set_attribute("rows", 8)
+  :set_attribute("cols", 80)
+body:append(textarea)
+
 
 local div = document:create_element "div"
 div:set_attribute("id", "mydiv")
@@ -37,25 +42,25 @@ body:append(div)
 
 body:append(document:create_element "div" :set_attribute("id", "mydiv3") : set_attribute("style", "padding: 1em; background-color: yellow") :append "さわってみて")
 
--- local function cb(event_type, event_data)
---   print("click.output", event_type)
---   for k, v in pairs(event_data) do
---     print(k, v)
---   end
--- end
+local function cb(event_type, event_data)
+  print("click.output", event_type)
+  for k, v in pairs(event_data) do
+    print(k, v)
+  end
+end
 
--- event.set_click_callback("#output", false, cb)
+event.set_click_callback("#output", false, cb)
 
 local toggle = false
 
 event.set_click_callback("#mydiv", false, function ()
   print "click.mydiv"
   toggle = not toggle
-  -- if toggle then
-  --   event.set_click_callback("#output", false)
-  -- else
-  --   event.set_click_callback("#output", false, cb)
-  -- end
+  if toggle then
+    event.set_click_callback("#output", false)
+  else
+    event.set_click_callback("#output", false, cb)
+  end
   local R = debug.getregistry()
   for k, v in pairs(R["dromozoa.web.event.callbacks"]) do
     print(k, v)

@@ -20,6 +20,17 @@ local core = require "dromozoa.web.core"
 print(core.run_script_string [[document.location.href]])
 print(core.run_script_string [[document.location.search]])
 
+for i = 1, 4 do
+  print(core.run_script_string [[
+    (function () {
+      let f = Module.cwrap("callback", "number", ["string", "pointer"]);
+      console.log(f);
+      f(JSON.stringify([ "test", 42 ]), 2);
+      return 7;
+    })()
+  ]])
+end
+
 print(core.get_device_pixel_ratio())
 print(core.get_window_title())
 core.set_window_title "タイトル変更"

@@ -88,5 +88,18 @@ link:addEventListener("click", function (ev)
   ev:stopPropagation()
 end)
 
--- window.console:log "てすとだよ！！！！"
+window.console:log "てすとだよ！！！！"
+
+local div4 = document:createElement "div"
+div4.id = "Z"
+div4:append "removeのテスト"
+div4:addEventListener("click", function (ev)
+  print "div4 clicked"
+end)
+document.body:appendChild(div4)
+-- document.body:removeChild(div4)
+-- document.body:appendChild(div4)
+
+
+
 

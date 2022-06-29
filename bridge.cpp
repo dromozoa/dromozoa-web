@@ -240,15 +240,6 @@ namespace dromozoa {
     void impl_gc(lua_State* L) {
       object_t::check(L, 1)->~object_t();
     }
-
-    void impl_get_window(lua_State* L) {
-      EM_ASM({
-        const D = dromozoa_web_bridge;
-        const id = D.generate_id();
-        D.objects.set(id, window);
-        D.push_object($0, id);
-      }, L);
-    }
   }
 
   void initialize_bridge(lua_State* L) {
@@ -312,7 +303,13 @@ namespace dromozoa {
 
     lua_newtable(L);
     {
-      set_field(L, -1, "get_window", function<impl_get_window>());
+      EM_ASM({
+        const D = dromozoa_web_bridge;
+        const id = D.generate_id();
+        D.objects.set(id, window);
+        D.push_object($0, id);
+      }, L);
+      lua_setfield(L, -2, "window");
 
       lua_pushlightuserdata(L, nullptr);
       lua_setfield(L, -2, "null");

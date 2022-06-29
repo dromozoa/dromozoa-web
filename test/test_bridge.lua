@@ -100,3 +100,10 @@ document.body:appendChild(div4)
 -- document.body:removeChild(div4)
 -- document.body:appendChild(div4)
 
+local js_number = bridge.new(window.Number, 42)
+print(js_number)
+window.console:log(js_number)
+
+
+
+

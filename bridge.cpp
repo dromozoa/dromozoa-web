@@ -49,6 +49,7 @@ namespace dromozoa {
       callback_type関数をつくる
         とりあえず、EventListener？
 
+      function => listener
      */
 
     thread_reference ref;
@@ -94,7 +95,8 @@ namespace dromozoa {
           break;
         case LUA_TNUMBER:
           if (lua_isinteger(L, index)) {
-            EM_ASM({ dromozoa_web_bridge.stack.push($0); }, lua_tointeger(L, index));
+            // int64_tをそのままわたすと怒られる
+            EM_ASM({ dromozoa_web_bridge.stack.push($0); }, static_cast<int>(lua_tointeger(L, index)));
           } else {
             EM_ASM({ dromozoa_web_bridge.stack.push($0); }, lua_tonumber(L, index));
           }
@@ -210,7 +212,7 @@ namespace dromozoa {
       auto* self = object_t::check(L, 1);
       int top = lua_gettop(L);
 
-      int id = EM_ASM_INT({
+      auto id = EM_ASM_INT({
         const D = dromozoa_web_bridge;
         const id = D.generate_id();
         D.objects.set(id, []);
@@ -239,6 +241,29 @@ namespace dromozoa {
 
     void impl_gc(lua_State* L) {
       object_t::check(L, 1)->~object_t();
+    }
+
+    void impl_new(lua_State* L) {
+      int top = lua_gettop(L);
+
+      auto id = EM_ASM_INT({
+        const D = dromozoa_web_bridge;
+        const id = D.generate_id();
+        D.objects.set(id, []);
+        return id;
+      });
+
+      for (int i = 1; i <= top; ++i) {
+        js_push(L, i);
+        js_set(id, i - 1);
+      }
+
+      EM_ASM({
+        const D = dromozoa_web_bridge;
+        const a = D.objects.get($1);
+        D.objects.delete($1);
+        D.push($0, D.new.apply(undefined, a));
+      }, L, id);
     }
   }
 
@@ -290,6 +315,10 @@ namespace dromozoa {
             }
         }
       };
+
+      D.new = (T, ...a) => {
+        return new T(a);
+      };
     });
 
     luaL_newmetatable(L, object_t::NAME);
@@ -303,6 +332,8 @@ namespace dromozoa {
 
     lua_newtable(L);
     {
+      set_field(L, -1, "new", function<impl_new>());
+
       EM_ASM({
         const D = dromozoa_web_bridge;
         const id = D.generate_id();

@@ -30,12 +30,6 @@
 namespace dromozoa {
   namespace {
     /*
-      JS側にvoid pointerでコンテキストを持たせる？
-
-      LuaからJavaScriptのオブジェクトを操作する
-
-      EM_ASMから、C関数を呼び出して、直接、Luaのスタックに乗せる
-
       event_target:addEventListener(type, listener, use_capture)
 
       -- onceサポート？
@@ -52,59 +46,10 @@ namespace dromozoa {
 
       Map.deleteは存在していなくてもエラーにならない。
 
-      listener = function (ev) {
-        luaL_ref(key)
-        push(ev)
-      }
-
-      map[node] = {
-        type: [ listener, use_capture ]
-      }
-
-      listenerはLuaにバインドしている
-
       callback_type関数をつくる
         とりあえず、EventListener？
 
-      javascriptにもスタックを作って
-        PUSH_VALUE
-        SET_MAP
-        SET_ARRAY
-      みたいに分割する
-
-      javascriptのthisとLuaのself（第一引数）をどうするか
-
-
-      lua functionは、とりあえず、参照IDにする
-
-
-
      */
-
-    //
-    // event_target:add_event_listener(type, listener, use_capture)
-    // listener(event)
-    // dromozoa_web_tied_objects[i] = ...
-    //
-    // double
-    // int ref;
-    //
-    // {"ref":0}
-    // querySelector
-    // querySelectorAll
-    //
-    // composite object
-
-    // event object
-    // event.currentTarget
-    //
-    // serialize戦略
-
-    // lua->c++->js
-    // js->c++->lua
-    //
-    // 構造体をプッシュ
-    // Luaに直接？
 
     thread_reference ref;
 

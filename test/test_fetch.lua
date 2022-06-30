@@ -27,6 +27,9 @@ local p1 = D.window:fetch("main.lua", {
   };
   cache = "no-store";
 })
+
+local done
+
 print("p1", D.get(p1))
 local p2 = p1:then_(function (response)
   -- 関数がFinalizationRegistryから解放されないと、内部的にひもづいたpromiseが
@@ -38,15 +41,22 @@ end)
 print("p2", D.get(p2))
 local p3 = p2:then_(function (text)
   print(text)
+  done = true
 end)
 print("p3", D.get(p3))
 local p4 = p3:catch(function (e)
   print("catch", e.message)
+  done = true
 end)
 print("p4", D.get(p4))
 
-D.window.console:log { foo = 17, bar = 23, baz = { 1, 2, 3, qux = true } }
+while not done do
+  coroutine.yield()
+end
 
+D.window.console:log { foo = 17, bar = 23, baz = D.array { 1, 2, D.null, 3, qux = true } }
 
-
-
+local array = D.array { 1, 2, 3, qux = true }
+print(array)
+print(#array, array[1], array.qux)
+print(D.window.JSON:stringify({ foo = 17, bar = 23, baz = D.array { 1, 2, D.null, 3, qux = true } }))

@@ -35,6 +35,11 @@ namespace dromozoa {
   namespace {
     thread_reference thread;
 
+    class array_t : noncopyable {
+    public:
+      static constexpr char NAME[] = "dromozoa.web.array";
+    };
+
     class object_t : noncopyable {
     public:
       static constexpr char NAME[] = "dromozoa.web.object";
@@ -87,14 +92,17 @@ namespace dromozoa {
           {
             index = lua_absindex(L, index);
 
-            // lengthが1以上だったら、配列とする
-            // 再帰的にObjectまたはArrayに変換する
-            // rawlenにする？
-            lua_len(L, index);
-            bool array = lua_tointeger(L, -1) != 0;
-            lua_pop(L, 1);
+            // metatableがarrayだったら、
+            bool is_array = false;
+            if (lua_getmetatable(L, index)) {
+              luaL_getmetatable(L, array_t::NAME);
+              if (lua_rawequal(L, -1, -2)) {
+                is_array = true;
+              }
+              lua_pop(L, 2);
+            }
 
-            if (array) {
+            if (is_array) {
               JS_ASM({ D.stack.push([]); });
             } else {
               JS_ASM({ D.stack.push({}); });
@@ -104,11 +112,9 @@ namespace dromozoa {
             while (lua_next(L, index)) {
               // k: -2
               // v: -1
-
-              // key, value
               switch (lua_type(L, -2)) {
                 case LUA_TNUMBER:
-                  if (array && lua_isinteger(L, -2)) {
+                  if (is_array && lua_isinteger(L, -2)) {
                     JS_ASM({ D.stack.push($0); }, lua_tonumber(L, -2) - 1);
                   } else {
                     JS_ASM({ D.stack.push($0); }, lua_tonumber(L, -2));
@@ -273,6 +279,10 @@ namespace dromozoa {
       auto* self = object_t::check(L, 1);
       push(L, self->get());
     }
+
+    void impl_array(lua_State* L) {
+      luaL_setmetatable(L, array_t::NAME);
+    }
   }
 
   void initialize(lua_State* L) {
@@ -287,11 +297,15 @@ namespace dromozoa {
     set_field(L, -1, "__gc", function<impl_gc>());
     lua_pop(L, 1);
 
+    luaL_newmetatable(L, array_t::NAME);
+    lua_pop(L, 1);
+
     lua_newtable(L);
     {
       set_field(L, -1, "new", function<impl_new>());
       set_field(L, -1, "ref", function<impl_ref>());
       set_field(L, -1, "get", function<impl_get>());
+      set_field(L, -1, "array", function<impl_array>());
 
       JS_ASM({ D.push_object($0, D.ref_object(window)); }, L);
       lua_setfield(L, -2, "window");

@@ -18,8 +18,11 @@
 CXX = em++
 CPPFLAGS += -Ilua/src -DLUA_USE_POSIX -MMD
 CXXFLAGS += -Wall -W -std=c++20 -O2 -fexceptions -sNO_DISABLE_EXCEPTION_CATCHING
-LDFLAGS += -Llua/src -fexceptions -sEXPORTED_RUNTIME_METHODS=ccall,cwrap -sFETCH --shell-file shell.html
+LDFLAGS += -Llua/src -fexceptions -sEXPORTED_RUNTIME_METHODS=ccall,cwrap -sFETCH --shell-file shell.html --pre-js prologue.js --post-js epilogue.js
 LDLIBS += -llua
+
+# closure compiler
+# LDFLAGS += -Llua/src -fexceptions -sEXPORTED_RUNTIME_METHODS=ccall,cwrap -sFETCH --shell-file shell.html --closure=1
 
 # source-map
 # CXXFLAGS += -Wall -W -std=c++20 -g -fexceptions -sNO_DISABLE_EXCEPTION_CATCHING
@@ -44,10 +47,10 @@ all-recursive:
 clean:
 	$(RM) *.d *.o $(TARGET) index.html index.js index.wasm
 
-clean-recursive:
-	(cd lua/src && $(MAKE) clean && $(RM) lua*.html lua*.js lua*.wasm)
+clean-recursive: clean
+	(cd lua/src && $(MAKE) clean && $(RM) *.d lua*.html lua*.js lua*.wasm)
 
-$(TARGET): $(OBJS) shell.html
+$(TARGET): $(OBJS) shell.html prologue.js epilogue.js
 	$(CXX) $(CPPFLAGS) $(LDFLAGS) $(OBJS) $(LDLIBS) -o $@
 
 .cpp.o:

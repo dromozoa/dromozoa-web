@@ -6,9 +6,9 @@
    - [x] emscriptenを導入する
    - [x] Luaをレポジトリに追加する
    - [x] LuaをCでコンパイルしてWASMを生成する
-   - [ ] emscripten runtimeを使う
+   - [x] emscripten runtimeを使う
     - [x] そもそもメインループどうしよう: コルーチン登場？
-    - [ ] スクリプトの読みこみ方式は？
+    - [x] スクリプトの読みこみ方式は？
    - [x] LuaをC++でコンパイルしてWASMを生成する
 - [ ] Luaとお役立ちモジュールをビルドしてWASMを生成する
    - [x] fetchを実験
@@ -16,11 +16,11 @@
    - [ ] 生メモリを直接扱う
     - [ ] LuaJIT風のメモリ関数
     - [ ] メモリからioモジュールから生メモリに書き出し
-   - [ ] JavaScript関数を扱う
+   - [x] JavaScript関数を扱う
    - [x] コルーチンはどうしよう
 - [x] どうやってLuaの更新に追随しよう
   - Lua本体は基本的にいじらない
-- [ ] stack guardと`luaL_error`は相性がわるい？
+- [x] stack guardと`luaL_error`は相性がわるい？
   - 内部的にスタックを使うからかな？
 
 ## おぼえがき

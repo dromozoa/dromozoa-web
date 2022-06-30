@@ -103,7 +103,7 @@ namespace dromozoa {
       void close() {
         if (id_) {
           EM_ASM({
-            dromozoa_web_dom.delete($0);
+            window.dromozoa_web_dom.delete($0);
           }, id_);
           id_ = 0;
         }
@@ -173,7 +173,7 @@ namespace dromozoa {
     void impl_document_call(lua_State* L) {
       auto id = ++object_id;
       EM_ASM({
-        dromozoa_web_dom.set($0, document);
+        window.dromozoa_web_dom.set($0, document);
       }, id);
       new_userdata<object_t>(L, "dromozoa.web.dom.document", id);
     }
@@ -184,7 +184,7 @@ namespace dromozoa {
 
       auto id = ++object_id;
       EM_ASM({
-        dromozoa_web_dom.set($0, dromozoa_web_dom.get($1).createElement(UTF8ToString($2)));
+        window.dromozoa_web_dom.set($0, window.dromozoa_web_dom.get($1).createElement(UTF8ToString($2)));
       }, id, self->get_id(), name);
       new_userdata<object_t>(L, "dromozoa.web.dom.element", id);
     }
@@ -196,15 +196,15 @@ namespace dromozoa {
 
       auto id = ++object_id;
       auto result = EM_ASM_INT({
-        const result = dromozoa_web_dom.get($1).getAttributeNames();
-        dromozoa_web_dom.set($0, result);
+        const result = window.dromozoa_web_dom.get($1).getAttributeNames();
+        window.dromozoa_web_dom.set($0, result);
         return result.length;
       }, id, self->get_id());
 
       lua_newtable(L);
       for (int i = 0; i < result; ++i) {
         auto result = make_unique_cstr(EM_ASM_INT({
-          const result = dromozoa_web_dom.get($0)[$1];
+          const result = window.dromozoa_web_dom.get($0)[$1];
           if (result) {
             const size = lengthBytesUTF8(result) + 1;
             const data = _malloc(size);
@@ -223,7 +223,7 @@ namespace dromozoa {
       }
 
       EM_ASM({
-        dromozoa_web_dom.delete($0);
+        window.dromozoa_web_dom.delete($0);
       }, id);
     }
 
@@ -232,7 +232,7 @@ namespace dromozoa {
       const auto* name = luaL_checkstring(L, 2);
 
       auto result = make_unique_cstr(EM_ASM_INT({
-        const result = dromozoa_web_dom.get($0).getAttribute(UTF8ToString($1));
+        const result = window.dromozoa_web_dom.get($0).getAttribute(UTF8ToString($1));
         if (result) {
           const size = lengthBytesUTF8(result) + 1;
           const data = _malloc(size);
@@ -255,7 +255,7 @@ namespace dromozoa {
       const auto* value = luaL_checkstring(L, 3);
 
       EM_ASM({
-        dromozoa_web_dom.get($0).setAttribute(UTF8ToString($1), UTF8ToString($2));
+        window.dromozoa_web_dom.get($0).setAttribute(UTF8ToString($1), UTF8ToString($2));
       }, self->get_id(), name, value);
     }
 
@@ -264,7 +264,7 @@ namespace dromozoa {
       const auto* name = luaL_checkstring(L, 2);
 
       EM_ASM({
-        dromozoa_web_dom.get($0).removeAttribute(UTF8ToString($1));
+        window.dromozoa_web_dom.get($0).removeAttribute(UTF8ToString($1));
       }, self->get_id(), name);
     }
 
@@ -274,12 +274,12 @@ namespace dromozoa {
       auto* self = check_object(L, 1);
       if (object_t* node = test_object(L, 2)) {
         EM_ASM({
-          dromozoa_web_dom.get($0).prepend(dromozoa_web_dom.get($1));
+          window.dromozoa_web_dom.get($0).prepend(window.dromozoa_web_dom.get($1));
         }, self->get_id(), node->get_id());
       } else {
         const auto* text = luaL_checkstring(L, 2);
         EM_ASM({
-          dromozoa_web_dom.get($0).prepend(UTF8ToString($1));
+          window.dromozoa_web_dom.get($0).prepend(UTF8ToString($1));
         }, self->get_id(), text);
       }
     }
@@ -288,12 +288,12 @@ namespace dromozoa {
       auto* self = check_object(L, 1);
       if (object_t* node = test_object(L, 2)) {
         EM_ASM({
-          dromozoa_web_dom.get($0).append(dromozoa_web_dom.get($1));
+          window.dromozoa_web_dom.get($0).append(window.dromozoa_web_dom.get($1));
         }, self->get_id(), node->get_id());
       } else {
         const auto* text = luaL_checkstring(L, 2);
         EM_ASM({
-          dromozoa_web_dom.get($0).append(UTF8ToString($1));
+          window.dromozoa_web_dom.get($0).append(UTF8ToString($1));
         }, self->get_id(), text);
       }
     }
@@ -304,9 +304,9 @@ namespace dromozoa {
 
       auto id = ++object_id;
       auto result = EM_ASM_INT({
-        const result = dromozoa_web_dom.get($1).querySelector(UTF8ToString($2));
+        const result = window.dromozoa_web_dom.get($1).querySelector(UTF8ToString($2));
         if (result) {
-          dromozoa_web_dom.set($0, result);
+          window.dromozoa_web_dom.set($0, result);
           return 1;
         } else {
           return 0;
@@ -326,8 +326,8 @@ namespace dromozoa {
 
       auto id = ++object_id;
       auto result = EM_ASM_INT({
-        const result = dromozoa_web_dom.get($1).querySelectorAll(UTF8ToString($2));
-        dromozoa_web_dom.set($0, result);
+        const result = window.dromozoa_web_dom.get($1).querySelectorAll(UTF8ToString($2));
+        window.dromozoa_web_dom.set($0, result);
         return result.length;
       }, id, self->get_id(), selectors);
 
@@ -335,8 +335,8 @@ namespace dromozoa {
       for (int i = 0; i < result; ++i) {
         auto item_id = ++object_id;
         auto result = EM_ASM_INT({
-          const result = dromozoa_web_dom.get($1).item($2);
-          dromozoa_web_dom.set($0, result);
+          const result = window.dromozoa_web_dom.get($1).item($2);
+          window.dromozoa_web_dom.set($0, result);
           return result.nodeType;
         }, item_id, id, i);
         new_userdata<object_t>(L, node_type_to_name(result), item_id);
@@ -344,7 +344,7 @@ namespace dromozoa {
       }
 
       EM_ASM({
-        dromozoa_web_dom.delete($0);
+        window.dromozoa_web_dom.delete($0);
       }, id);
     }
 

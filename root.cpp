@@ -83,6 +83,59 @@ namespace dromozoa {
         case LUA_TSTRING:
           JS_ASM({ D.stack.push(UTF8ToString($0)); }, lua_tostring(L, index));
           break;
+        case LUA_TTABLE:
+          {
+            index = lua_absindex(L, index);
+
+            // lengthが1以上だったら、配列とする
+            // 再帰的にObjectまたはArrayに変換する
+            // rawlenにする？
+            lua_len(L, index);
+            bool array = lua_tointeger(L, -1) != 0;
+            lua_pop(L, 1);
+
+            if (array) {
+              JS_ASM({ D.stack.push([]); });
+            } else {
+              JS_ASM({ D.stack.push({}); });
+            }
+
+            lua_pushnil(L);
+            while (lua_next(L, index)) {
+              // k: -2
+              // v: -1
+
+              // key, value
+              switch (lua_type(L, -2)) {
+                case LUA_TNUMBER:
+                  if (array && lua_isinteger(L, -2)) {
+                    JS_ASM({ D.stack.push($0); }, lua_tonumber(L, -2) - 1);
+                  } else {
+                    JS_ASM({ D.stack.push($0); }, lua_tonumber(L, -2));
+                  }
+                  break;
+                case LUA_TSTRING:
+                  // 文字列なので、スタック上の変換は行われない
+                  JS_ASM({ D.stack.push(UTF8ToString($0)); }, lua_tostring(L, -2));
+                  break;
+                // 数値キーと文字列だけを扱う
+                default:
+                  lua_pop(L, 1);
+                  continue;
+              }
+
+              js_push(L, -1);
+
+              JS_ASM({
+                const v = D.stack.pop();
+                const k = D.stack.pop();
+                D.stack[D.stack.length - 1][k] = v;
+              });
+
+              lua_pop(L, 1);
+            }
+          }
+          break;
         case LUA_TFUNCTION:
           {
             // 厳密にはtry catchをしないとよくわからないことになる？

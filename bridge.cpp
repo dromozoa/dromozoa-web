@@ -33,45 +33,6 @@
 
 namespace dromozoa {
   namespace {
-    /*
-      event_target:addEventListener(type, listener, use_capture)
-
-      -- onceサポート？
-      [node, type, listener, use_capture]
-
-      __gcでnodeが消されたら、イベントリスナのマップも削除する？
-      →これはダメ
-      →documentからもdocument_fragmentからもたどれなくなったら？
-      node.isConnectedでどうにかならない？
-      →document_fragmentについてるときはisConnectedはfalse
-      →parentNodeをたどる？
-      →getRootNode()
-      →手動で消すようにしたほうがいい気がする
-
-      Map.deleteは存在していなくてもエラーにならない。
-
-      callback_type関数をつくる
-        とりあえず、EventListener？
-
-      function => listener
-
-      javascriptの例外が出る
-        →C++の例外が出る
-          →Luaのエラーとして捕捉
-            →スタックをまきもどさないと、オブジェクトが解放されない？
-
-      JavaScriptが止まっちゃう
-
-      try {
-        return 1;
-      } catch (e) {
-        console.log(e);
-        // 文字列を返すか？
-        return 0;
-      }
-
-     */
-
     thread_reference ref;
 
     class object_t : noncopyable {

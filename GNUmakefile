@@ -32,7 +32,6 @@ OBJS = \
 	boot.o \
 	bridge.o \
 	core.o \
-	dom.o \
 	event.o \
 	exception_queue.o \
 	fetch.o \

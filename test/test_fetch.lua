@@ -32,8 +32,6 @@ local done
 
 print("p1", D.get(p1))
 local p2 = p1:then_(function (response)
-  -- 関数がFinalizationRegistryから解放されないと、内部的にひもづいたpromiseが
-  -- 解放されない
   local p = response:text()
   print("p", D.get(p))
   return p

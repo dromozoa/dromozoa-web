@@ -15,11 +15,14 @@
 // You should have received a copy of the GNU General Public License
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-const dromozoa_web_bridge = {
+const D = {
   id: 0,
   objects: new Map(),
   stack: [],
-  generate_id: () => { return ++dromozoa_web_bridge.id; },
+  generate_id: () => { return ++D.id; },
+
+  refs: new FinalizationRegistry((v) => { D.unref(D.get_state(), v); }),
+
   evaluate_lua: cwrap("dromozoa_web_evaluate_lua", null, ["string"]),
   get_state: cwrap("dromozoa_web_get_state", "pointer", []),
   push_function: cwrap("dromozoa_web_push_function", null, ["number"]),
@@ -31,39 +34,38 @@ const dromozoa_web_bridge = {
   push_boolean: cwrap("dromozoa_web_push_boolean", null, ["pointer", "number"]),
   push_string: cwrap("dromozoa_web_push_string", null, ["pointer", "string"]),
   push_object: cwrap("dromozoa_web_push_object", null, ["pointer", "number"]),
-};
+  unref: cwrap("dromozoa_web_unref", null, ["pointer", "number"]),
 
-const D = dromozoa_web_bridge;
+  push: (L, v) => {
+    switch (typeof v) {
+      case "undefined":
+        D.push_nil(L, v);
+        break;
+      case "number":
+        if (Number.isInteger(v)) {
+          D.push_integer(L, v);
+        } else {
+          D.push_number(L, v);
+        }
+        break;
+      case "boolean":
+        D.push_boolean(L, !!v);
+        break;
+      case "string":
+        D.push_string(L, v);
+        break;
+      default:
+        if (v === null) {
+          D.push_null(L);
+        } else {
+          const id = D.generate_id();
+          D.objects.set(id, v);
+          D.push_object(L, id);
+        }
+    }
+  },
 
-D.push = (L, v) => {
-  switch (typeof v) {
-    case "undefined":
-      D.push_nil(L, v);
-      break;
-    case "number":
-      if (Number.isInteger(v)) {
-        D.push_integer(L, v);
-      } else {
-        D.push_number(L, v);
-      }
-      break;
-    case "boolean":
-      D.push_boolean(L, !!v);
-      break;
-    case "string":
-      D.push_string(L, v);
-      break;
-    default:
-      if (v === null) {
-        D.push_null(L);
-      } else {
-        const id = D.generate_id();
-        D.objects.set(id, v);
-        D.push_object(L, id);
-      }
-  }
-};
-
-D.new = (T, ...a) => {
-  return new T(a);
+  new: (T, ...a) => {
+    return new T(a);
+  },
 };

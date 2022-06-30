@@ -3,6 +3,16 @@
 - LuaとJavaScriptで互換性がある型をスタックに乗せてやりとりする
 - JavaScript
 
+## 参照
+
+- JavaScript側で強参照をとる
+- FinalizationRegistryに登録したら、Lua側のgcを行わないようにする
+
+
+
+
+
+
 ## 名詞
 
 - referencesを両方につくる

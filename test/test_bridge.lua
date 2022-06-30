@@ -82,12 +82,6 @@ link.href = "index.html"
 link:append "index.html"
 div3:append(link)
 
-link:addEventListener("click", function (ev)
-  print "link clicked"
-  ev:preventDefault()
-  ev:stopPropagation()
-end)
-
 window.console:log "てすとだよ！！！！"
 
 local div4 = document:createElement "div"
@@ -103,3 +97,25 @@ document.body:appendChild(div4)
 local js_number = bridge.new(window.Number, 42)
 print(js_number)
 window.console:log(js_number)
+
+local ref = bridge.ref(function (x) print("ref", x) end)
+print(ref)
+ref(42, 69)
+
+local flag
+
+link:addEventListener("click", function (ev)
+  print "link clicked"
+
+  flag = not flag
+  if flag then
+    print "addEventListener"
+    div4:addEventListener("click", ref)
+  else
+    print "removeEventListener"
+    div4:removeEventListener("click", ref)
+  end
+
+  ev:preventDefault()
+  ev:stopPropagation()
+end)

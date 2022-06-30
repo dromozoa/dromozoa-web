@@ -65,7 +65,7 @@ namespace dromozoa {
       }
 
     private:
-      int id_ = 0;
+      int id_;
     };
 
     void js_push(lua_State* L, int index) {
@@ -85,6 +85,8 @@ namespace dromozoa {
           break;
         case LUA_TFUNCTION:
           {
+            // 厳密にはtry catchをしないとよくわからないことになる？
+            // 順序を考える
             lua_pushvalue(L, index);
             int ref = luaL_ref(L, LUA_REGISTRYINDEX);
             JS_ASM({
@@ -216,6 +218,16 @@ namespace dromozoa {
         D.args = undefined;
       }, L);
     }
+
+    void impl_ref(lua_State* L) {
+      // callableをスタックに積んで、object_tに変換する
+      js_push(L, 1);
+      JS_ASM({
+        const id = D.generate_id();
+        D.objects.set(id, D.stack.pop());
+        D.push_object($0, id);
+      }, L);
+    }
   }
 
   void initialize_bridge(lua_State* L) {
@@ -233,6 +245,7 @@ namespace dromozoa {
     lua_newtable(L);
     {
       set_field(L, -1, "new", function<impl_new>());
+      set_field(L, -1, "ref", function<impl_ref>());
 
       JS_ASM({
         const id = D.generate_id();

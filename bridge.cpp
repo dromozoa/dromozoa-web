@@ -153,20 +153,6 @@ namespace dromozoa {
       }
     }
 
-    void js_set(int id, int key) {
-      EM_ASM({
-        const D = dromozoa_web_bridge;
-        D.objects.get($0)[$1] = D.stack.pop();
-      }, id, key);
-    }
-
-    void js_set(int id, const char* key) {
-      EM_ASM({
-        const D = dromozoa_web_bridge;
-        D.objects.get($0)[UTF8ToString($1)] = D.stack.pop();
-      }, id, key);
-    }
-
     void impl_eq(lua_State* L) {
       if (auto* self = object_t::test(L, 1)) {
         if (auto* that = object_t::test(L, 2)) {
@@ -200,10 +186,16 @@ namespace dromozoa {
       auto* self = object_t::check(L, 1);
       js_push(L, 3);
       if (lua_isnumber(L, 2)) {
-        js_set(self->get_id(), lua_tonumber(L, 2));
+        EM_ASM({
+          const D = dromozoa_web_bridge;
+          D.objects.get($0)[$1] = D.stack.pop();
+        }, self->get_id(), lua_tonumber(L, 2));
       } else {
         const auto* key = luaL_checkstring(L, 2);
-        js_set(self->get_id(), key);
+        EM_ASM({
+          const D = dromozoa_web_bridge;
+          D.objects.get($0)[UTF8ToString($1)] = D.stack.pop();
+        }, self->get_id(), key);
       }
     }
 

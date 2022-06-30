@@ -255,58 +255,55 @@ extern "C" {
     }
   }
 
-  void* EMSCRIPTEN_KEEPALIVE dromozoa_web_get_state() {
+  lua_State* EMSCRIPTEN_KEEPALIVE dromozoa_web_get_state() {
     return dromozoa::ref.get();
   }
 
-  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_function(void* state, int ref) {
-    lua_geti(static_cast<lua_State*>(state), LUA_REGISTRYINDEX, ref);
+  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_function(lua_State* L, int ref) {
+    lua_geti(L, LUA_REGISTRYINDEX, ref);
   }
 
-  void EMSCRIPTEN_KEEPALIVE dromozoa_web_call_function(void* state, int nargs) {
-    if (lua_State* L = static_cast<lua_State*>(state)) {
-      if (lua_pcall(L, nargs, 0, 0) != LUA_OK) {
-        std::cerr << "cannot lua_pcall: " << lua_tostring(L, -1) << "\n";
-      }
+  void EMSCRIPTEN_KEEPALIVE dromozoa_web_call_function(lua_State* L, int nargs) {
+    if (lua_pcall(L, nargs, 0, 0) != LUA_OK) {
+      std::cerr << "cannot lua_pcall: " << lua_tostring(L, -1) << "\n";
     }
   }
 
-  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_nil(void* state) {
-    lua_pushnil(static_cast<lua_State*>(state));
+  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_nil(lua_State* L) {
+    lua_pushnil(L);
   }
 
-  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_null(void* state) {
-    lua_pushlightuserdata(static_cast<lua_State*>(state), nullptr);
+  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_null(lua_State* L) {
+    lua_pushlightuserdata(L, nullptr);
   }
 
-  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_integer(void* state, int value) {
-    lua_pushinteger(static_cast<lua_State*>(state), value);
+  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_integer(lua_State* L, int value) {
+    lua_pushinteger(L, value);
   }
 
-  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_number(void* state, double value) {
-    lua_pushnumber(static_cast<lua_State*>(state), value);
+  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_number(lua_State* L, double value) {
+    lua_pushnumber(L, value);
   }
 
-  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_boolean(void* state, int value) {
-    lua_pushboolean(static_cast<lua_State*>(state), value);
+  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_boolean(lua_State* L, int value) {
+    lua_pushboolean(L, value);
   }
 
-  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_string(void* state, const char* value) {
-    lua_pushstring(static_cast<lua_State*>(state), value);
+  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_string(lua_State* L, const char* value) {
+    lua_pushstring(L, value);
   }
 
-  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_object(void* state, int id) {
+  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_object(lua_State* L, int id) {
     using namespace dromozoa;
-    new_userdata<object_t>(static_cast<lua_State*>(state), object_t::NAME, id);
+    new_userdata<object_t>(L, object_t::NAME, id);
   }
 
-  int EMSCRIPTEN_KEEPALIVE dromozoa_web_ref(void* state, int index) {
-    lua_State* L = static_cast<lua_State*>(state);
+  int EMSCRIPTEN_KEEPALIVE dromozoa_web_ref(lua_State* L, int index) {
     lua_pushvalue(L, index);
     return luaL_ref(L, LUA_REGISTRYINDEX);
   }
 
-  void EMSCRIPTEN_KEEPALIVE dromozoa_web_unref(void* state, int ref) {
-    luaL_unref(static_cast<lua_State*>(state), LUA_REGISTRYINDEX, ref);
+  void EMSCRIPTEN_KEEPALIVE dromozoa_web_unref(lua_State* L, int ref) {
+    luaL_unref(L, LUA_REGISTRYINDEX, ref);
   }
 }

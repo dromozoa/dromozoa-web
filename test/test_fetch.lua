@@ -1,0 +1,31 @@
+-- Copyright (C) 2022 Tomoyuki Fujimori <moyu@dromozoa.com>
+--
+-- This file is part of dromozoa-web.
+--
+-- dromozoa-web is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- dromozoa-web is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
+
+local D = require "dromozoa.web"
+
+local promise = D.window:fetch("main.lua")
+promise["then"](promise, function (response)
+  print "then"
+  print(response.status, response.statusText)
+  local promise = response:text()
+  promise["then"](promise, function (text)
+    print(text)
+  end)
+end):catch(function (e)
+  print "catch"
+end)
+

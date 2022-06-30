@@ -17,15 +17,15 @@
 
 local D = require "dromozoa.web"
 
-local promise = D.window:fetch("main.lua")
-promise["then"](promise, function (response)
-  print "then"
-  print(response.status, response.statusText)
-  local promise = response:text()
-  promise["then"](promise, function (text)
-    print(text)
-  end)
-end):catch(function (e)
-  print "catch"
-end)
+local prototype = D.window.Promise.prototype
+prototype.then_ = prototype["then"]
 
+local promise = D.window:fetch("main.lua")
+promise:then_(function (response)
+  local p = response:text()
+  return p
+end):then_(function (text)
+  print(text)
+end):catch(function (e)
+  print("catch", e.message)
+end)

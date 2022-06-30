@@ -96,6 +96,7 @@ namespace dromozoa {
                   D.push(L, args[i])
                 }
                 D.call_function(L, n);
+                return D.stack.pop();
               };
               v.ref = D.ref($0, $1);
               D.refs.register(v, v.ref);
@@ -263,9 +264,12 @@ extern "C" {
   }
 
   void EMSCRIPTEN_KEEPALIVE dromozoa_web_call_function(lua_State* L, int nargs) {
-    if (lua_pcall(L, nargs, 0, 0) != LUA_OK) {
+    using namespace dromozoa;
+    if (lua_pcall(L, nargs, 1, 0) != LUA_OK) {
       std::cerr << "cannot lua_pcall: " << lua_tostring(L, -1) << "\n";
     }
+    // 返り値をJavaScriptに返す
+    js_push(L, -1);
   }
 
   void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_nil(lua_State* L) {

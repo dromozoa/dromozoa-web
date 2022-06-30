@@ -40,20 +40,20 @@ namespace dromozoa {
       static constexpr char NAME[] = "dromozoa.web.bridge.object";
 
       // TODO id => ref
-      explicit object_t(int id) : id_(id) {}
+      explicit object_t(int ref) : ref_(ref) {}
 
       ~object_t() {
         close();
       }
 
-      int get_id() const {
-        return id_;
+      int get() const {
+        return ref_;
       };
 
       void close() {
-        if (id_) {
-          JS_ASM({ D.unref_object($0); }, id_);
-          id_ = 0;
+        if (ref_) {
+          JS_ASM({ D.unref_object($0); }, ref_);
+          ref_ = 0;
         }
       }
 
@@ -66,7 +66,7 @@ namespace dromozoa {
       }
 
     private:
-      int id_;
+      int ref_;
     };
 
     void js_push(lua_State* L, int index) {
@@ -106,7 +106,7 @@ namespace dromozoa {
           break;
         case LUA_TUSERDATA:
           if (object_t* that = object_t::test(L, index)) {
-            JS_ASM({ D.stack.push(D.objs[$0]); }, that->get_id());
+            JS_ASM({ D.stack.push(D.objs[$0]); }, that->get());
           } else {
             throw DROMOZOA_LOGIC_ERROR("unsupported type");
           }
@@ -126,7 +126,7 @@ namespace dromozoa {
     void impl_eq(lua_State* L) {
       if (auto* self = object_t::test(L, 1)) {
         if (auto* that = object_t::test(L, 2)) {
-          JS_ASM({ D.push_boolean($0, D.objs[$1] === D.objs[$2]); }, L, self->get_id(), that->get_id());
+          JS_ASM({ D.push_boolean($0, D.objs[$1] === D.objs[$2]); }, L, self->get(), that->get());
           return;
         }
       }
@@ -138,12 +138,12 @@ namespace dromozoa {
       if (lua_isnumber(L, 2)) {
         JS_ASM({
           D.push($0, D.objs[$1][$2]);
-        }, L, self->get_id(), lua_tonumber(L, 2));
+        }, L, self->get(), lua_tonumber(L, 2));
       } else {
         const auto* key = luaL_checkstring(L, 2);
         JS_ASM({
           D.push($0, D.objs[$1][UTF8ToString($2)]);
-        }, L, self->get_id(), key);
+        }, L, self->get(), key);
       }
     }
 
@@ -151,10 +151,10 @@ namespace dromozoa {
       auto* self = object_t::check(L, 1);
       js_push(L, 3);
       if (lua_isnumber(L, 2)) {
-        JS_ASM({ D.objs[$0][$1] = D.stack.pop(); }, self->get_id(), lua_tonumber(L, 2));
+        JS_ASM({ D.objs[$0][$1] = D.stack.pop(); }, self->get(), lua_tonumber(L, 2));
       } else {
         const auto* key = luaL_checkstring(L, 2);
-        JS_ASM({ D.objs[$0][UTF8ToString($1)] = D.stack.pop(); }, self->get_id(), key);
+        JS_ASM({ D.objs[$0][UTF8ToString($1)] = D.stack.pop(); }, self->get(), key);
       }
     }
 
@@ -177,7 +177,7 @@ namespace dromozoa {
         D.push($0, D.objs[$1].apply(D.thisArg, D.args));
         D.thisArg = undefined;
         D.args = undefined;
-      }, L, self->get_id());
+      }, L, self->get());
     }
 
     void impl_close(lua_State* L) {

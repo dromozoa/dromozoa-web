@@ -214,7 +214,7 @@ namespace dromozoa {
     }
   }
 
-  void initialize_bridge(lua_State* L) {
+  void initialize(lua_State* L) {
     ref = thread_reference(L);
 
     luaL_newmetatable(L, object_t::NAME);

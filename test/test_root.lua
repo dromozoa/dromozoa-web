@@ -15,9 +15,9 @@
 -- You should have received a copy of the GNU General Public License
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-local bridge = require "dromozoa.web.bridge"
+local D = require "dromozoa.web"
 
-local window = bridge.window
+local window = D.window
 local document = window.document
 print(window)
 print(window.screenX, window.screenY)
@@ -94,11 +94,11 @@ document.body:appendChild(div4)
 -- document.body:removeChild(div4)
 -- document.body:appendChild(div4)
 
-local js_number = bridge.new(window.Number, 42)
+local js_number = D.new(window.Number, 42)
 print(js_number)
 window.console:log(js_number)
 
-local ref = bridge.ref(function (x) print("ref", x) end)
+local ref = D.ref(function (x) print("ref", x) end)
 print(ref)
 ref(42, 69)
 

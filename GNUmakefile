@@ -30,11 +30,11 @@ LDLIBS += -llua
 
 OBJS = \
 	boot.o \
-	bridge.o \
 	core.o \
 	exception_queue.o \
 	fetch.o \
-	module.o
+	module.o \
+	root.o
 TARGET = index.html
 
 all: all-recursive $(TARGET)

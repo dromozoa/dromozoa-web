@@ -21,6 +21,9 @@ CXXFLAGS += -Wall -W -std=c++20 -O2 -fexceptions -sNO_DISABLE_EXCEPTION_CATCHING
 LDFLAGS += -Llua/src -fexceptions -sEXPORTED_RUNTIME_METHODS=ccall,cwrap -sFETCH --shell-file shell.html
 LDLIBS += -llua
 
+# closure compiler
+# LDFLAGS += -Llua/src -fexceptions -sEXPORTED_RUNTIME_METHODS=ccall,cwrap -sFETCH --shell-file shell.html --closure=1
+
 # source-map
 # CXXFLAGS += -Wall -W -std=c++20 -g -fexceptions -sNO_DISABLE_EXCEPTION_CATCHING
 # LDFLAGS += -Llua/src -fexceptions -sFETCH -gsource-map --source-map-base http://127.0.0.1/dromozoa-web/

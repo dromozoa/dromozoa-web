@@ -90,7 +90,7 @@ namespace dromozoa {
 
       void close() {
         if (id_) {
-          JS_ASM({ dromozoa_web_bridge.objects.delete($0); }, id_);
+          JS_ASM({ window.dromozoa_web_bridge.objects.delete($0); }, id_);
           id_ = 0;
         }
       }
@@ -111,16 +111,16 @@ namespace dromozoa {
       switch (lua_type(L, index)) {
         case LUA_TNONE:
         case LUA_TNIL:
-          JS_ASM({ dromozoa_web_bridge.stack.push(undefined); });
+          JS_ASM({ window.dromozoa_web_bridge.stack.push(undefined); });
           break;
         case LUA_TNUMBER:
-          JS_ASM({ dromozoa_web_bridge.stack.push($0); }, lua_tonumber(L, index));
+          JS_ASM({ window.dromozoa_web_bridge.stack.push($0); }, lua_tonumber(L, index));
           break;
         case LUA_TBOOLEAN:
-          JS_ASM({ dromozoa_web_bridge.stack.push(!!$0); }, lua_toboolean(L, index));
+          JS_ASM({ window.dromozoa_web_bridge.stack.push(!!$0); }, lua_toboolean(L, index));
           break;
         case LUA_TSTRING:
-          JS_ASM({ dromozoa_web_bridge.stack.push(UTF8ToString($0)); }, lua_tostring(L, index));
+          JS_ASM({ window.dromozoa_web_bridge.stack.push(UTF8ToString($0)); }, lua_tostring(L, index));
           break;
         case LUA_TFUNCTION:
           {
@@ -128,7 +128,7 @@ namespace dromozoa {
             lua_pushvalue(L, index);
             int ref = luaL_ref(L, LUA_REGISTRYINDEX);
             JS_ASM({
-              const D = dromozoa_web_bridge;
+              const D = window.dromozoa_web_bridge;
               const r = $0;
               const v = (...args) => {
                 const L = D.get_state();
@@ -146,7 +146,7 @@ namespace dromozoa {
         case LUA_TUSERDATA:
           if (object_t* that = object_t::test(L, index)) {
             JS_ASM({
-              const D = dromozoa_web_bridge;
+              const D = window.dromozoa_web_bridge;
               D.stack.push(D.objects.get($0));
             }, that->get_id());
           } else {
@@ -155,7 +155,7 @@ namespace dromozoa {
           break;
         case LUA_TLIGHTUSERDATA:
           if (!lua_touserdata(L, index)) {
-            JS_ASM({ dromozoa_web_bridge.stack.push(null); });
+            JS_ASM({ window.dromozoa_web_bridge.stack.push(null); });
           } else {
             throw DROMOZOA_LOGIC_ERROR("unsupported type");
           }
@@ -169,7 +169,7 @@ namespace dromozoa {
       if (auto* self = object_t::test(L, 1)) {
         if (auto* that = object_t::test(L, 2)) {
           JS_ASM({
-            const D = dromozoa_web_bridge;
+            const D = window.dromozoa_web_bridge;
             D.push_boolean($0, D.objects.get($1) === D.objects.get($2));
           }, L, self->get_id(), that->get_id());
           return;
@@ -182,13 +182,13 @@ namespace dromozoa {
       auto* self = object_t::check(L, 1);
       if (lua_isnumber(L, 2)) {
         JS_ASM({
-          const D = dromozoa_web_bridge;
+          const D = window.dromozoa_web_bridge;
           D.push($0, D.objects.get($1)[$2]);
         }, L, self->get_id(), lua_tonumber(L, 2));
       } else {
         const auto* key = luaL_checkstring(L, 2);
         JS_ASM({
-          const D = dromozoa_web_bridge;
+          const D = window.dromozoa_web_bridge;
           D.push($0, D.objects.get($1)[UTF8ToString($2)]);
         }, L, self->get_id(), key);
       }
@@ -199,13 +199,13 @@ namespace dromozoa {
       js_push(L, 3);
       if (lua_isnumber(L, 2)) {
         JS_ASM({
-          const D = dromozoa_web_bridge;
+          const D = window.dromozoa_web_bridge;
           D.objects.get($0)[$1] = D.stack.pop();
         }, self->get_id(), lua_tonumber(L, 2));
       } else {
         const auto* key = luaL_checkstring(L, 2);
         JS_ASM({
-          const D = dromozoa_web_bridge;
+          const D = window.dromozoa_web_bridge;
           D.objects.get($0)[UTF8ToString($1)] = D.stack.pop();
         }, self->get_id(), key);
       }
@@ -217,7 +217,7 @@ namespace dromozoa {
 
       js_push(L, 2);
       JS_ASM({
-        const D = dromozoa_web_bridge;
+        const D = window.dromozoa_web_bridge;
         D.thisArg = D.stack.pop();
         D.args = [];
       });
@@ -225,13 +225,13 @@ namespace dromozoa {
       for (int i = 3; i <= top; ++i) {
         js_push(L, i);
         JS_ASM({
-          const D = dromozoa_web_bridge;
+          const D = window.dromozoa_web_bridge;
           D.args.push(D.stack.pop());
         });
       }
 
       JS_ASM({
-        const D = dromozoa_web_bridge;
+        const D = window.dromozoa_web_bridge;
         D.push($0, D.objects.get($1).apply(D.thisArg, D.args));
         D.thisArg = undefined;
         D.args = undefined;
@@ -250,19 +250,19 @@ namespace dromozoa {
       int top = lua_gettop(L);
 
       JS_ASM({
-        dromozoa_web_bridge.args = [];
+        window.dromozoa_web_bridge.args = [];
       });
 
       for (int i = 1; i <= top; ++i) {
         js_push(L, i);
         JS_ASM({
-          const D = dromozoa_web_bridge;
+          const D = window.dromozoa_web_bridge;
           D.args.push(D.stack.pop());
         });
       }
 
       JS_ASM({
-        const D = dromozoa_web_bridge;
+        const D = window.dromozoa_web_bridge;
         D.push($0, D.new.apply(undefined, D.args));
         D.args = undefined;
       }, L);
@@ -338,7 +338,7 @@ namespace dromozoa {
       set_field(L, -1, "new", function<impl_new>());
 
       JS_ASM({
-        const D = dromozoa_web_bridge;
+        const D = window.dromozoa_web_bridge;
         const id = D.generate_id();
         D.objects.set(id, window);
         D.push_object($0, id);

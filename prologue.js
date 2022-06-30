@@ -34,6 +34,7 @@ const D = {
   push_boolean: cwrap("dromozoa_web_push_boolean", null, ["pointer", "number"]),
   push_string: cwrap("dromozoa_web_push_string", null, ["pointer", "string"]),
   push_object: cwrap("dromozoa_web_push_object", null, ["pointer", "number"]),
+  ref: cwrap("dromozoa_web_ref", "number", ["pointer"]),
   unref: cwrap("dromozoa_web_unref", null, ["pointer", "number"]),
 
   push: (L, v) => {

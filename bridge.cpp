@@ -86,23 +86,21 @@ namespace dromozoa {
         case LUA_TFUNCTION:
           {
             // 厳密にはtry catchをしないとよくわからないことになる？
-            // 順序を考える
-            lua_pushvalue(L, index);
-            int ref = luaL_ref(L, LUA_REGISTRYINDEX);
+            // ロールバックを書くほうがよいかもしれない
             JS_ASM({
-              const r = $0;
               const v = (...args) => {
                 const L = D.get_state();
                 const n = args.length;
-                D.push_function(L, r);
+                D.push_function(L, v.ref);
                 for (let i = 0; i < n; ++i) {
                   D.push(L, args[i])
                 }
                 D.call_function(L, n);
               };
+              v.ref = D.ref($0, $1);
+              D.refs.register(v, v.ref);
               D.stack.push(v);
-              D.refs.register(v, r);
-            }, ref);
+            }, L, index);
           }
           break;
         case LUA_TUSERDATA:
@@ -317,6 +315,12 @@ extern "C" {
   void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_object(void* state, int id) {
     using namespace dromozoa;
     new_userdata<object_t>(static_cast<lua_State*>(state), object_t::NAME, id);
+  }
+
+  int EMSCRIPTEN_KEEPALIVE dromozoa_web_ref(void* state, int index) {
+    lua_State* L = static_cast<lua_State*>(state);
+    lua_pushvalue(L, index);
+    return luaL_ref(L, LUA_REGISTRYINDEX);
   }
 
   void EMSCRIPTEN_KEEPALIVE dromozoa_web_unref(void* state, int ref) {

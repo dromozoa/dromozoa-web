@@ -87,6 +87,8 @@ namespace dromozoa {
           {
             // 厳密にはtry catchをしないとよくわからないことになる？
             // ロールバックを書くほうがよいかもしれない
+            // luaL_refに成功して、registerに失敗した場合、参照が切れる
+            // そういう事態が発生するか？
             JS_ASM({
               const v = (...args) => {
                 const L = D.get_state();

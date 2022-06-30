@@ -20,12 +20,21 @@ local D = require "dromozoa.web"
 local prototype = D.window.Promise.prototype
 prototype.then_ = prototype["then"]
 
-local promise = D.window:fetch("main.lua")
-promise:then_(function (response)
+local p1 = D.window:fetch("main.lua")
+print("p1", D.get(p1))
+local p2 = p1:then_(function (response)
+  -- 関数がFinalizationRegistryから解放されないと、内部的にひもづいたpromiseが
+  -- 解放されない
   local p = response:text()
+  print("p", D.get(p))
   return p
-end):then_(function (text)
+end)
+print("p2", D.get(p2))
+local p3 = p2:then_(function (text)
   print(text)
-end):catch(function (e)
+end)
+print("p3", D.get(p3))
+local p4 = p3:catch(function (e)
   print("catch", e.message)
 end)
+print("p4", D.get(p4))

@@ -213,6 +213,11 @@ namespace dromozoa {
       js_push(L, 1);
       JS_ASM({ D.push_object($0, D.ref_object(D.stack.pop())); }, L);
     }
+
+    void impl_get(lua_State* L) {
+      auto* self = object_t::check(L, 1);
+      push(L, self->get());
+    }
   }
 
   void initialize(lua_State* L) {
@@ -231,6 +236,7 @@ namespace dromozoa {
     {
       set_field(L, -1, "new", function<impl_new>());
       set_field(L, -1, "ref", function<impl_ref>());
+      set_field(L, -1, "get", function<impl_get>());
 
       JS_ASM({ D.push_object($0, D.ref_object(window)); }, L);
       lua_setfield(L, -2, "window");
@@ -270,6 +276,8 @@ extern "C" {
     }
     // 返り値をJavaScriptに返す
     js_push(L, -1);
+    // 返り値を削除しないと参照がはずれない
+    lua_pop(L, 1);
   }
 
   void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_nil(lua_State* L) {

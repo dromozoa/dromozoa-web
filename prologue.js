@@ -15,13 +15,31 @@
 // You should have received a copy of the GNU General Public License
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-const D = {
-  id: 0,
-  objects: new Map(),
-  stack: [],
-  generate_id: () => { return ++D.id; },
+// luaL_ref, luaL_unrefと同様の仕組みを実装する
+// objs[0]がfreelistの先頭要素である
 
+const D = {
+  stack: [],
+  objs: [ 0 ],
   refs: new FinalizationRegistry((v) => { D.unref(D.get_state(), v); }),
+
+  ref_object: (obj) => {
+    let ref = D.objs[0];
+    if (ref === 0) {
+      ref = D.objs.length;
+    } else {
+      D.objs[0] = D.objs[ref]
+    }
+    D.objs[ref] = obj;
+    return ref;
+  },
+
+  unref_object: (ref) => {
+    if (ref > 0) {
+      D.objs[ref] = D.objs[0];
+      D.objs[0] = ref;
+    }
+  },
 
   evaluate_lua: cwrap("dromozoa_web_evaluate_lua", null, ["string"]),
   get_state: cwrap("dromozoa_web_get_state", "pointer", []),
@@ -59,9 +77,7 @@ const D = {
         if (v === null) {
           D.push_null(L);
         } else {
-          const id = D.generate_id();
-          D.objects.set(id, v);
-          D.push_object(L, id);
+          D.push_object(L, D.ref_object(v));
         }
     }
   },

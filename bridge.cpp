@@ -50,6 +50,14 @@ namespace dromozoa {
         とりあえず、EventListener？
 
       function => listener
+
+      javascriptの例外が出る
+        →C++の例外が出る
+          →Luaのエラーとして捕捉
+            →スタックをまきもどさないと、オブジェクトが解放されない？
+
+      JavaScriptが止まっちゃう
+
      */
 
     thread_reference ref;
@@ -94,12 +102,7 @@ namespace dromozoa {
           EM_ASM({ dromozoa_web_bridge.stack.push(undefined); });
           break;
         case LUA_TNUMBER:
-          if (lua_isinteger(L, index)) {
-            // int64_tをそのままわたすと怒られる
-            EM_ASM({ dromozoa_web_bridge.stack.push($0); }, static_cast<int>(lua_tointeger(L, index)));
-          } else {
-            EM_ASM({ dromozoa_web_bridge.stack.push($0); }, lua_tonumber(L, index));
-          }
+          EM_ASM({ dromozoa_web_bridge.stack.push($0); }, lua_tonumber(L, index));
           break;
         case LUA_TBOOLEAN:
           EM_ASM({ dromozoa_web_bridge.stack.push(!!$0); }, lua_toboolean(L, index));
@@ -179,13 +182,11 @@ namespace dromozoa {
 
     void impl_index(lua_State* L) {
       auto* self = object_t::check(L, 1);
-      int is_integer = 0;
-      auto key = lua_tointegerx(L, 2, &is_integer);
-      if (is_integer) {
+      if (lua_isnumber(L, 2)) {
         EM_ASM({
           const D = dromozoa_web_bridge;
           D.push($0, D.objects.get($1)[$2]);
-        }, L, self->get_id(), key);
+        }, L, self->get_id(), lua_tonumber(L, 2));
       } else {
         const auto* key = luaL_checkstring(L, 2);
         EM_ASM({
@@ -197,11 +198,9 @@ namespace dromozoa {
 
     void impl_newindex(lua_State* L) {
       auto* self = object_t::check(L, 1);
-      int is_integer = 0;
-      auto key = lua_tointegerx(L, 2, &is_integer);
       js_push(L, 3);
-      if (is_integer) {
-        js_set(self->get_id(), key);
+      if (lua_isnumber(L, 2)) {
+        js_set(self->get_id(), lua_tonumber(L, 2));
       } else {
         const auto* key = luaL_checkstring(L, 2);
         js_set(self->get_id(), key);
@@ -212,27 +211,27 @@ namespace dromozoa {
       auto* self = object_t::check(L, 1);
       int top = lua_gettop(L);
 
-      auto id = EM_ASM_INT({
-        const D = dromozoa_web_bridge;
-        const id = D.generate_id();
-        D.objects.set(id, []);
-        return id;
-      });
-
       js_push(L, 2);
-      js_set(id, "thisArg");
+      EM_ASM({
+        const D = dromozoa_web_bridge;
+        D.thisArg = D.stack.pop();
+        D.args = [];
+      });
 
       for (int i = 3; i <= top; ++i) {
         js_push(L, i);
-        js_set(id, i - 3);
+        EM_ASM({
+          const D = dromozoa_web_bridge;
+          D.args.push(D.stack.pop());
+        });
       }
 
       EM_ASM({
         const D = dromozoa_web_bridge;
-        const a = D.objects.get($2);
-        D.objects.delete($2);
-        D.push($0, D.objects.get($1).apply(a.thisArg, a));
-      }, L, self->get_id(), id);
+        D.push($0, D.objects.get($1).apply(D.thisArg, D.args));
+        D.thisArg = undefined;
+        D.args = undefined;
+      }, L, self->get_id());
     }
 
     void impl_close(lua_State* L) {
@@ -246,24 +245,23 @@ namespace dromozoa {
     void impl_new(lua_State* L) {
       int top = lua_gettop(L);
 
-      auto id = EM_ASM_INT({
-        const D = dromozoa_web_bridge;
-        const id = D.generate_id();
-        D.objects.set(id, []);
-        return id;
+      EM_ASM({
+        dromozoa_web_bridge.args = [];
       });
 
       for (int i = 1; i <= top; ++i) {
         js_push(L, i);
-        js_set(id, i - 1);
+        EM_ASM({
+          const D = dromozoa_web_bridge;
+          D.args.push(D.stack.pop());
+        });
       }
 
       EM_ASM({
         const D = dromozoa_web_bridge;
-        const a = D.objects.get($1);
-        D.objects.delete($1);
-        D.push($0, D.new.apply(undefined, a));
-      }, L, id);
+        D.push($0, D.new.apply(undefined, D.args));
+        D.args = undefined;
+      }, L);
     }
   }
 
@@ -276,6 +274,7 @@ namespace dromozoa {
       D.objects = new Map();
       D.stack = [];
       D.generate_id = () => { return ++D.id; };
+      D.evaluate_lua = cwrap("dromozoa_web_evaluate_lua", null, ["string"]);
       D.get_state = cwrap("dromozoa_web_get_state", "pointer", []);
       D.push_function = cwrap("dromozoa_web_push_function", null, ["number"]);
       D.call_function = cwrap("dromozoa_web_call_function", null, ["pointer", "number"]);
@@ -349,16 +348,23 @@ namespace dromozoa {
 }
 
 extern "C" {
-  void EMSCRIPTEN_KEEPALIVE evaluate_lua(const char* code) {
+  void EMSCRIPTEN_KEEPALIVE dromozoa_web_evaluate_lua(const char* code) {
     using namespace dromozoa;
     if (auto* L = ref.get()) {
+      std::cout << "top: " << lua_gettop(L) << "\n";
+
       if (luaL_loadbuffer(L, code, std::strlen(code), "=(load)") != LUA_OK) {
         std::cerr << "cannot luaL_loadbuffer: " << lua_tostring(L, -1) << "\n";
         return;
       }
+
+      std::cout << "top: " << lua_gettop(L) << "\n";
+
       if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
         std::cerr << "cannot lua_pcall: " << lua_tostring(L, -1) << "\n";
       }
+
+      std::cout << "top: " << lua_gettop(L) << "\n";
     }
   }
 

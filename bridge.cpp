@@ -39,7 +39,6 @@ namespace dromozoa {
     public:
       static constexpr char NAME[] = "dromozoa.web.bridge.object";
 
-      // TODO id => ref
       explicit object_t(int ref) : ref_(ref) {}
 
       ~object_t() {

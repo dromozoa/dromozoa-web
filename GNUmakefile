@@ -47,8 +47,8 @@ all-recursive:
 clean:
 	$(RM) *.d *.o $(TARGET) index.html index.js index.wasm
 
-clean-recursive:
-	(cd lua/src && $(MAKE) clean && $(RM) lua*.html lua*.js lua*.wasm)
+clean-recursive: clean
+	(cd lua/src && $(MAKE) clean && $(RM) *.d lua*.html lua*.js lua*.wasm)
 
 $(TARGET): $(OBJS) shell.html prologue.js epilogue.js
 	$(CXX) $(CPPFLAGS) $(LDFLAGS) $(OBJS) $(LDLIBS) -o $@

@@ -17,7 +17,7 @@
 
 local bridge = require "dromozoa.web.bridge"
 
-local window = bridge.get_window()
+local window = bridge.window
 local document = window.document
 print(window)
 print(window.screenX, window.screenY)
@@ -100,6 +100,6 @@ document.body:appendChild(div4)
 -- document.body:removeChild(div4)
 -- document.body:appendChild(div4)
 
-
-
-
+local js_number = bridge.new(window.Number, 42)
+print(js_number)
+window.console:log(js_number)

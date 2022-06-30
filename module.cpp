@@ -31,13 +31,11 @@ namespace dromozoa {
 
   void initialize_bridge(lua_State*);
   void initialize_core(lua_State*);
-  void initialize_event(lua_State*);
   void initialize_fetch(lua_State*);
 
   void preload_modules(lua_State* L) {
     preload_impl(L, "dromozoa.web.bridge", function<initialize_bridge>());
     preload_impl(L, "dromozoa.web.core", function<initialize_core>());
-    preload_impl(L, "dromozoa.web.event", function<initialize_event>());
     preload_impl(L, "dromozoa.web.fetch", function<initialize_fetch>());
   }
 }

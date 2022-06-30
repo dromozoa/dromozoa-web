@@ -33,11 +33,11 @@
 
 namespace dromozoa {
   namespace {
-    thread_reference ref;
+    thread_reference thread;
 
     class object_t : noncopyable {
     public:
-      static constexpr char NAME[] = "dromozoa.web.bridge.object";
+      static constexpr char NAME[] = "dromozoa.web.object";
 
       explicit object_t(int ref) : ref_(ref) {}
 
@@ -215,7 +215,7 @@ namespace dromozoa {
   }
 
   void initialize(lua_State* L) {
-    ref = thread_reference(L);
+    thread = thread_reference(L);
 
     luaL_newmetatable(L, object_t::NAME);
     set_field(L, -1, "__eq", function<impl_eq>());
@@ -243,7 +243,7 @@ namespace dromozoa {
 extern "C" {
   void EMSCRIPTEN_KEEPALIVE dromozoa_web_evaluate_lua(const char* code) {
     using namespace dromozoa;
-    if (auto* L = ref.get()) {
+    if (auto* L = thread.get()) {
       if (luaL_loadbuffer(L, code, std::strlen(code), "=(load)") != LUA_OK) {
         std::cerr << "cannot luaL_loadbuffer: " << lua_tostring(L, -1) << "\n";
         return;
@@ -255,7 +255,7 @@ extern "C" {
   }
 
   lua_State* EMSCRIPTEN_KEEPALIVE dromozoa_web_get_state() {
-    return dromozoa::ref.get();
+    return dromozoa::thread.get();
   }
 
   void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_function(lua_State* L, int ref) {

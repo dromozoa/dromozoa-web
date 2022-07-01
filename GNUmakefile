@@ -21,8 +21,12 @@ BASE_LDFLAGS = -fexceptions
 CXX = em++
 CPPFLAGS += -Ilua/src -DLUA_USE_POSIX -MMD
 CXXFLAGS += -Wall -W -std=c++20 $(BASE_CXXFALGS)
-LDFLAGS += -Llua/src $(BASE_LDFLAGS) -sEXPORTED_RUNTIME_METHODS=ccall,cwrap --shell-file shell.html --pre-js prologue.js --post-js epilogue.js --closure=1
+LDFLAGS += -Llua/src $(BASE_LDFLAGS) -sEXPORTED_RUNTIME_METHODS=ccall,cwrap --shell-file shell.html --pre-js prologue.js --post-js epilogue.js
 LDLIBS += -llua
+
+ifneq ($(CLOSURE),)
+LDFLAGS += --closure=$(CLOSURE)
+endif
 
 OBJS = \
 	boot.o \

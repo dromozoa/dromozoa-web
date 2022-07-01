@@ -100,7 +100,7 @@ namespace dromozoa {
         if (auto* L = state_) {
           lua_pushvalue(L, -1);
           if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
-            throw DROMOZOA_LOGIC_ERROR("canot lua_pcall: ", lua_tostring(L, -1));
+            throw DROMOZOA_LOGIC_ERROR("cannot lua_pcall: ", lua_tostring(L, -1));
           }
         }
       } catch (...) {
@@ -114,6 +114,6 @@ namespace dromozoa {
 
 int main() {
   auto boot = std::make_unique<dromozoa::boot_t>();
-  emscripten_set_main_loop_arg(dromozoa::boot_t::each, boot.release(), 30, true);
+  emscripten_set_main_loop_arg(dromozoa::boot_t::each, boot.release(), 0, true);
   return 0;
 }

@@ -94,26 +94,42 @@ namespace dromozoa {
     }
 
     void each_impl() {
+      bool do_close = false;
+
       check_exception_queue();
 
       try {
         if (auto* L = state_) {
           lua_pushvalue(L, -1);
-          if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
+          if (lua_pcall(L, 0, 1, 0) != LUA_OK) {
             throw DROMOZOA_LOGIC_ERROR("cannot lua_pcall: ", lua_tostring(L, -1));
           }
+          if (lua_toboolean(L, -1)) {
+            do_close = true;
+          }
+          lua_pop(L, 1);
         }
       } catch (...) {
         push_exception_queue();
       }
 
+      // cancelをするときに、自分自身を閉じる
+      // これにより、LuaのState自体が解放される
+
       check_exception_queue();
+
+      if (do_close) {
+        std::cout << "closing\n";
+        close();
+        std::cout << "closed\n";
+        emscripten_cancel_main_loop();
+      }
     }
   };
 }
 
 int main() {
   auto boot = std::make_unique<dromozoa::boot_t>();
-  emscripten_set_main_loop_arg(dromozoa::boot_t::each, boot.release(), 0, true);
+  emscripten_set_main_loop_arg(dromozoa::boot_t::each, boot.release(), 0, false);
   return 0;
 }

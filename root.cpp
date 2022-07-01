@@ -33,7 +33,15 @@
 
 namespace dromozoa {
   namespace {
-    thread_reference thread;
+    // thread_reference
+    // lua_Stateがcloseされたら閉じたい
+    // refしておいて、自動的に閉じられるようにする
+    // __gcでクローズする
+    // threadをrefに積んでおく
+    // さらに、そのポインタ参照をrefにつんでおく
+    // モジュール自体に__gcを設定しよう
+
+    lua_State* thread = nullptr;
 
     class array_t : noncopyable {
     public:
@@ -249,6 +257,10 @@ namespace dromozoa {
       object_t::check(L, 1)->~object_t();
     }
 
+    void impl_module_gc(lua_State*) {
+      thread = nullptr;
+    }
+
     void impl_new(lua_State* L) {
       int top = lua_gettop(L);
 
@@ -286,7 +298,10 @@ namespace dromozoa {
   }
 
   void initialize(lua_State* L) {
-    thread = thread_reference(L);
+    // thread = thread_reference(L);
+
+    thread = lua_newthread(L);
+    luaL_ref(L, LUA_REGISTRYINDEX);
 
     luaL_newmetatable(L, object_t::NAME);
     set_field(L, -1, "__eq", function<impl_eq>());
@@ -302,6 +317,8 @@ namespace dromozoa {
 
     lua_newtable(L);
     {
+      set_metafield(L, -1, "__gc", function<impl_module_gc>());
+
       set_field(L, -1, "new", function<impl_new>());
       set_field(L, -1, "ref", function<impl_ref>());
       set_field(L, -1, "get", function<impl_get>());
@@ -319,7 +336,7 @@ namespace dromozoa {
 extern "C" {
   void EMSCRIPTEN_KEEPALIVE dromozoa_web_evaluate_lua(const char* code) {
     using namespace dromozoa;
-    if (auto* L = thread.get()) {
+    if (auto* L = thread) {
       if (luaL_loadbuffer(L, code, std::strlen(code), "=(load)") != LUA_OK) {
         std::cerr << "cannot luaL_loadbuffer: " << lua_tostring(L, -1) << "\n";
         return;
@@ -331,7 +348,7 @@ extern "C" {
   }
 
   lua_State* EMSCRIPTEN_KEEPALIVE dromozoa_web_get_state() {
-    return dromozoa::thread.get();
+    return dromozoa::thread;
   }
 
   void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_function(lua_State* L, int ref) {

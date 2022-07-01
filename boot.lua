@@ -56,15 +56,19 @@ end)
 
 return function ()
   if not main_thread then
-    return
+    return false
   end
 
   local result, message = coroutine.resume(main_thread)
   if not result then
     io.stderr:write("main thread error: ", message, "\n")
+    if message:find "__exit__" then
+      return true
+    end
   end
   if coroutine.status(main_thread) == "dead" then
     main_thread = nil
   end
+  return false
 end
 --)"--"

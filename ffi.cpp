@@ -287,7 +287,12 @@ namespace dromozoa {
       DROMOZOA_JS_ASM({
         const args = D.args;
         D.args = undefined;
-        D.push($0, D.objs[$1].apply(args.thisArg, args));
+        const result = D.objs[$1].apply(args.thisArg, args);
+        if (result === undefined) {
+          D.push($0, args.thisArg);
+        } else {
+          D.push($0, result);
+        }
       }, L, self->get());
     }
 

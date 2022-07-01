@@ -31,9 +31,7 @@ LDLIBS += -llua
 OBJS = \
 	boot.o \
 	core.o \
-	exception_queue.o \
 	fetch.o \
-	module.o \
 	root.o
 TARGET = index.html
 

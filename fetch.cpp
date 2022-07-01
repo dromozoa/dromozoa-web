@@ -26,7 +26,7 @@
 #include <vector>
 #include "common.hpp"
 #include "error.hpp"
-#include "exception_queue.hpp"
+// #include "exception_queue.hpp"
 #include "lua.hpp"
 #include "noncopyable.hpp"
 #include "thread_reference.hpp"
@@ -132,7 +132,7 @@ namespace dromozoa {
             throw DROMOZOA_LOGIC_ERROR("canot lua_pcall: ", lua_tostring(L, -1));
           }
         } catch (...) {
-          push_exception_queue();
+          // push_exception_queue();
         }
       }
     };

@@ -72,7 +72,7 @@ const D = {
   },
 
   new: (T, ...a) => {
-    return new T(a);
+    return new T(...a);
   },
 
   eval: (code) => {

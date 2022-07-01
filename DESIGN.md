@@ -1,73 +1,20 @@
 # dromozoa-web
 
-- LuaとJavaScriptで互換性がある型をスタックに乗せてやりとりする
-- JavaScript
+## エラーの伝搬
 
-## 参照
+- JavaScriptの例外
+- Luaのエラー
+- C++の例外
 
-- JavaScript側で強参照をとる
-- FinalizationRegistryに登録したら、Lua側のgcを行わないようにする
+- メインループのなかで発生したエラー
+  - メインコルーチンのなかで発生したエラー
+- メインループのそとで発生したエラー
 
+- エラーからのリカバリは行わない
+- エラー情報の出力は同期的にconsole.logに出力する
 
+- `JS_ASM`呼び出しによるJavaScript例外はC++例外に変換する
+- Luaから呼び出されるC++関数のエラーはLuaエラーに変換する
+- pcall結果のエラーはコンテキスト依存する
+  - pcallがJavaScriptから呼びだされるとき、呼び出し側でJavaScriptに変換する
 
-
-
-
-## 名詞
-
-- referencesを両方につくる
-- referenceをつくる
-- references
-- JavaScript側はFinalizationRegistryでgcを拾う
-
-``` JavaScript
-D.refs.get(key);
-D.refs.set(key, value);
-D.refs.delete(key);
-```
-
-``` JavaScript
-D.objs.set(key);
-
-D.refs = new FinalizationRegistry(callback);
-D.refs.register(obj, ref, ref);
-D.refs.unregister(ref);
-```
-
-```
-event_target:addEventListener(type, listener, use_capture)
-
--- onceサポート？
-[node, type, listener, use_capture]
-
-__gcでnodeが消されたら、イベントリスナのマップも削除する？
-→これはダメ
-→documentからもdocument_fragmentからもたどれなくなったら？
-node.isConnectedでどうにかならない？
-→document_fragmentについてるときはisConnectedはfalse
-→parentNodeをたどる？
-→getRootNode()
-→手動で消すようにしたほうがいい気がする
-
-Map.deleteは存在していなくてもエラーにならない。
-
-callback_type関数をつくる
-  とりあえず、EventListener？
-
-function => listener
-
-javascriptの例外が出る
-  →C++の例外が出る
-    →Luaのエラーとして捕捉
-      →スタックをまきもどさないと、オブジェクトが解放されない？
-
-JavaScriptが止まっちゃう
-
-try {
-  return 1;
-} catch (e) {
-  console.log(e);
-  // 文字列を返すか？
-  return 0;
-}
-```

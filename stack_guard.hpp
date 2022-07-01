@@ -19,6 +19,7 @@
 #define DROMOZOA_WEB_STACK_GUARD_HPP
 
 #include "lua.hpp"
+#include "noncopyable.hpp"
 
 namespace dromozoa {
   class stack_guard : noncopyable {
@@ -26,15 +27,15 @@ namespace dromozoa {
     explicit stack_guard(lua_State* L) : state_(L), top_(lua_gettop(L)) {}
 
     ~stack_guard() {
-      if (state_) {
-        lua_settop(state_, top_);
+      if (auto* L = state_) {
+        lua_settop(L, top_);
       }
     }
 
     lua_State* release() {
-      lua_State* state = state_;
+      auto* L = state_;
       state_ = nullptr;
-      return state;
+      return L;
     }
 
   private:

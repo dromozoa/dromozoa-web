@@ -17,6 +17,7 @@
 
 #include <emscripten.h>
 #include "common.hpp"
+#include "error.hpp"
 #include "lua.hpp"
 
 namespace dromozoa {
@@ -68,6 +69,10 @@ namespace dromozoa {
     void impl_random(lua_State* L) {
       push(L, emscripten_random());
     }
+
+    void impl_exit(lua_State*) {
+      throw DROMOZOA_LOGIC_ERROR("__exit__");
+    }
   }
 
   void initialize_core(lua_State* L) {
@@ -83,6 +88,7 @@ namespace dromozoa {
       set_field(L, -1, "hide_mouse", function<impl_hide_mouse>());
       set_field(L, -1, "get_now", function<impl_get_now>());
       set_field(L, -1, "random", function<impl_random>());
+      set_field(L, -1, "exit", function<impl_exit>());
     }
   }
 }

@@ -89,6 +89,7 @@ div4.id = "Z"
 div4:append "removeのテスト"
 div4:addEventListener("click", function (ev)
   print "div4 clicked"
+  error "???"
 end)
 document.body:appendChild(div4)
 -- document.body:removeChild(div4)
@@ -119,3 +120,14 @@ link:addEventListener("click", function (ev)
   ev:preventDefault()
   ev:stopPropagation()
 end)
+
+while true do
+  while true do
+    local e = D.get_error()
+    if not e then
+      break
+    end
+    io.stderr:write(e, "\n")
+  end
+  coroutine.yield()
+end

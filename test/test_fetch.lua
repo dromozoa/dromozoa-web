@@ -32,8 +32,6 @@ local done
 
 print("p1", D.get(p1))
 local p2 = p1:then_(function (response)
-  -- 関数がFinalizationRegistryから解放されないと、内部的にひもづいたpromiseが
-  -- 解放されない
   local p = response:text()
   print("p", D.get(p))
   return p
@@ -59,4 +57,10 @@ D.window.console:log { foo = 17, bar = 23, baz = D.array { 1, 2, D.null, 3, qux 
 local array = D.array { 1, 2, 3, qux = true }
 print(array)
 print(#array, array[1], array.qux)
-print(D.window.JSON:stringify({ foo = 17, bar = 23, baz = D.array { 1, 2, D.null, 3, qux = true } }))
+print(D.window.JSON:stringify({
+  [{}] = "table1";
+  [{}] = "table2";
+  foo = 17,
+  bar = 23,
+  baz = D.array { 1, 2, D.null, 3, qux = true }
+}))

@@ -28,7 +28,7 @@ local function fetch(url, thread)
     if response.ok then
       return response:text()
     else
-      D.throw(D.new(D.window.Error, "!!!"))
+      D.throw "!!!"
     end
   end)
   :then_(function (text)
@@ -54,6 +54,15 @@ while true do
     and coroutine.status(t4) == "dead" then
     break
   end
+
+  while true do
+    local e = D.get_error()
+    if not e then
+      break
+    end
+    io.stderr:write(e, "\n")
+  end
+
   coroutine.yield()
 end
 

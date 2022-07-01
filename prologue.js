@@ -78,8 +78,11 @@ const D = {
   eval: (code) => {
     const L = D.get_thread();
     if (L) {
-      if (D.evaluate(L, code)) {
-        return D.stack.pop();
+      switch (D.evaluate(L, code)) {
+        case 1:
+          return D.stack.pop();
+        case 2:
+          throw new Error(D.stack.pop());
       }
     }
   },

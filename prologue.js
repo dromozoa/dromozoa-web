@@ -75,8 +75,17 @@ const D = {
     return new T(a);
   },
 
+  eval: (code) => {
+    const L = D.get_thread();
+    if (L) {
+      if (D.evaluate(L, code)) {
+        return D.stack.pop();
+      }
+    }
+  },
+
   get_thread: cwrap("dromozoa_web_get_thread", "pointer", []),
-  evaluate: cwrap("dromozoa_web_evaluate", "number", ["string"]),
+  evaluate: cwrap("dromozoa_web_evaluate", "number", ["pointer", "string"]),
   call: cwrap("dromozoa_web_call", "number", ["pointer", "number"]),
   push_nil: cwrap("dromozoa_web_push_nil", null, ["pointer"]),
   push_integer: cwrap("dromozoa_web_push_integer", null, ["pointer", "number"]),

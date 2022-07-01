@@ -17,8 +17,8 @@
 
 CXX = em++
 CPPFLAGS += -Ilua/src -DLUA_USE_POSIX -MMD
-CXXFLAGS += -Wall -W -std=c++20 -O2 -fexceptions -sNO_DISABLE_EXCEPTION_CATCHING
-LDFLAGS += -Llua/src -fexceptions -sEXPORTED_RUNTIME_METHODS=ccall,cwrap --shell-file shell.html --pre-js prologue.js --post-js epilogue.js
+CXXFLAGS += -Wall -W -std=c++20 -Oz -fexceptions -sNO_DISABLE_EXCEPTION_CATCHING
+LDFLAGS += -Llua/src -fexceptions -sEXPORTED_RUNTIME_METHODS=ccall,cwrap --shell-file shell.html --pre-js prologue.js --post-js epilogue.js --closure=1
 LDLIBS += -llua
 
 # closure compiler
@@ -37,7 +37,7 @@ TARGET = index.html
 all: all-recursive $(TARGET)
 
 all-recursive:
-	(cd lua/src && $(MAKE) CC=em++ AR="emar rcu" RANLIB=emranlib MYCFLAGS="-fexceptions -sNO_DISABLE_EXCEPTION_CATCHING" MYLDFLAGS=-fexceptions LUA_T=lua.html LUAC_T=luac.html posix)
+	(cd lua/src && $(MAKE) CC=em++ AR="emar rcu" RANLIB=emranlib CFLAGS="-Wall -Wextra -DLUA_COMPAT_5_3 -Oz -fexceptions -sNO_DISABLE_EXCEPTION_CATCHING" MYLDFLAGS=-fexceptions LUA_T=lua.html LUAC_T=luac.html posix)
 
 clean:
 	$(RM) *.d *.o $(TARGET) index.html index.js index.wasm

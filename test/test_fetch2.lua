@@ -16,7 +16,6 @@
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 local D = require "dromozoa.web"
-local core = require "dromozoa.web.core"
 
 local prototype = D.window.Promise.prototype
 prototype.then_ = prototype["then"]
@@ -67,4 +66,3 @@ while true do
 end
 
 print "done"
--- core.exit()

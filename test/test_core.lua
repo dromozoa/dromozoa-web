@@ -15,21 +15,10 @@
 -- You should have received a copy of the GNU General Public License
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-local core = require "dromozoa.web.core"
+local core = require "dromozoa.web"
 
 print(core.run_script_string [[document.location.href]])
 print(core.run_script_string [[document.location.search]])
-
-for i = 1, 4 do
-  print(core.run_script_string [[
-    (function () {
-      let f = Module.cwrap("callback", "number", ["string", "pointer"]);
-      console.log(f);
-      f(JSON.stringify([ "test", 42 ]), 2);
-      return 7;
-    })()
-  ]])
-end
 
 print(core.get_device_pixel_ratio())
 print(core.get_window_title())

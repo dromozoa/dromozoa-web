@@ -57,7 +57,7 @@ namespace dromozoa {
     lua_State* thread = nullptr;
     std::deque<std::exception_ptr> error_queue;
 
-    void push_error_queue() {
+    void push_error() {
       error_queue.emplace_back(std::current_exception());
     }
 
@@ -271,7 +271,7 @@ namespace dromozoa {
       thread = nullptr;
     }
 
-    void impl_pop_error_queue(lua_State* L) {
+    void impl_get_error(lua_State* L) {
       try {
         if (!error_queue.empty()) {
           std::exception_ptr eptr = error_queue.front();
@@ -333,7 +333,7 @@ namespace dromozoa {
     {
       set_metafield(L, -1, "__gc", function<impl_close_module>());
 
-      set_field(L, -1, "pop_error_queue", function<impl_pop_error_queue>());
+      set_field(L, -1, "get_error", function<impl_get_error>());
       set_field(L, -1, "new", function<impl_new>());
       set_field(L, -1, "ref", function<impl_ref>());
       set_field(L, -1, "array", function<impl_array>());
@@ -366,7 +366,7 @@ extern "C" {
       js_push(L, -1);
       return 1;
     } catch (...) {
-      push_error_queue();
+      push_error();
     }
     return 0;
   }
@@ -380,7 +380,7 @@ extern "C" {
       js_push(L, -1);
       return 1;
     } catch (...) {
-      push_error_queue();
+      push_error();
     }
     return 0;
   }

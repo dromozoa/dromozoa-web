@@ -123,7 +123,7 @@ end)
 
 while true do
   while true do
-    local e = D.pop_error_queue()
+    local e = D.get_error()
     if not e then
       break
     end

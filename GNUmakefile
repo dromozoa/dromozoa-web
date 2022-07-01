@@ -31,7 +31,7 @@ LDLIBS += -llua
 OBJS = \
 	boot.o \
 	core.o \
-	root.o
+	ffi.o
 TARGET = index.html
 
 all: all-recursive $(TARGET)

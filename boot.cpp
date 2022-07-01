@@ -19,33 +19,34 @@
 #include <cstring>
 #include <exception>
 #include <iostream>
-#include <memory>
+#include <utility>
 #include "common.hpp"
 #include "error.hpp"
 #include "lua.hpp"
 #include "stack_guard.hpp"
 
 namespace dromozoa {
-  void initialize(lua_State*);
   void initialize_core(lua_State*);
+  void initialize_ffi(lua_State*);
 
   namespace {
     template <class T_key, class T_value>
-    void preload_impl(lua_State* L, T_key&& key, T_value&& value) {
+    void preload(lua_State* L, T_key&& key, T_value&& value) {
       stack_guard guard(L);
       lua_getglobal(L, "package");
       lua_getfield(L, -1, "preload");
       set_field(L, -1, std::forward<T_key>(key), std::forward<T_value>(value));
     }
 
-    void preload_modules(lua_State* L) {
-      preload_impl(L, "dromozoa.web", function<initialize>());
-      preload_impl(L, "dromozoa.web.core", function<initialize_core>());
+    void open(lua_State* L) {
+      lua_newtable(L);
+      initialize_core(L);
+      initialize_ffi(L);
     }
 
     void boot(lua_State* L) {
       luaL_openlibs(L);
-      preload_modules(L);
+      preload(L, "dromozoa.web", function<open>());
 
       static const char code[] =
       #include "boot.lua"
@@ -70,8 +71,6 @@ namespace dromozoa {
           return;
         } catch (const std::exception& e) {
           std::cerr << e.what() << "\n";
-        } catch (...) {
-          std::cerr << "unknown exception\n";
         }
         emscripten_cancel_main_loop();
         lua_close(L);
@@ -90,8 +89,6 @@ int main() {
       return 0;
     } catch (const std::exception& e) {
       std::cerr << e.what() << "\n";
-    } catch (...) {
-      std::cerr << "unknown exception\n";
     }
   } else {
     std::cerr << "cannot luaL_newstate\n";

@@ -20,7 +20,6 @@
 #include <cstring>
 #include <deque>
 #include <exception>
-#include <iostream>
 #include <memory>
 #include "common.hpp"
 #include "error.hpp"
@@ -352,7 +351,7 @@ namespace dromozoa {
     }
   }
 
-  void initialize(lua_State* L) {
+  void initialize_ffi(lua_State* L) {
     thread = lua_newthread(L);
     luaL_ref(L, LUA_REGISTRYINDEX);
 
@@ -372,22 +371,19 @@ namespace dromozoa {
     set_field(L, -1, "__gc", function<impl_gc_object>());
     lua_pop(L, 1);
 
-    lua_newtable(L);
-    {
-      set_metafield(L, -1, "__gc", function<impl_gc_module>());
+    set_metafield(L, -1, "__gc", function<impl_gc_module>());
 
-      set_field(L, -1, "get_error", function<impl_get_error>());
-      set_field(L, -1, "new", function<impl_new>());
-      set_field(L, -1, "ref", function<impl_ref>());
-      set_field(L, -1, "throw", function<impl_throw>());
-      set_field(L, -1, "array", function<impl_array>());
+    set_field(L, -1, "get_error", function<impl_get_error>());
+    set_field(L, -1, "new", function<impl_new>());
+    set_field(L, -1, "ref", function<impl_ref>());
+    set_field(L, -1, "throw", function<impl_throw>());
+    set_field(L, -1, "array", function<impl_array>());
 
-      DROMOZOA_JS_ASM({ D.push_object($0, D.ref_object(window)); }, L);
-      lua_setfield(L, -2, "window");
+    DROMOZOA_JS_ASM({ D.push_object($0, D.ref_object(window)); }, L);
+    lua_setfield(L, -2, "window");
 
-      lua_pushlightuserdata(L, nullptr);
-      lua_setfield(L, -2, "null");
-    }
+    lua_pushlightuserdata(L, nullptr);
+    lua_setfield(L, -2, "null");
   }
 }
 

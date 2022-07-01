@@ -22,28 +22,43 @@ local prototype = D.window.Promise.prototype
 prototype.then_ = prototype["then"]
 
 local boot_thread = coroutine.create(function ()
-  local filename = D.new(D.window.URLSearchParams, D.window.document.location.search):get("main") or "main.lua"
+  local filename = D.new(D.window.URLSearchParams, D.window.document.location.search):get("main")
+  if not filename or filename == D.null then
+    filename = "main.lua"
+  end
   local chunk
+  local error_message
 
   D.window:fetch(filename, { cache = "no-store" })
   :then_(function (response)
-    return response:text()
+    if response.ok then
+      return response:text()
+    else
+      D.throw(D.new(D.window.Error, response.statusText))
+    end
   end)
   :then_(function (text)
     chunk = assert(load(text, filename))
+    done = true
   end)
   :catch(function (e)
     print("error ", e.message)
+    done = true
+    error_message = e.message
   end)
 
   while true do
-    if chunk then
+    if done then
       break
     end
     coroutine.yield()
   end
 
-  return chunk()
+  if chunk then
+    return chunk()
+  else
+    error(error_message)
+  end
 end)
 
 return function ()

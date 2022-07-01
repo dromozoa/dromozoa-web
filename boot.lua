@@ -16,59 +16,73 @@ R""--(
 -- You should have received a copy of the GNU General Public License
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-local core = require "dromozoa.web.core"
-local fetch = require "dromozoa.web.fetch"
+local D = require "dromozoa.web"
 
-local main_thread = coroutine.create(function ()
-  local main_filename = core.run_script_string [[new URLSearchParams(document.location.search).get("main") || "main.lua"]]
-  local main_fetch
-  local main_chunk
-  local main_error
+local prototype = D.window.Promise.prototype
+prototype.then_ = prototype["then"]
 
-  main_fetch = fetch({
-    request_method = "GET";
-    attributes = fetch.LOAD_TO_MEMORY;
-    onsuccess = function (f)
-      main_chunk = f:get_data()
-      f:close()
-      main_fetch = nil
-    end;
-    onerror = function (f)
-      main_error = ("cannot fetch: %s: %d %s\n"):format(main_filename, f:get_status(), f:get_status_text())
-      f:close()
-      main_fetch = nil
-    end;
-  }, main_filename .. "?t=" .. os.time())
+local thread = coroutine.create(function ()
+  local window = D.window
+  local document = window.document
+
+  local filename = D.new(window.URLSearchParams, document.location.search):get "main"
+  if not filename or filename == D.null then
+    filename = "main.lua"
+  end
+
+  local result
+  local data
+
+  window:fetch(filename, { cache = "no-store" })
+    :then_(function (response)
+      if response.ok then
+        return response:text()
+      else
+        D.throw(("%d %s"):format(response.status, response.statusText))
+      end
+    end)
+    :then_(function (text)
+      result = true
+      data = text
+    end)
+    :catch(function (e)
+      result = false
+      data = e.message
+    end)
 
   while true do
-    coroutine.yield()
-    if not main_fetch then
+    while true do
+      local e = D.get_error()
+      if not e then
+        break
+      end
+      io.stderr:write(e, "\n")
+    end
+    if result ~= nil then
       break
     end
+    coroutine.yield()
   end
 
-  if main_chunk then
-    return assert(load(main_chunk, main_filename))()
-  else
-    error(main_error)
+  if not result then
+    error(data)
   end
+
+  return assert(load(data, filename))()
 end)
 
 return function ()
-  if not main_thread then
-    return false
+  if not thread then
+    return
   end
 
-  local result, message = coroutine.resume(main_thread)
+  local result, data = coroutine.resume(thread)
+  if coroutine.status(thread) == "dead" then
+    thread = nil
+  end
+
   if not result then
-    io.stderr:write("main thread error: ", message, "\n")
-    if message:find "__exit__" then
-      return true
-    end
+    error(data)
   end
-  if coroutine.status(main_thread) == "dead" then
-    main_thread = nil
-  end
-  return false
 end
 --)"--"

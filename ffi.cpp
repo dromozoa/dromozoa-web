@@ -16,18 +16,16 @@
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <emscripten.h>
-#include <cstddef>
 #include <cstdlib>
 #include <cstring>
 #include <deque>
 #include <exception>
-#include <iostream>
 #include <memory>
 #include "common.hpp"
 #include "error.hpp"
 #include "lua.hpp"
 #include "noncopyable.hpp"
-#include "thread_reference.hpp"
+#include "stack_guard.hpp"
 
 #define DROMOZOA_JS_ASM_TRY \
   "try {" \
@@ -55,10 +53,37 @@ namespace dromozoa {
     }
 
     lua_State* thread = nullptr;
+
     std::deque<std::exception_ptr> error_queue;
 
     void push_error() {
       error_queue.emplace_back(std::current_exception());
+    }
+
+    constexpr char NAME_ERROR[] = "dromozoa.web.error";
+
+    class error_t : noncopyable {
+    public:
+      explicit error_t(const std::string& what) : what_(what) {}
+
+      const char* get() const {
+        return what_.c_str();
+      }
+
+    private:
+      std::string what_;
+    };
+
+    error_t* test_error(lua_State* L, int index) {
+      return static_cast<error_t*>(luaL_testudata(L, index, NAME_ERROR));
+    }
+
+    error_t* check_error(lua_State* L, int index) {
+      return static_cast<error_t*>(luaL_checkudata(L, index, NAME_ERROR));
+    }
+
+    void impl_gc_error(lua_State* L) {
+      check_error(L, 1)->~error_t();
     }
 
     constexpr char NAME_ARRAY[] = "dromozoa.web.array";
@@ -126,7 +151,7 @@ namespace dromozoa {
           {
             index = lua_absindex(L, index);
 
-            bool array = is_array(L, index);
+            auto array = is_array(L, index);
             if (array) {
               DROMOZOA_JS_ASM({ D.stack.push([]); });
             } else {
@@ -171,8 +196,11 @@ namespace dromozoa {
                   for (let i = 0; i < n; ++i) {
                     D.push(L, args[i]);
                   }
-                  if (D.call(L, n)) {
-                    return D.stack.pop();
+                  switch (D.call(L, n)) {
+                    case 1:
+                      return D.stack.pop();
+                    case 2:
+                      throw new Error(D.stack.pop());
                   }
                 }
               };
@@ -183,7 +211,7 @@ namespace dromozoa {
           }
           break;
         case LUA_TUSERDATA:
-          if (object_t* that = test_object(L, index)) {
+          if (auto* that = test_object(L, index)) {
             DROMOZOA_JS_ASM({ D.stack.push(D.objs[$0]); }, that->get());
           } else {
             throw DROMOZOA_LOGIC_ERROR(NAME_OBJECT, " expected, got ", luaL_typename(L, index));
@@ -243,7 +271,7 @@ namespace dromozoa {
 
     void impl_call(lua_State* L) {
       auto* self = check_object(L, 1);
-      int top = lua_gettop(L);
+      auto top = lua_gettop(L);
 
       js_push(L, 2);
       DROMOZOA_JS_ASM({
@@ -251,7 +279,7 @@ namespace dromozoa {
         D.args.thisArg = D.stack.pop();
       });
 
-      for (int i = 3; i <= top; ++i) {
+      for (auto i = 3; i <= top; ++i) {
         js_push(L, i);
         DROMOZOA_JS_ASM({ D.args.push(D.stack.pop()); });
       }
@@ -267,16 +295,20 @@ namespace dromozoa {
       check_object(L, 1)->close();
     }
 
-    void impl_close_module(lua_State*) {
+    void impl_gc_object(lua_State* L) {
+      check_object(L, 1)->~object_t();
+    }
+
+    void impl_gc_module(lua_State*) {
       thread = nullptr;
     }
 
     void impl_get_error(lua_State* L) {
       try {
         if (!error_queue.empty()) {
-          std::exception_ptr eptr = error_queue.front();
+          auto e = error_queue.front();
           error_queue.pop_front();
-          std::rethrow_exception(eptr);
+          std::rethrow_exception(e);
         }
         lua_pushnil(L);
       } catch (const std::exception& e) {
@@ -287,11 +319,11 @@ namespace dromozoa {
     }
 
     void impl_new(lua_State* L) {
-      int top = lua_gettop(L);
+      auto top = lua_gettop(L);
 
       DROMOZOA_JS_ASM({ D.args = []; });
 
-      for (int i = 1; i <= top; ++i) {
+      for (auto i = 1; i <= top; ++i) {
         js_push(L, i);
         DROMOZOA_JS_ASM({ D.args.push(D.stack.pop()); });
       }
@@ -308,14 +340,24 @@ namespace dromozoa {
       DROMOZOA_JS_ASM({ D.push_object($0, D.ref_object(D.stack.pop())); }, L);
     }
 
+    void impl_throw(lua_State* L) {
+      const char* what = luaL_checkstring(L, 1);
+      new_userdata<error_t>(L, NAME_ERROR, what);
+      lua_error(L);
+    }
+
     void impl_array(lua_State* L) {
       luaL_setmetatable(L, NAME_ARRAY);
     }
   }
 
-  void initialize(lua_State* L) {
+  void initialize_ffi(lua_State* L) {
     thread = lua_newthread(L);
     luaL_ref(L, LUA_REGISTRYINDEX);
+
+    luaL_newmetatable(L, NAME_ERROR);
+    set_field(L, -1, "__gc", function<impl_gc_error>());
+    lua_pop(L, 1);
 
     luaL_newmetatable(L, NAME_ARRAY);
     lua_pop(L, 1);
@@ -326,24 +368,22 @@ namespace dromozoa {
     set_field(L, -1, "__newindex", function<impl_newindex>());
     set_field(L, -1, "__call", function<impl_call>());
     set_field(L, -1, "__close", function<impl_close_object>());
-    set_field(L, -1, "__gc", function<impl_close_object>());
+    set_field(L, -1, "__gc", function<impl_gc_object>());
     lua_pop(L, 1);
 
-    lua_newtable(L);
-    {
-      set_metafield(L, -1, "__gc", function<impl_close_module>());
+    set_metafield(L, -1, "__gc", function<impl_gc_module>());
 
-      set_field(L, -1, "get_error", function<impl_get_error>());
-      set_field(L, -1, "new", function<impl_new>());
-      set_field(L, -1, "ref", function<impl_ref>());
-      set_field(L, -1, "array", function<impl_array>());
+    set_field(L, -1, "get_error", function<impl_get_error>());
+    set_field(L, -1, "new", function<impl_new>());
+    set_field(L, -1, "ref", function<impl_ref>());
+    set_field(L, -1, "throw", function<impl_throw>());
+    set_field(L, -1, "array", function<impl_array>());
 
-      DROMOZOA_JS_ASM({ D.push_object($0, D.ref_object(window)); }, L);
-      lua_setfield(L, -2, "window");
+    DROMOZOA_JS_ASM({ D.push_object($0, D.ref_object(window)); }, L);
+    lua_setfield(L, -2, "window");
 
-      lua_pushlightuserdata(L, nullptr);
-      lua_setfield(L, -2, "null");
-    }
+    lua_pushlightuserdata(L, nullptr);
+    lua_setfield(L, -2, "null");
   }
 }
 
@@ -361,10 +401,16 @@ extern "C" {
         throw DROMOZOA_LOGIC_ERROR("cannot luaL_loadbuffer: ", lua_tostring(L, -1));
       }
       if (lua_pcall(L, 0, 1, 0) != LUA_OK) {
-        throw DROMOZOA_LOGIC_ERROR("cannot lua_pcall: ", lua_tostring(L, -1));
+        if (auto* that = test_error(L, -1)) {
+          DROMOZOA_JS_ASM({ D.stack.push(UTF8ToString($0)); }, that->get());
+          return 2;
+        } else {
+          throw DROMOZOA_LOGIC_ERROR("cannot lua_pcall: ", lua_tostring(L, -1));
+        }
+      } else {
+        js_push(L, -1);
+        return 1;
       }
-      js_push(L, -1);
-      return 1;
     } catch (...) {
       push_error();
     }
@@ -375,10 +421,16 @@ extern "C" {
     try {
       stack_guard guard(L);
       if (lua_pcall(L, n, 1, 0) != LUA_OK) {
-        throw DROMOZOA_LOGIC_ERROR("cannot lua_pcall: ", lua_tostring(L, -1));
+        if (auto* that = test_error(L, -1)) {
+          DROMOZOA_JS_ASM({ D.stack.push(UTF8ToString($0)); }, that->get());
+          return 2;
+        } else {
+          throw DROMOZOA_LOGIC_ERROR("cannot lua_pcall: ", lua_tostring(L, -1));
+        }
+      } else {
+        js_push(L, -1);
+        return 1;
       }
-      js_push(L, -1);
-      return 1;
     } catch (...) {
       push_error();
     }

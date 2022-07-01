@@ -24,15 +24,19 @@ prototype.then_ = prototype["then"]
 local function fetch(url, thread)
   D.window:fetch(url, { cache = "no-store" })
   :then_(function (response)
-    print("then1", url)
-    return response:text()
+    print("then1", url, response.ok)
+    if response.ok then
+      return response:text()
+    else
+      D.throw "!!!"
+    end
   end)
   :then_(function (text)
     print("then2", url)
     coroutine.resume(thread, "success", url, text)
   end)
   :catch(function (e)
-    print("catch", url)
+    print("catch", url, e.message)
     coroutine.resume(thread, "failure", url, e)
   end)
   return thread
@@ -40,7 +44,7 @@ end
 
 local t1 = fetch("https://honoka.dromozoa.com/", coroutine.create(function (result, url, v) print(result, url) end))
 local t2 = fetch("prologue.js", coroutine.create(function (result, url, v) print(result, url) end))
-local t3 = fetch("epilogue.js", coroutine.create(function (result, url, v) print(result, url) end))
+local t3 = fetch("no-such-file.txt", coroutine.create(function (result, url, v) print(result, url) end))
 local t4 = fetch("README.md", coroutine.create(function (result, url, v) print(result, url) end))
 
 while true do
@@ -50,8 +54,17 @@ while true do
     and coroutine.status(t4) == "dead" then
     break
   end
+
+  while true do
+    local e = D.get_error()
+    if not e then
+      break
+    end
+    io.stderr:write(e, "\n")
+  end
+
   coroutine.yield()
 end
 
 print "done"
-core.exit()
+-- core.exit()

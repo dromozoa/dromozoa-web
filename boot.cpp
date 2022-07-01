@@ -19,117 +19,79 @@
 #include <cstring>
 #include <exception>
 #include <iostream>
-#include <memory>
+#include <utility>
+#include "common.hpp"
 #include "error.hpp"
-#include "exception_queue.hpp"
 #include "lua.hpp"
-#include "noncopyable.hpp"
+#include "stack_guard.hpp"
 
 namespace dromozoa {
-  void preload_modules(lua_State*);
+  void initialize_core(lua_State*);
+  void initialize_ffi(lua_State*);
 
-  class boot_t : noncopyable {
-  public:
-    boot_t() : state_(luaL_newstate()) {
-      boot();
+  namespace {
+    template <class T_key, class T_value>
+    void preload(lua_State* L, T_key&& key, T_value&& value) {
+      stack_guard guard(L);
+      lua_getglobal(L, "package");
+      lua_getfield(L, -1, "preload");
+      set_field(L, -1, std::forward<T_key>(key), std::forward<T_value>(value));
     }
 
-    ~boot_t() {
-      close();
+    void open(lua_State* L) {
+      lua_newtable(L);
+      initialize_core(L);
+      initialize_ffi(L);
     }
 
-    static void each(void* data) {
-      static_cast<boot_t*>(data)->each_impl();
-    }
+    void boot(lua_State* L) {
+      luaL_openlibs(L);
+      preload(L, "dromozoa.web", function<open>());
 
-  private:
-    lua_State* state_;
+      static const char code[] =
+      #include "boot.lua"
+      ;
 
-    void close() {
-      if (state_) {
-        lua_close(state_);
-        state_ = nullptr;
+      if (luaL_loadbuffer(L, code, std::strlen(code), "boot.lua") != LUA_OK) {
+        throw DROMOZOA_LOGIC_ERROR("cannot luaL_loadbuffer: ", lua_tostring(L, -1));
+      }
+      if (lua_pcall(L, 0, 1, 0) != LUA_OK) {
+        throw DROMOZOA_LOGIC_ERROR("cannot lua_pcall: ", lua_tostring(L, -1));
       }
     }
 
-    void boot() {
-      try {
-        if (auto* L = state_) {
-          luaL_openlibs(L);
-          preload_modules(L);
-
-          static const char code[] =
-          #include "boot.lua"
-          ;
-
-          if (luaL_loadbuffer(L, code, std::strlen(code), "boot.lua") != LUA_OK) {
-            throw DROMOZOA_LOGIC_ERROR("cannot luaL_loadbuffer: ", lua_tostring(L, -1));
-          }
-          if (lua_pcall(L, 0, 1, 0) != LUA_OK) {
+    void each(void* state) {
+      if (auto* L = static_cast<lua_State*>(state)) {
+        try {
+          stack_guard guard(L);
+          lua_pushvalue(L, -1);
+          if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
             throw DROMOZOA_LOGIC_ERROR("cannot lua_pcall: ", lua_tostring(L, -1));
-          }
-        }
-      } catch (...) {
-        push_exception_queue();
-      }
-    }
-
-    void check_exception_queue() {
-      for (int i = 0; ; ++i) {
-        if (std::exception_ptr eptr = pop_exception_queue()) {
-          try {
-            std::rethrow_exception(eptr);
-          } catch (const std::exception& e) {
-            std::cerr << "exception " << e.what() << "\n";
-          } catch (...) {
-            std::cerr << "unknown exception\n";
-          }
-        } else {
-          if (i > 0) {
-            close();
           }
           return;
+        } catch (const std::exception& e) {
+          std::cerr << e.what() << "\n";
         }
-      }
-    }
-
-    void each_impl() {
-      bool do_close = false;
-
-      check_exception_queue();
-
-      try {
-        if (auto* L = state_) {
-          lua_pushvalue(L, -1);
-          if (lua_pcall(L, 0, 1, 0) != LUA_OK) {
-            throw DROMOZOA_LOGIC_ERROR("cannot lua_pcall: ", lua_tostring(L, -1));
-          }
-          if (lua_toboolean(L, -1)) {
-            do_close = true;
-          }
-          lua_pop(L, 1);
-        }
-      } catch (...) {
-        push_exception_queue();
-      }
-
-      // cancelをするときに、自分自身を閉じる
-      // これにより、LuaのState自体が解放される
-
-      check_exception_queue();
-
-      if (do_close) {
-        std::cout << "closing\n";
-        close();
-        std::cout << "closed\n";
         emscripten_cancel_main_loop();
+        lua_close(L);
       }
     }
-  };
+  }
 }
 
+using namespace dromozoa;
+
 int main() {
-  auto boot = std::make_unique<dromozoa::boot_t>();
-  emscripten_set_main_loop_arg(dromozoa::boot_t::each, boot.release(), 0, false);
-  return 0;
+  if (lua_State* L = luaL_newstate()) {
+    try {
+      boot(L);
+      emscripten_set_main_loop_arg(each, L, 0, false);
+      return 0;
+    } catch (const std::exception& e) {
+      std::cerr << e.what() << "\n";
+    }
+  } else {
+    std::cerr << "cannot luaL_newstate\n";
+  }
+  return 1;
 }

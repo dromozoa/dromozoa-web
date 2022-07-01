@@ -17,7 +17,6 @@
 
 #include <emscripten.h>
 #include "common.hpp"
-#include "error.hpp"
 #include "lua.hpp"
 
 namespace dromozoa {
@@ -69,26 +68,18 @@ namespace dromozoa {
     void impl_random(lua_State* L) {
       push(L, emscripten_random());
     }
-
-    void impl_exit(lua_State*) {
-      throw DROMOZOA_LOGIC_ERROR("__exit__");
-    }
   }
 
   void initialize_core(lua_State* L) {
-    lua_newtable(L);
-    {
-      set_field(L, -1, "run_script", function<impl_run_script>());
-      set_field(L, -1, "run_script_int", function<impl_run_script_int>());
-      set_field(L, -1, "run_script_string", function<impl_run_script_string>());
-      set_field(L, -1, "get_device_pixel_ratio", function<impl_get_device_pixel_ratio>());
-      set_field(L, -1, "get_window_title", function<impl_get_window_title>());
-      set_field(L, -1, "set_window_title", function<impl_set_window_title>());
-      set_field(L, -1, "get_screen_size", function<impl_get_screen_size>());
-      set_field(L, -1, "hide_mouse", function<impl_hide_mouse>());
-      set_field(L, -1, "get_now", function<impl_get_now>());
-      set_field(L, -1, "random", function<impl_random>());
-      set_field(L, -1, "exit", function<impl_exit>());
-    }
+    set_field(L, -1, "run_script", function<impl_run_script>());
+    set_field(L, -1, "run_script_int", function<impl_run_script_int>());
+    set_field(L, -1, "run_script_string", function<impl_run_script_string>());
+    set_field(L, -1, "get_device_pixel_ratio", function<impl_get_device_pixel_ratio>());
+    set_field(L, -1, "get_window_title", function<impl_get_window_title>());
+    set_field(L, -1, "set_window_title", function<impl_set_window_title>());
+    set_field(L, -1, "get_screen_size", function<impl_get_screen_size>());
+    set_field(L, -1, "hide_mouse", function<impl_hide_mouse>());
+    set_field(L, -1, "get_now", function<impl_get_now>());
+    set_field(L, -1, "random", function<impl_random>());
   }
 }

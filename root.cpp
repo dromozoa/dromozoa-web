@@ -33,25 +33,13 @@
 
 namespace dromozoa {
   namespace {
-    // thread_reference
-    // lua_Stateがcloseされたら閉じたい
-    // refしておいて、自動的に閉じられるようにする
-    // __gcでクローズする
-    // threadをrefに積んでおく
-    // さらに、そのポインタ参照をrefにつんでおく
-    // モジュール自体に__gcを設定しよう
-
     lua_State* thread = nullptr;
 
-    class array_t : noncopyable {
-    public:
-      static constexpr char NAME[] = "dromozoa.web.array";
-    };
+    constexpr char ARRAY_NAME[] = "dromozoa.web.array";
+    constexpr char OBJECT_NAME[] = "dromozoa.web.object";
 
     class object_t : noncopyable {
     public:
-      static constexpr char NAME[] = "dromozoa.web.object";
-
       explicit object_t(int ref) : ref_(ref) {}
 
       ~object_t() {
@@ -69,17 +57,17 @@ namespace dromozoa {
         }
       }
 
-      static object_t* test(lua_State* L, int index) {
-        return static_cast<object_t*>(luaL_testudata(L, index, NAME));
-      }
-
-      static object_t* check(lua_State* L, int index) {
-        return static_cast<object_t*>(luaL_checkudata(L, index, NAME));
-      }
-
     private:
       int ref_;
     };
+
+    object_t* test_object(lua_State* L, int index) {
+      return static_cast<object_t*>(luaL_testudata(L, index, OBJECT_NAME));
+    }
+
+    object_t* check_object(lua_State* L, int index) {
+      return static_cast<object_t*>(luaL_checkudata(L, index, OBJECT_NAME));
+    }
 
     void js_push(lua_State* L, int index) {
       switch (lua_type(L, index)) {
@@ -103,7 +91,7 @@ namespace dromozoa {
             // metatableがarrayだったら、
             bool is_array = false;
             if (lua_getmetatable(L, index)) {
-              luaL_getmetatable(L, array_t::NAME);
+              luaL_getmetatable(L, ARRAY_NAME);
               if (lua_rawequal(L, -1, -2)) {
                 is_array = true;
               }
@@ -174,7 +162,7 @@ namespace dromozoa {
           }
           break;
         case LUA_TUSERDATA:
-          if (object_t* that = object_t::test(L, index)) {
+          if (object_t* that = test_object(L, index)) {
             JS_ASM({ D.stack.push(D.objs[$0]); }, that->get());
           } else {
             throw DROMOZOA_LOGIC_ERROR("unsupported type");
@@ -193,8 +181,8 @@ namespace dromozoa {
     }
 
     void impl_eq(lua_State* L) {
-      if (auto* self = object_t::test(L, 1)) {
-        if (auto* that = object_t::test(L, 2)) {
+      if (auto* self = test_object(L, 1)) {
+        if (auto* that = test_object(L, 2)) {
           JS_ASM({ D.push_boolean($0, D.objs[$1] === D.objs[$2]); }, L, self->get(), that->get());
           return;
         }
@@ -203,7 +191,7 @@ namespace dromozoa {
     }
 
     void impl_index(lua_State* L) {
-      auto* self = object_t::check(L, 1);
+      auto* self = check_object(L, 1);
       if (lua_isnumber(L, 2)) {
         JS_ASM({
           D.push($0, D.objs[$1][$2]);
@@ -217,7 +205,7 @@ namespace dromozoa {
     }
 
     void impl_newindex(lua_State* L) {
-      auto* self = object_t::check(L, 1);
+      auto* self = check_object(L, 1);
       js_push(L, 3);
       if (lua_isnumber(L, 2)) {
         JS_ASM({ D.objs[$0][$1] = D.stack.pop(); }, self->get(), lua_tonumber(L, 2));
@@ -228,7 +216,7 @@ namespace dromozoa {
     }
 
     void impl_call(lua_State* L) {
-      auto* self = object_t::check(L, 1);
+      auto* self = check_object(L, 1);
       int top = lua_gettop(L);
 
       js_push(L, 2);
@@ -250,11 +238,11 @@ namespace dromozoa {
     }
 
     void impl_close(lua_State* L) {
-      object_t::check(L, 1)->close();
+      check_object(L, 1)->close();
     }
 
     void impl_gc(lua_State* L) {
-      object_t::check(L, 1)->~object_t();
+      check_object(L, 1)->~object_t();
     }
 
     void impl_module_gc(lua_State*) {
@@ -288,12 +276,12 @@ namespace dromozoa {
     }
 
     void impl_get(lua_State* L) {
-      auto* self = object_t::check(L, 1);
+      auto* self = check_object(L, 1);
       push(L, self->get());
     }
 
     void impl_array(lua_State* L) {
-      luaL_setmetatable(L, array_t::NAME);
+      luaL_setmetatable(L, ARRAY_NAME);
     }
   }
 
@@ -303,7 +291,7 @@ namespace dromozoa {
     thread = lua_newthread(L);
     luaL_ref(L, LUA_REGISTRYINDEX);
 
-    luaL_newmetatable(L, object_t::NAME);
+    luaL_newmetatable(L, OBJECT_NAME);
     set_field(L, -1, "__eq", function<impl_eq>());
     set_field(L, -1, "__index", function<impl_index>());
     set_field(L, -1, "__newindex", function<impl_newindex>());
@@ -312,7 +300,7 @@ namespace dromozoa {
     set_field(L, -1, "__gc", function<impl_gc>());
     lua_pop(L, 1);
 
-    luaL_newmetatable(L, array_t::NAME);
+    luaL_newmetatable(L, ARRAY_NAME);
     lua_pop(L, 1);
 
     lua_newtable(L);
@@ -392,7 +380,7 @@ extern "C" {
 
   void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_object(lua_State* L, int id) {
     using namespace dromozoa;
-    new_userdata<object_t>(L, object_t::NAME, id);
+    new_userdata<object_t>(L, OBJECT_NAME, id);
   }
 
   int EMSCRIPTEN_KEEPALIVE dromozoa_web_ref(lua_State* L, int index) {

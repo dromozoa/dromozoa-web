@@ -57,4 +57,10 @@ D.window.console:log { foo = 17, bar = 23, baz = D.array { 1, 2, D.null, 3, qux 
 local array = D.array { 1, 2, 3, qux = true }
 print(array)
 print(#array, array[1], array.qux)
-print(D.window.JSON:stringify({ foo = 17, bar = 23, baz = D.array { 1, 2, D.null, 3, qux = true } }))
+print(D.window.JSON:stringify({
+  [{}] = "table1";
+  [{}] = "table2";
+  foo = 17,
+  bar = 23,
+  baz = D.array { 1, 2, D.null, 3, qux = true }
+}))

@@ -311,6 +311,11 @@ namespace dromozoa {
       DROMOZOA_JS_ASM({ D.push_object($0, D.ref_object(D.stack.pop())); }, L);
     }
 
+    void impl_throw(lua_State* L) {
+      js_push(L, 1);
+      EM_ASM({ throw D.stack.pop(); });
+    }
+
     void impl_array(lua_State* L) {
       luaL_setmetatable(L, NAME_ARRAY);
     }
@@ -339,6 +344,7 @@ namespace dromozoa {
       set_field(L, -1, "get_error", function<impl_get_error>());
       set_field(L, -1, "new", function<impl_new>());
       set_field(L, -1, "ref", function<impl_ref>());
+      set_field(L, -1, "throw", function<impl_throw>());
       set_field(L, -1, "array", function<impl_array>());
 
       DROMOZOA_JS_ASM({ D.push_object($0, D.ref_object(window)); }, L);

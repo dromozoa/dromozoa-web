@@ -54,4 +54,4 @@ while true do
 end
 
 print "done"
--- core.exit()
+core.exit()

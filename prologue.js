@@ -15,13 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-// luaL_ref, luaL_unrefと同様の仕組みを実装する
-// objs[0]がfreelistの先頭要素である
-
 const D = {
   stack: [],
   objs: [ 0 ],
-  refs: new FinalizationRegistry((v) => { D.unref(D.get_state(), v); }),
 
   ref_object: (obj) => {
     let ref = D.objs[0];
@@ -41,19 +37,12 @@ const D = {
     }
   },
 
-  evaluate_lua: cwrap("dromozoa_web_evaluate_lua", null, ["string"]),
-  get_state: cwrap("dromozoa_web_get_state", "pointer", []),
-  push_function: cwrap("dromozoa_web_push_function", null, ["number"]),
-  call_function: cwrap("dromozoa_web_call_function", null, ["pointer", "number"]),
-  push_nil: cwrap("dromozoa_web_push_nil", null, ["pointer"]),
-  push_null: cwrap("dromozoa_web_push_null", null, ["pointer"]),
-  push_integer: cwrap("dromozoa_web_push_integer", null, ["pointer", "number"]),
-  push_number: cwrap("dromozoa_web_push_number", null, ["pointer", "number"]),
-  push_boolean: cwrap("dromozoa_web_push_boolean", null, ["pointer", "number"]),
-  push_string: cwrap("dromozoa_web_push_string", null, ["pointer", "string"]),
-  push_object: cwrap("dromozoa_web_push_object", null, ["pointer", "number"]),
-  ref: cwrap("dromozoa_web_ref", "number", ["pointer"]),
-  unref: cwrap("dromozoa_web_unref", null, ["pointer", "number"]),
+  refs: new FinalizationRegistry((ref) => {
+    const L = D.get_thread();
+    if (L) {
+      D.unref_registry(L, ref);
+    }
+  }),
 
   push: (L, v) => {
     switch (typeof v) {
@@ -85,4 +74,18 @@ const D = {
   new: (T, ...a) => {
     return new T(a);
   },
+
+  get_thread: cwrap("dromozoa_web_get_thread", "pointer", []),
+  evaluate: cwrap("dromozoa_web_evaluate", "number", ["string"]),
+  call: cwrap("dromozoa_web_call", "number", ["pointer", "number"]),
+  push_nil: cwrap("dromozoa_web_push_nil", null, ["pointer"]),
+  push_integer: cwrap("dromozoa_web_push_integer", null, ["pointer", "number"]),
+  push_number: cwrap("dromozoa_web_push_number", null, ["pointer", "number"]),
+  push_boolean: cwrap("dromozoa_web_push_boolean", null, ["pointer", "number"]),
+  push_string: cwrap("dromozoa_web_push_string", null, ["pointer", "string"]),
+  push_null: cwrap("dromozoa_web_push_null", null, ["pointer"]),
+  push_object: cwrap("dromozoa_web_push_object", null, ["pointer", "number"]),
+  push_ref: cwrap("dromozoa_web_push_ref", null, ["number"]),
+  ref_registry: cwrap("dromozoa_web_ref_registry", "number", ["pointer"]),
+  unref_registry: cwrap("dromozoa_web_unref_registry", null, ["pointer", "number"]),
 };

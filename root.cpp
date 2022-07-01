@@ -35,8 +35,20 @@ namespace dromozoa {
   namespace {
     lua_State* thread = nullptr;
 
-    constexpr char ARRAY_NAME[] = "dromozoa.web.array";
-    constexpr char OBJECT_NAME[] = "dromozoa.web.object";
+    constexpr char NAME_ARRAY[] = "dromozoa.web.array";
+
+    bool is_array(lua_State* L, int index) {
+      stack_guard guard(L);
+      if (lua_getmetatable(L, index)) {
+        luaL_getmetatable(L, NAME_ARRAY);
+        if (lua_rawequal(L, -1, -2)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    constexpr char NAME_OBJECT[] = "dromozoa.web.object";
 
     class object_t : noncopyable {
     public:
@@ -62,11 +74,11 @@ namespace dromozoa {
     };
 
     object_t* test_object(lua_State* L, int index) {
-      return static_cast<object_t*>(luaL_testudata(L, index, OBJECT_NAME));
+      return static_cast<object_t*>(luaL_testudata(L, index, NAME_OBJECT));
     }
 
     object_t* check_object(lua_State* L, int index) {
-      return static_cast<object_t*>(luaL_checkudata(L, index, OBJECT_NAME));
+      return static_cast<object_t*>(luaL_checkudata(L, index, NAME_OBJECT));
     }
 
     void js_push(lua_State* L, int index) {
@@ -88,17 +100,8 @@ namespace dromozoa {
           {
             index = lua_absindex(L, index);
 
-            // metatableがarrayだったら、
-            bool is_array = false;
-            if (lua_getmetatable(L, index)) {
-              luaL_getmetatable(L, ARRAY_NAME);
-              if (lua_rawequal(L, -1, -2)) {
-                is_array = true;
-              }
-              lua_pop(L, 2);
-            }
-
-            if (is_array) {
+            bool array = is_array(L, index);
+            if (array) {
               JS_ASM({ D.stack.push([]); });
             } else {
               JS_ASM({ D.stack.push({}); });
@@ -106,56 +109,48 @@ namespace dromozoa {
 
             lua_pushnil(L);
             while (lua_next(L, index)) {
-              // k: -2
-              // v: -1
               switch (lua_type(L, -2)) {
                 case LUA_TNUMBER:
-                  if (is_array && lua_isinteger(L, -2)) {
+                  if (array && lua_isinteger(L, -2)) {
                     JS_ASM({ D.stack.push($0); }, lua_tonumber(L, -2) - 1);
                   } else {
                     JS_ASM({ D.stack.push($0); }, lua_tonumber(L, -2));
                   }
                   break;
                 case LUA_TSTRING:
-                  // 文字列なので、スタック上の変換は行われない
                   JS_ASM({ D.stack.push(UTF8ToString($0)); }, lua_tostring(L, -2));
                   break;
-                // 数値キーと文字列だけを扱う
                 default:
                   lua_pop(L, 1);
                   continue;
               }
-
               js_push(L, -1);
-
               JS_ASM({
                 const v = D.stack.pop();
                 const k = D.stack.pop();
                 D.stack[D.stack.length - 1][k] = v;
               });
-
               lua_pop(L, 1);
             }
           }
           break;
         case LUA_TFUNCTION:
           {
-            // 厳密にはtry catchをしないとよくわからないことになる？
-            // ロールバックを書くほうがよいかもしれない
-            // luaL_refに成功して、registerに失敗した場合、参照が切れる
-            // そういう事態が発生するか？
             JS_ASM({
               const v = (...args) => {
-                const L = D.get_state();
-                const n = args.length;
-                D.push_function(L, v.ref);
-                for (let i = 0; i < n; ++i) {
-                  D.push(L, args[i])
+                const L = D.get_thread();
+                if (L) {
+                  const n = args.length;
+                  D.push_ref(L, v.ref);
+                  for (let i = 0; i < n; ++i) {
+                    D.push(L, args[i]);
+                  }
+                  if (D.call(L, n)) {
+                    return D.stack.pop();
+                  }
                 }
-                D.call_function(L, n);
-                return D.stack.pop();
               };
-              v.ref = D.ref($0, $1);
+              v.ref = D.ref_registry($0, $1);
               D.refs.register(v, v.ref);
               D.stack.push(v);
             }, L, index);
@@ -181,26 +176,22 @@ namespace dromozoa {
     }
 
     void impl_eq(lua_State* L) {
-      if (auto* self = test_object(L, 1)) {
-        if (auto* that = test_object(L, 2)) {
-          JS_ASM({ D.push_boolean($0, D.objs[$1] === D.objs[$2]); }, L, self->get(), that->get());
-          return;
-        }
+      auto* self = test_object(L, 1);
+      auto* that = test_object(L, 1);
+      if (self && that) {
+        JS_ASM({ D.push_boolean($0, D.objs[$1] === D.objs[$2]); }, L, self->get(), that->get());
+      } else {
+        lua_pushboolean(L, false);
       }
-      lua_pushboolean(L, false);
     }
 
     void impl_index(lua_State* L) {
       auto* self = check_object(L, 1);
       if (lua_isnumber(L, 2)) {
-        JS_ASM({
-          D.push($0, D.objs[$1][$2]);
-        }, L, self->get(), lua_tonumber(L, 2));
+        JS_ASM({ D.push($0, D.objs[$1][$2]); }, L, self->get(), lua_tonumber(L, 2));
       } else {
         const auto* key = luaL_checkstring(L, 2);
-        JS_ASM({
-          D.push($0, D.objs[$1][UTF8ToString($2)]);
-        }, L, self->get(), key);
+        JS_ASM({ D.push($0, D.objs[$1][UTF8ToString($2)]); }, L, self->get(), key);
       }
     }
 
@@ -264,8 +255,9 @@ namespace dromozoa {
       }
 
       JS_ASM({
-        D.push($0, D.new.apply(undefined, D.args));
+        const args = D.args;
         D.args = undefined;
+        D.push($0, D.new.apply(undefined, args));
       }, L);
     }
 
@@ -281,26 +273,24 @@ namespace dromozoa {
     }
 
     void impl_array(lua_State* L) {
-      luaL_setmetatable(L, ARRAY_NAME);
+      luaL_setmetatable(L, NAME_ARRAY);
     }
   }
 
   void initialize(lua_State* L) {
-    // thread = thread_reference(L);
-
     thread = lua_newthread(L);
     luaL_ref(L, LUA_REGISTRYINDEX);
 
-    luaL_newmetatable(L, OBJECT_NAME);
+    luaL_newmetatable(L, NAME_ARRAY);
+    lua_pop(L, 1);
+
+    luaL_newmetatable(L, NAME_OBJECT);
     set_field(L, -1, "__eq", function<impl_eq>());
     set_field(L, -1, "__index", function<impl_index>());
     set_field(L, -1, "__newindex", function<impl_newindex>());
     set_field(L, -1, "__call", function<impl_call>());
     set_field(L, -1, "__close", function<impl_close>());
     set_field(L, -1, "__gc", function<impl_gc>());
-    lua_pop(L, 1);
-
-    luaL_newmetatable(L, ARRAY_NAME);
     lua_pop(L, 1);
 
     lua_newtable(L);
@@ -322,44 +312,42 @@ namespace dromozoa {
 }
 
 extern "C" {
-  void EMSCRIPTEN_KEEPALIVE dromozoa_web_evaluate_lua(const char* code) {
-    using namespace dromozoa;
-    if (auto* L = thread) {
-      if (luaL_loadbuffer(L, code, std::strlen(code), "=(load)") != LUA_OK) {
-        std::cerr << "cannot luaL_loadbuffer: " << lua_tostring(L, -1) << "\n";
-        return;
-      }
-      if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
-        std::cerr << "cannot lua_pcall: " << lua_tostring(L, -1) << "\n";
-      }
-    }
-  }
+  using namespace dromozoa;
 
-  lua_State* EMSCRIPTEN_KEEPALIVE dromozoa_web_get_state() {
+  lua_State* EMSCRIPTEN_KEEPALIVE dromozoa_web_get_thread() {
     return dromozoa::thread;
   }
 
-  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_function(lua_State* L, int ref) {
-    lua_geti(L, LUA_REGISTRYINDEX, ref);
+  int EMSCRIPTEN_KEEPALIVE dromozoa_web_evaluate(const char* code) {
+    if (auto* L = thread) {
+      stack_guard guard(L);
+      if (luaL_loadbuffer(L, code, std::strlen(code), "=(load)") != LUA_OK) {
+        std::cerr << "cannot luaL_loadbuffer: " << lua_tostring(L, -1) << "\n";
+        return 0;
+      }
+      if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
+        std::cerr << "cannot lua_pcall: " << lua_tostring(L, -1) << "\n";
+        return 0;
+      }
+      return 1;
+    } else {
+      std::cerr << "thread is null\n";
+      return 0;
+    }
   }
 
-  void EMSCRIPTEN_KEEPALIVE dromozoa_web_call_function(lua_State* L, int nargs) {
-    using namespace dromozoa;
+  int EMSCRIPTEN_KEEPALIVE dromozoa_web_call(lua_State* L, int nargs) {
+    stack_guard guard(L);
     if (lua_pcall(L, nargs, 1, 0) != LUA_OK) {
       std::cerr << "cannot lua_pcall: " << lua_tostring(L, -1) << "\n";
+      return 0;
     }
-    // 返り値をJavaScriptに返す
     js_push(L, -1);
-    // 返り値を削除しないと参照がはずれない
-    lua_pop(L, 1);
+    return 1;
   }
 
   void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_nil(lua_State* L) {
     lua_pushnil(L);
-  }
-
-  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_null(lua_State* L) {
-    lua_pushlightuserdata(L, nullptr);
   }
 
   void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_integer(lua_State* L, int value) {
@@ -378,17 +366,24 @@ extern "C" {
     lua_pushstring(L, value);
   }
 
-  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_object(lua_State* L, int id) {
-    using namespace dromozoa;
-    new_userdata<object_t>(L, OBJECT_NAME, id);
+  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_null(lua_State* L) {
+    lua_pushlightuserdata(L, nullptr);
   }
 
-  int EMSCRIPTEN_KEEPALIVE dromozoa_web_ref(lua_State* L, int index) {
+  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_object(lua_State* L, int id) {
+    new_userdata<object_t>(L, NAME_OBJECT, id);
+  }
+
+  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_ref(lua_State* L, int ref) {
+    lua_geti(L, LUA_REGISTRYINDEX, ref);
+  }
+
+  int EMSCRIPTEN_KEEPALIVE dromozoa_web_ref_registry(lua_State* L, int index) {
     lua_pushvalue(L, index);
     return luaL_ref(L, LUA_REGISTRYINDEX);
   }
 
-  void EMSCRIPTEN_KEEPALIVE dromozoa_web_unref(lua_State* L, int ref) {
+  void EMSCRIPTEN_KEEPALIVE dromozoa_web_unref_registry(lua_State* L, int ref) {
     luaL_unref(L, LUA_REGISTRYINDEX, ref);
   }
 }

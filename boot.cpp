@@ -28,7 +28,6 @@
 namespace dromozoa {
   void initialize(lua_State*);
   void initialize_core(lua_State*);
-  void initialize_fetch(lua_State*);
 
   namespace {
     template <class T_key, class T_value>
@@ -42,7 +41,6 @@ namespace dromozoa {
     void preload_modules(lua_State* L) {
       preload_impl(L, "dromozoa.web", function<initialize>());
       preload_impl(L, "dromozoa.web.core", function<initialize_core>());
-      preload_impl(L, "dromozoa.web.fetch", function<initialize_fetch>());
     }
 
     void boot(lua_State* L) {

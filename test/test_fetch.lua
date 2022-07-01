@@ -30,23 +30,18 @@ local p1 = D.window:fetch("main.lua", {
 
 local done
 
-print("p1", D.get(p1))
 local p2 = p1:then_(function (response)
   local p = response:text()
-  print("p", D.get(p))
   return p
 end)
-print("p2", D.get(p2))
 local p3 = p2:then_(function (text)
   print(text)
   done = true
 end)
-print("p3", D.get(p3))
 local p4 = p3:catch(function (e)
   print("catch", e.message)
   done = true
 end)
-print("p4", D.get(p4))
 
 while not done do
   coroutine.yield()

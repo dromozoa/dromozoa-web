@@ -15,18 +15,14 @@
 # You should have received a copy of the GNU General Public License
 # along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
+BASE_CXXFALGS = -Oz -fexceptions -sNO_DISABLE_EXCEPTION_CATCHING
+BASE_LDFLAGS = -fexceptions
+
 CXX = em++
 CPPFLAGS += -Ilua/src -DLUA_USE_POSIX -MMD
-CXXFLAGS += -Wall -W -std=c++20 -O2 -fexceptions -sNO_DISABLE_EXCEPTION_CATCHING
-LDFLAGS += -Llua/src -fexceptions -sEXPORTED_RUNTIME_METHODS=ccall,cwrap --shell-file shell.html --pre-js prologue.js --post-js epilogue.js
+CXXFLAGS += -Wall -W -std=c++20 $(BASE_CXXFALGS)
+LDFLAGS += -Llua/src $(BASE_LDFLAGS) -sEXPORTED_RUNTIME_METHODS=ccall,cwrap --shell-file shell.html --pre-js prologue.js --post-js epilogue.js --closure=1
 LDLIBS += -llua
-
-# closure compiler
-# LDFLAGS += -Llua/src -fexceptions -sEXPORTED_RUNTIME_METHODS=ccall,cwrap --shell-file shell.html --closure=1
-
-# source-map
-# CXXFLAGS += -Wall -W -std=c++20 -g -fexceptions -sNO_DISABLE_EXCEPTION_CATCHING
-# LDFLAGS += -Llua/src -fexceptions -gsource-map --source-map-base http://127.0.0.1/dromozoa-web/
 
 OBJS = \
 	boot.o \
@@ -37,7 +33,7 @@ TARGET = index.html
 all: all-recursive $(TARGET)
 
 all-recursive:
-	(cd lua/src && $(MAKE) CC=em++ AR="emar rcu" RANLIB=emranlib MYCFLAGS="-fexceptions -sNO_DISABLE_EXCEPTION_CATCHING" MYLDFLAGS=-fexceptions LUA_T=lua.html LUAC_T=luac.html posix)
+	(cd lua/src && $(MAKE) CC=em++ AR="emar rcu" RANLIB=emranlib CFLAGS="-Wall -Wextra -DLUA_COMPAT_5_3 $(BASE_CXXFALGS)" MYLDFLAGS="$(BASE_LDFLAGS)" LUA_T=lua.html LUAC_T=luac.html posix)
 
 clean:
 	$(RM) *.d *.o $(TARGET) index.html index.js index.wasm

@@ -21,7 +21,7 @@
 #include <exception>
 #include "common.hpp"
 #include "error.hpp"
-#include "js.hpp"
+#include "js_asm.hpp"
 #include "lua.hpp"
 #include "noncopyable.hpp"
 #include "stack_guard.hpp"

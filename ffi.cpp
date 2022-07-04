@@ -25,7 +25,7 @@
 #include "lua.hpp"
 #include "noncopyable.hpp"
 #include "stack_guard.hpp"
-#include <iostream>
+#include "udata.hpp"
 
 namespace dromozoa {
   namespace {
@@ -78,9 +78,12 @@ namespace dromozoa {
         return ref_;
       };
 
-      void close() {
+      void close() noexcept {
         if (ref_) {
-          DROMOZOA_JS_ASM({ D.unref_object($0); }, ref_);
+          try {
+            DROMOZOA_JS_ASM({ D.unref_object($0); }, ref_);
+          } catch (...) {
+          }
           ref_ = 0;
         }
       }

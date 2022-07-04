@@ -19,8 +19,6 @@
 #include "common.hpp"
 #include "thread.hpp"
 
-#include <iostream>
-
 namespace dromozoa {
   namespace {
     lua_State* thread = nullptr;
@@ -33,8 +31,10 @@ namespace dromozoa {
   void initialize_thread(lua_State* L) {
     lua_newtable(L);
     thread = lua_newthread(L);
-    lua_setfield(L, -2, "thread");
-    set_metafield(L, -1, "__gc", function<impl_gc>());
+    set_field(L, -2, 1);
+    lua_newtable(L);
+    set_field(L, -1, "__gc", function<impl_gc>());
+    lua_setmetatable(L, -2);
     luaL_ref(L, LUA_REGISTRYINDEX);
   }
 }

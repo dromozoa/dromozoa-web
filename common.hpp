@@ -151,21 +151,13 @@ namespace dromozoa {
     lua_settable(L, index);
   }
 
-  template <class T_key, class T_value>
-  inline void set_metafield(lua_State* L, int index, T_key&& key, T_value&& value) {
-    if (lua_getmetatable(L, index)) {
-      push(L, std::forward<T_key>(key));
-      push(L, std::forward<T_value>(value));
-      lua_settable(L, -3);
-      lua_pop(L, 1);
-    } else {
-      index = lua_absindex(L, index);
-      lua_newtable(L);
-      push(L, std::forward<T_key>(key));
-      push(L, std::forward<T_value>(value));
-      lua_settable(L, -3);
-      lua_setmetatable(L, index);
-    }
+  template <class T_key>
+  inline void set_field(lua_State* L, int index, T_key&& key) {
+    index = lua_absindex(L, index);
+    push(L, std::forward<T_key>(key));
+    lua_pushvalue(L, -2);
+    lua_settable(L, index);
+    lua_pop(L, 1);
   }
 
   template <class T, std::enable_if_t<(std::is_integral_v<T> && std::is_signed_v<T> && sizeof(lua_Integer) <= sizeof(T)), std::nullptr_t> = nullptr>

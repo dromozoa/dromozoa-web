@@ -25,9 +25,25 @@
 #include "lua.hpp"
 #include "noncopyable.hpp"
 #include "stack_guard.hpp"
+#include <iostream>
 
 namespace dromozoa {
   namespace {
+    template <class T>
+    inline int gc_impl2(lua_State* L) {
+      T* self = check_udata<T>(L, 1);
+      std::cout << "gc " << T::NAME << " " << self << "\n";
+      self->~T();
+      return 0;
+    };
+
+
+
+
+
+    // template <class T>
+    // using gc_function = function<gc_impl<T>::value>
+
     lua_State* thread = nullptr;
 
     std::deque<std::exception_ptr> error_queue;
@@ -49,10 +65,6 @@ namespace dromozoa {
     private:
       std::string what_;
     };
-
-    void impl_gc_error(lua_State* L) {
-      check_udata<error_t>(L, 1)->~error_t();
-    }
 
     constexpr char NAME_ARRAY[] = "dromozoa.web.array";
 
@@ -265,10 +277,6 @@ namespace dromozoa {
       check_udata<object_t>(L, 1)->close();
     }
 
-    void impl_gc_object(lua_State* L) {
-      check_udata<object_t>(L, 1)->~object_t();
-    }
-
     void impl_gc_module(lua_State*) {
       thread = nullptr;
     }
@@ -326,7 +334,7 @@ namespace dromozoa {
     luaL_ref(L, LUA_REGISTRYINDEX);
 
     luaL_newmetatable(L, error_t::NAME);
-    set_field(L, -1, "__gc", function<impl_gc_error>());
+    set_field(L, -1, "__gc", gc_impl2<error_t>);
     lua_pop(L, 1);
 
     luaL_newmetatable(L, NAME_ARRAY);
@@ -339,7 +347,7 @@ namespace dromozoa {
     set_field(L, -1, "__call", function<impl_call>());
     set_field(L, -1, "__tostring", function<impl_tostring>());
     set_field(L, -1, "__close", function<impl_close>());
-    set_field(L, -1, "__gc", function<impl_gc_object>());
+    set_field(L, -1, "__gc", gc_impl2<object_t>);
     lua_pop(L, 1);
 
     set_metafield(L, -1, "__gc", function<impl_gc_module>());

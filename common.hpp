@@ -135,6 +135,10 @@ namespace dromozoa {
     lua_pushcfunction(L, (function_wrapper<T, T_function>::value));
   }
 
+  inline void push(lua_State* L, lua_CFunction value) {
+    lua_pushcfunction(L, value);
+  }
+
   template <class T_key, class T_value>
   inline void set_field(lua_State* L, int index, T_key&& key, T_value&& value) {
     index = lua_absindex(L, index);

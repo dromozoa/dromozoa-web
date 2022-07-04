@@ -15,22 +15,13 @@
 // You should have received a copy of the GNU General Public License
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "js_array.hpp"
-#include "js_error.hpp"
-#include "js_object.hpp"
-#include "thread.hpp"
+#ifndef DROMOZOA_WEB_THREAD_HPP
+#define DROMOZOA_WEB_THREAD_HPP
+
+#include "lua.hpp"
 
 namespace dromozoa {
-  void initialize_core(lua_State*);
-  void initialize_ffi(lua_State*);
-
-  void open_module(lua_State* L) {
-    lua_newtable(L);
-    initialize_core(L);
-    initialize_ffi(L);
-    initialize_js_array(L);
-    initialize_js_error(L);
-    initialize_js_object(L);
-    initialize_thread(L);
-  }
+  void initialize_thread(lua_State*);
 }
+
+#endif

@@ -15,22 +15,34 @@
 // You should have received a copy of the GNU General Public License
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "js_array.hpp"
-#include "js_error.hpp"
-#include "js_object.hpp"
+#include <emscripten.h>
+#include "common.hpp"
 #include "thread.hpp"
 
-namespace dromozoa {
-  void initialize_core(lua_State*);
-  void initialize_ffi(lua_State*);
+#include <iostream>
 
-  void open_module(lua_State* L) {
+namespace dromozoa {
+  namespace {
+    lua_State* thread = nullptr;
+
+    void impl_gc(lua_State*) {
+      thread = nullptr;
+    }
+  }
+
+  void initialize_thread(lua_State* L) {
     lua_newtable(L);
-    initialize_core(L);
-    initialize_ffi(L);
-    initialize_js_array(L);
-    initialize_js_error(L);
-    initialize_js_object(L);
-    initialize_thread(L);
+    thread = lua_newthread(L);
+    lua_setfield(L, -2, "thread");
+    set_metafield(L, -1, "__gc", function<impl_gc>());
+    luaL_ref(L, LUA_REGISTRYINDEX);
+  }
+}
+
+extern "C" {
+  using namespace dromozoa;
+
+  lua_State* EMSCRIPTEN_KEEPALIVE dromozoa_web_get_thread() {
+    return thread;
   }
 }

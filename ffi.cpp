@@ -33,16 +33,10 @@
 
 namespace dromozoa {
   namespace {
-    lua_State* thread = nullptr;
-
     std::deque<std::exception_ptr> error_queue;
 
     void push_error() {
       error_queue.emplace_back(std::current_exception());
-    }
-
-    void impl_gc_module(lua_State*) {
-      thread = nullptr;
     }
 
     void impl_get_error(lua_State* L) {
@@ -84,11 +78,6 @@ namespace dromozoa {
   }
 
   void initialize_ffi(lua_State* L) {
-    thread = lua_newthread(L);
-    luaL_ref(L, LUA_REGISTRYINDEX);
-
-    set_metafield(L, -1, "__gc", function<impl_gc_module>());
-
     set_field(L, -1, "get_error", function<impl_get_error>());
     set_field(L, -1, "new", function<impl_new>());
     set_field(L, -1, "ref", function<impl_ref>());
@@ -97,10 +86,6 @@ namespace dromozoa {
 
 extern "C" {
   using namespace dromozoa;
-
-  lua_State* EMSCRIPTEN_KEEPALIVE dromozoa_web_get_thread() {
-    return thread;
-  }
 
   int EMSCRIPTEN_KEEPALIVE dromozoa_web_evaluate(lua_State* L, const char* code) {
     try {

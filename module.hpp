@@ -21,7 +21,7 @@
 #include "lua.hpp"
 
 namespace dromozoa {
-  int open_module(lua_State*);
+  void open_module(lua_State*);
 }
 
 #endif

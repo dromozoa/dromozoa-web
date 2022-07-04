@@ -38,7 +38,7 @@ namespace dromozoa {
 
     void boot(lua_State* L) {
       luaL_openlibs(L);
-      preload(L, "dromozoa.web", open_module);
+      preload(L, "dromozoa.web", function<open_module>());
 
       static const char code[] =
       #include "boot.lua"

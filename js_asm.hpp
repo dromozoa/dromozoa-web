@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef DROMOZOA_JS_ASM_HPP
-#define DROMOZOA_JS_ASM_HPP
+#ifndef DROMOZOA_WEB_JS_ASM_HPP
+#define DROMOZOA_WEB_JS_ASM_HPP
 
 #include <emscripten.h>
 #include <cstdlib>

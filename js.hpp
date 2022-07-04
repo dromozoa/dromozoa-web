@@ -24,16 +24,16 @@
 
 namespace dromozoa {
   template <class T>
-  inline std::unique_ptr<T, decltype(&std::free)> make_unique_free(void* ptr) {
+  inline std::unique_ptr<T, decltype(&std::free)> js_make_unique(void* ptr) {
     return std::unique_ptr<T, decltype(&std::free)>(static_cast<T*>(ptr), std::free);
   }
 }
 
-#define DROMOZOA_JS_ASM_TRY \
+#define DROMOZOA_JS_ASM_PROLOGUE \
   "try {" \
 /**/
 
-#define DROMOZOA_JS_ASM_CATCH \
+#define DROMOZOA_JS_ASM_EPILOGUE \
   "} catch (e) {" \
     "const size = lengthBytesUTF8(e.message) + 1;" \
     "const data = _malloc(size);" \
@@ -44,8 +44,8 @@ namespace dromozoa {
 /**/
 
 #define DROMOZOA_JS_ASM(code, ...) \
-  if (auto  e = dromozoa::make_unique_free<char>(emscripten_asm_const_ptr(CODE_EXPR(DROMOZOA_JS_ASM_TRY #code DROMOZOA_JS_ASM_CATCH) _EM_ASM_PREP_ARGS(__VA_ARGS__)))) \
-    throw DROMOZOA_LOGIC_ERROR("javascript error: ", e.get()) \
+  if (auto js_error = dromozoa::js_make_unique<char>(emscripten_asm_const_ptr(CODE_EXPR(DROMOZOA_JS_ASM_PROLOGUE #code DROMOZOA_JS_ASM_EPILOGUE) _EM_ASM_PREP_ARGS(__VA_ARGS__)))) \
+    throw DROMOZOA_LOGIC_ERROR("javascript error: ", js_error.get()) \
 /**/
 
 #endif

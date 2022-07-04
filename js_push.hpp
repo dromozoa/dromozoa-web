@@ -15,34 +15,13 @@
 // You should have received a copy of the GNU General Public License
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "js_asm.hpp"
-#include "common.hpp"
-#include "js_object.hpp"
-#include "js_push.hpp"
-#include "udata.hpp"
+#ifndef DROMOZOA_WEB_JS_PUSH_HPP
+#define DROMOZOA_WEB_JS_PUSH_HPP
+
+#include "lua.hpp"
 
 namespace dromozoa {
-  namespace {
-    void impl_eq(lua_State* L) {
-      auto* self = test_udata<js_object>(L, 1);
-      auto* that = test_udata<js_object>(L, 2);
-      if (self && that) {
-        DROMOZOA_JS_ASM({ D.push_boolean($0, D.objs[$1] === D.objs[$2]); }, L, self->get(), that->get());
-      } else {
-        push(L, false);
-      }
-    }
-  }
-
-  void js_object::close() noexcept {
-    if (ref_) {
-      try {
-        DROMOZOA_JS_ASM({ D.unref_object($0) }, ref_);
-      } catch (...) {}
-      ref_ = 0;
-    }
-  }
-
-  void initialize_js_object(lua_State* L) {
-  }
+  void js_push(lua_State*, int);
 }
+
+#endif

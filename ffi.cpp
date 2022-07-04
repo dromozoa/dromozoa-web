@@ -23,35 +23,13 @@
 #include <memory>
 #include "common.hpp"
 #include "error.hpp"
+#include "js.hpp"
 #include "lua.hpp"
 #include "noncopyable.hpp"
 #include "stack_guard.hpp"
 
-#define DROMOZOA_JS_ASM_TRY \
-  "try {" \
-/**/
-
-#define DROMOZOA_JS_ASM_CATCH \
-  "} catch (e) {" \
-    "const size = lengthBytesUTF8(e.message) + 1;" \
-    "const data = _malloc(size);" \
-    "stringToUTF8(e.message, data, size);" \
-    "return data;" \
-  "}" \
-  "return 0;" \
-/**/
-
-#define DROMOZOA_JS_ASM(code, ...) \
-  if (auto cstr = dromozoa::make_unique_cstr(emscripten_asm_const_ptr(CODE_EXPR(DROMOZOA_JS_ASM_TRY #code DROMOZOA_JS_ASM_CATCH) _EM_ASM_PREP_ARGS(__VA_ARGS__)))) \
-    throw DROMOZOA_LOGIC_ERROR("javascript error: ", cstr.get()) \
-/**/
-
 namespace dromozoa {
   namespace {
-    std::unique_ptr<char, decltype(&std::free)> make_unique_cstr(void* ptr) {
-      return std::unique_ptr<char, decltype(&std::free)>(static_cast<char*>(ptr), std::free);
-    }
-
     lua_State* thread = nullptr;
 
     std::deque<std::exception_ptr> error_queue;
@@ -296,7 +274,12 @@ namespace dromozoa {
       }, L, self->get());
     }
 
-    void impl_close_object(lua_State* L) {
+    void impl_tostring(lua_State* L) {
+      auto* self = check_object(L, 1);
+      DROMOZOA_JS_ASM({ D.push($0, D.objs[$1].toString()); }, L, self->get());
+    }
+
+    void impl_close(lua_State* L) {
       check_object(L, 1)->close();
     }
 
@@ -372,7 +355,8 @@ namespace dromozoa {
     set_field(L, -1, "__index", function<impl_index>());
     set_field(L, -1, "__newindex", function<impl_newindex>());
     set_field(L, -1, "__call", function<impl_call>());
-    set_field(L, -1, "__close", function<impl_close_object>());
+    set_field(L, -1, "__tostring", function<impl_tostring>());
+    set_field(L, -1, "__close", function<impl_close>());
     set_field(L, -1, "__gc", function<impl_gc_object>());
     lua_pop(L, 1);
 

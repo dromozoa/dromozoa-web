@@ -25,12 +25,9 @@ function class.new(f)
 end
 
 function class:await(p)
-  print "await start"
   p["then"](p, function (v)
-    print "then start"
     assert(coroutine.resume(self.thread, true, v))
   end):catch(function (v)
-    print "catch start"
     assert(coroutine.resume(self.thread, false, v))
   end)
   -- then,catchのなかで実行されていることに注意
@@ -38,24 +35,37 @@ function class:await(p)
   if result then
     return v
   else
-    print("error", v.message)
-    error(v:toString())
+    self:error(v)
   end
+end
+
+function class:error(v)
+  error(v)
 end
 
 local function async(f)
   local self = class.new(f)
-  print(self.thread)
   assert(coroutine.resume(self.thread, self))
 end
 
 async(function (self)
-  print "async start"
-  local url = "main.lua"
+  local url = "https://nozomi.dromozoa.com/"
+  local url = main.lua
   local response = self:await(D.window:fetch(url, { cache = "no-store" }))
   if response.ok then
     local text = self:await(response:text())
-    print(text)
+    print("ok", url)
+  else
+    self:error("cannot fetch: " .. url)
+  end
+end)
+
+async(function (self)
+  local url = "index.js"
+  local response = self:await(D.window:fetch(url, { cache = "no-store" }))
+  if response.ok then
+    local text = self:await(response:text())
+    print("ok", url)
   else
     error("cannot fetch: " .. url)
   end

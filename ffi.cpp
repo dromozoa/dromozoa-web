@@ -118,7 +118,11 @@ extern "C" {
           DROMOZOA_JS_ASM({ D.stack.push(UTF8ToString($0)); }, that->what());
           return 2;
         } else {
-          throw DROMOZOA_LOGIC_ERROR("cannot lua_pcall: ", lua_tostring(L, -1));
+          if (const char* data = luaL_tolstring(L, -1, nullptr)) {
+            throw DROMOZOA_LOGIC_ERROR("cannot lua_pcall: ", data);
+          } else {
+            throw DROMOZOA_LOGIC_ERROR("cannot lua_pcall");
+          }
         }
       } else {
         js_push(L, -1);

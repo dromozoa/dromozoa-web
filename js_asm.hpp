@@ -36,17 +36,14 @@ namespace dromozoa {
 
 #define DROMOZOA_JS_ASM_EPILOGUE \
   ";} catch (e) {" \
-    "const size = lengthBytesUTF8(e.message) + 1;" \
-    "const data = _malloc(size);" \
-    "stringToUTF8(e.message, data, size);" \
-    "return data;" \
+    "return allocateUTF8(e.toString());" \
   "}" \
   "return 0;" \
 /**/
 
 #define DROMOZOA_JS_ASM(code, ...) \
   if (auto error = dromozoa::make_unique_impl<char>(emscripten_asm_const_ptr(CODE_EXPR(DROMOZOA_JS_ASM_PROLOGUE #code DROMOZOA_JS_ASM_EPILOGUE) _EM_ASM_PREP_ARGS(__VA_ARGS__)))) \
-    throw DROMOZOA_LOGIC_ERROR("javascript error: ", error.get()) \
+    throw DROMOZOA_LOGIC_ERROR(error.get()) \
 /**/
 
 #endif

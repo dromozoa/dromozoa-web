@@ -19,9 +19,9 @@
 #include <cstring>
 #include <deque>
 #include <exception>
-#include "array.hpp"
 #include "common.hpp"
 #include "error.hpp"
+#include "js_array.hpp"
 #include "js_asm.hpp"
 #include "js_error.hpp"
 #include "lua.hpp"
@@ -86,7 +86,7 @@ namespace dromozoa {
           {
             index = lua_absindex(L, index);
 
-            auto array = is_array(L, index);
+            auto array = is_js_array(L, index);
             if (array) {
               DROMOZOA_JS_ASM({ D.stack.push([]); });
             } else {

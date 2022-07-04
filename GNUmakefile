@@ -29,10 +29,10 @@ LDFLAGS += --closure=$(CLOSURE)
 endif
 
 OBJS = \
-	array.o \
 	boot.o \
 	core.o \
 	ffi.o \
+	js_array.o \
 	js_error.o
 TARGET = index.html
 

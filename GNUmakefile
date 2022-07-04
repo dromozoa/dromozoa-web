@@ -31,7 +31,13 @@ endif
 OBJS = \
 	boot.o \
 	core.o \
-	ffi.o
+	ffi.o \
+	js_array.o \
+	js_error.o \
+	js_object.o \
+	js_push.o \
+	module.o \
+	thread.o
 TARGET = index.html
 
 all: all-recursive $(TARGET)

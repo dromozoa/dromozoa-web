@@ -50,7 +50,7 @@ end
 
 async(function (self)
   local url = "https://nozomi.dromozoa.com/"
-  local url = main.lua
+  -- local url = "main.lua"
   local response = self:await(D.window:fetch(url, { cache = "no-store" }))
   if response.ok then
     local text = self:await(response:text())

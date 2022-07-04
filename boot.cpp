@@ -23,15 +23,10 @@
 #include "common.hpp"
 #include "error.hpp"
 #include "lua.hpp"
-#include "js_array.hpp"
-#include "js_error.hpp"
-#include "js_object.hpp"
+#include "module.hpp"
 #include "stack_guard.hpp"
 
 namespace dromozoa {
-  void initialize_core(lua_State*);
-  void initialize_ffi(lua_State*);
-
   namespace {
     template <class T_key, class T_value>
     void preload(lua_State* L, T_key&& key, T_value&& value) {
@@ -41,18 +36,9 @@ namespace dromozoa {
       set_field(L, -1, std::forward<T_key>(key), std::forward<T_value>(value));
     }
 
-    void open(lua_State* L) {
-      lua_newtable(L);
-      initialize_core(L);
-      initialize_ffi(L);
-      initialize_js_array(L);
-      initialize_js_error(L);
-      initialize_js_object(L);
-    }
-
     void boot(lua_State* L) {
       luaL_openlibs(L);
-      preload(L, "dromozoa.web", function<open>());
+      preload(L, "dromozoa.web", open_module);
 
       static const char code[] =
       #include "boot.lua"

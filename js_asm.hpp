@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef DROMOZOA_JS_HPP
-#define DROMOZOA_JS_HPP
+#ifndef DROMOZOA_JS_ASM_HPP
+#define DROMOZOA_JS_ASM_HPP
 
 #include <emscripten.h>
 #include <cstdlib>
@@ -25,7 +25,7 @@
 
 namespace dromozoa {
   template <class T>
-  inline std::unique_ptr<T, decltype(&std::free)> js_make_unique_impl(void* ptr) {
+  inline std::unique_ptr<T, decltype(&std::free)> make_unique_impl(void* ptr) {
     return std::unique_ptr<T, decltype(&std::free)>(static_cast<T*>(ptr), std::free);
   }
 }
@@ -45,8 +45,8 @@ namespace dromozoa {
 /**/
 
 #define DROMOZOA_JS_ASM(code, ...) \
-  if (auto js_error = dromozoa::js_make_unique_impl<char>(emscripten_asm_const_ptr(CODE_EXPR(DROMOZOA_JS_ASM_PROLOGUE #code DROMOZOA_JS_ASM_EPILOGUE) _EM_ASM_PREP_ARGS(__VA_ARGS__)))) \
-    throw DROMOZOA_LOGIC_ERROR("javascript error: ", js_error.get()) \
+  if (auto error = dromozoa::make_unique_impl<char>(emscripten_asm_const_ptr(CODE_EXPR(DROMOZOA_JS_ASM_PROLOGUE #code DROMOZOA_JS_ASM_EPILOGUE) _EM_ASM_PREP_ARGS(__VA_ARGS__)))) \
+    throw DROMOZOA_LOGIC_ERROR("javascript error: ", error.get()) \
 /**/
 
 #endif

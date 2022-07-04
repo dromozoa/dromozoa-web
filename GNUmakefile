@@ -33,7 +33,8 @@ OBJS = \
 	core.o \
 	ffi.o \
 	js_array.o \
-	js_error.o
+	js_error.o \
+	js_object.o
 TARGET = index.html
 
 all: all-recursive $(TARGET)

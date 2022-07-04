@@ -22,7 +22,6 @@
 namespace dromozoa {
   namespace {
     constexpr char NAME[] = "dromozoa.web.js_array";
-    constexpr char KEY[] = "dromozoa.web.is_js_array";
 
     void impl_array(lua_State* L) {
       // tableかどうかを調べる？
@@ -34,7 +33,7 @@ namespace dromozoa {
   bool is_js_array(lua_State* L, int index) {
     stack_guard guard(L);
     if (lua_getmetatable(L, index)) {
-      lua_getfield(L, -1, KEY);
+      lua_getfield(L, -1, NAME);
       return lua_toboolean(L, -1);
       // luaL_getmetatable(L, NAME);
       // if (lua_rawequal(L, -1, -2)) {
@@ -46,7 +45,7 @@ namespace dromozoa {
 
   void initialize_js_array(lua_State* L) {
     luaL_newmetatable(L, NAME);
-    set_field(L, -1, KEY, true);
+    set_field(L, -1, NAME, true);
     lua_pop(L, 1);
 
     set_field(L, -1, "array", function<impl_array>());

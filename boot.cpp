@@ -20,6 +20,7 @@
 #include <exception>
 #include <iostream>
 #include <utility>
+#include "array.hpp"
 #include "common.hpp"
 #include "error.hpp"
 #include "lua.hpp"
@@ -41,6 +42,7 @@ namespace dromozoa {
 
     void open(lua_State* L) {
       lua_newtable(L);
+      initialize_array(L);
       initialize_core(L);
       initialize_ffi(L);
       initialize_js_error(L);

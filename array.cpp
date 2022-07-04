@@ -16,15 +16,17 @@
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "array.hpp"
-
 #include "common.hpp"
 #include "lua.hpp"
 
 namespace dromozoa {
   namespace {
     constexpr char NAME[] = "dromozoa.web.array";
+    constexpr char KEY[] = "dromozoa.web.is_array";
 
     void impl_array(lua_State* L) {
+      // tableかどうかを調べる？
+      // metatableがあったらエラー？
       luaL_setmetatable(L, NAME);
     }
   }
@@ -32,16 +34,19 @@ namespace dromozoa {
   bool is_array(lua_State* L, int index) {
     stack_guard guard(L);
     if (lua_getmetatable(L, index)) {
-      luaL_getmetatable(L, NAME);
-      if (lua_rawequal(L, -1, -2)) {
-        return true;
-      }
+      lua_getfield(L, -1, KEY);
+      return lua_toboolean(L, -1);
+      // luaL_getmetatable(L, NAME);
+      // if (lua_rawequal(L, -1, -2)) {
+      //   return true;
+      // }
     }
     return false;
   }
 
   void initialize_array(lua_State* L) {
     luaL_newmetatable(L, NAME);
+    set_field(L, -1, KEY, true);
     lua_pop(L, 1);
 
     set_field(L, -1, "array", function<impl_array>());

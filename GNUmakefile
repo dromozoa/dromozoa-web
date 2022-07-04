@@ -29,6 +29,7 @@ LDFLAGS += --closure=$(CLOSURE)
 endif
 
 OBJS = \
+	array.o \
 	boot.o \
 	core.o \
 	ffi.o \

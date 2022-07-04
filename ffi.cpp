@@ -19,6 +19,7 @@
 #include <cstring>
 #include <deque>
 #include <exception>
+#include "array.hpp"
 #include "common.hpp"
 #include "error.hpp"
 #include "js_asm.hpp"
@@ -36,19 +37,6 @@ namespace dromozoa {
 
     void push_error() {
       error_queue.emplace_back(std::current_exception());
-    }
-
-    constexpr char NAME_ARRAY[] = "dromozoa.web.array";
-
-    bool is_array(lua_State* L, int index) {
-      stack_guard guard(L);
-      if (lua_getmetatable(L, index)) {
-        luaL_getmetatable(L, NAME_ARRAY);
-        if (lua_rawequal(L, -1, -2)) {
-          return true;
-        }
-      }
-      return false;
     }
 
     class object_t : noncopyable {
@@ -288,18 +276,11 @@ namespace dromozoa {
       js_push(L, 1);
       DROMOZOA_JS_ASM({ D.push_object($0, D.ref_object(D.stack.pop())); }, L);
     }
-
-    void impl_array(lua_State* L) {
-      luaL_setmetatable(L, NAME_ARRAY);
-    }
   }
 
   void initialize_ffi(lua_State* L) {
     thread = lua_newthread(L);
     luaL_ref(L, LUA_REGISTRYINDEX);
-
-    luaL_newmetatable(L, NAME_ARRAY);
-    lua_pop(L, 1);
 
     luaL_newmetatable(L, object_t::NAME);
     set_field(L, -1, "__eq", function<impl_eq>());
@@ -316,7 +297,6 @@ namespace dromozoa {
     set_field(L, -1, "get_error", function<impl_get_error>());
     set_field(L, -1, "new", function<impl_new>());
     set_field(L, -1, "ref", function<impl_ref>());
-    set_field(L, -1, "array", function<impl_array>());
 
     DROMOZOA_JS_ASM({ D.push_object($0, D.ref_object(window)); }, L);
     lua_setfield(L, -2, "window");

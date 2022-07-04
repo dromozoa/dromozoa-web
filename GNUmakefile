@@ -36,8 +36,8 @@ OBJS = \
 	js_error.o \
 	js_object.o \
 	js_push.o \
-	module.o \
-	thread.o
+	js_thread.o \
+	module.o
 TARGET = index.html
 
 all: all-recursive $(TARGET)

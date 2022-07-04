@@ -29,21 +29,14 @@ namespace dromozoa {
     (out << ... << std::forward<T>(message)) << " at " << file << ":" << line;
     return out.str();
   }
-
-  template <class T>
-  class error : public T {
-  public:
-    template <class... U>
-    error(const char* file, int line, U&&... message) : T(make_error_impl(file, line, std::forward<U>(message)...)) {}
-  };
 }
 
 #define DROMOZOA_LOGIC_ERROR(...) \
-  dromozoa::error<std::logic_error>(__FILE__, __LINE__, __VA_ARGS__) \
+  std::logic_error(dromozoa::make_error_impl(__FILE__, __LINE__, __VA_ARGS__)) \
 /**/
 
 #define DROMOZOA_RUNTIME_ERROR(...) \
-  dromozoa::error<std::runtime_error>(__FILE__, __LINE__, __VA_ARGS__) \
+  std::runtime_error(dromozoa::make_error_impl(__FILE__, __LINE__, __VA_ARGS__)) \
 /**/
 
 #endif

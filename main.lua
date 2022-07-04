@@ -23,7 +23,7 @@ local body = document.body
 local df = document:createDocumentFragment()
 
 local ul = document:createElement "ul"
-for i, v in ipairs { "core", "fetch", "fetch2", "ffi" } do
+for i, v in ipairs { "core", "fetch", "fetch2", "fetch3", "ffi" } do
   local name = "test_" .. v
   ul:append(document:createElement "li"
     :append(document:createElement "a"

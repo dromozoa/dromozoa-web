@@ -28,40 +28,36 @@ namespace dromozoa {
     switch (lua_type(L, index)) {
       case LUA_TNONE:
       case LUA_TNIL:
-        DROMOZOA_JS_ASM({ D.stack.push(undefined); });
+        DROMOZOA_JS_ASM(D.stack.push(undefined));
         break;
       case LUA_TNUMBER:
-        DROMOZOA_JS_ASM({ D.stack.push($0); }, lua_tonumber(L, index));
+        DROMOZOA_JS_ASM(D.stack.push($0), lua_tonumber(L, index));
         break;
       case LUA_TBOOLEAN:
-        DROMOZOA_JS_ASM({ D.stack.push(!!$0); }, lua_toboolean(L, index));
+        DROMOZOA_JS_ASM(D.stack.push(!!$0), lua_toboolean(L, index));
         break;
       case LUA_TSTRING:
-        DROMOZOA_JS_ASM({ D.stack.push(UTF8ToString($0)); }, lua_tostring(L, index));
+        DROMOZOA_JS_ASM(D.stack.push(UTF8ToString($0)), lua_tostring(L, index));
         break;
       case LUA_TTABLE:
         {
           index = lua_absindex(L, index);
 
-          auto array = is_js_array(L, index);
-          if (array) {
-            DROMOZOA_JS_ASM({ D.stack.push([]); });
+          double origin = is_js_array(L, index);
+          if (origin) {
+            DROMOZOA_JS_ASM(D.stack.push([]));
           } else {
-            DROMOZOA_JS_ASM({ D.stack.push({}); });
+            DROMOZOA_JS_ASM(D.stack.push({}));
           }
 
           lua_pushnil(L);
           while (lua_next(L, index)) {
             switch (lua_type(L, -2)) {
               case LUA_TNUMBER:
-                if (array && lua_isinteger(L, -2)) {
-                  DROMOZOA_JS_ASM({ D.stack.push($0); }, lua_tonumber(L, -2) - 1);
-                } else {
-                  DROMOZOA_JS_ASM({ D.stack.push($0); }, lua_tonumber(L, -2));
-                }
+                DROMOZOA_JS_ASM(D.stack.push($0), lua_tonumber(L, -2) - origin);
                 break;
               case LUA_TSTRING:
-                DROMOZOA_JS_ASM({ D.stack.push(UTF8ToString($0)); }, lua_tostring(L, -2));
+                DROMOZOA_JS_ASM(D.stack.push(UTF8ToString($0)), lua_tostring(L, -2));
                 break;
               default:
                 lua_pop(L, 1);
@@ -104,14 +100,14 @@ namespace dromozoa {
         break;
       case LUA_TUSERDATA:
         if (auto* that = test_udata<js_object>(L, index)) {
-          DROMOZOA_JS_ASM({ D.stack.push(D.objs[$0]); }, that->get());
+          DROMOZOA_JS_ASM(D.stack.push(D.objs[$0]), that->get());
         } else {
           throw DROMOZOA_LOGIC_ERROR(js_object::NAME, " expected, got ", luaL_typename(L, index));
         }
         break;
       case LUA_TLIGHTUSERDATA:
         if (!lua_touserdata(L, index)) {
-          DROMOZOA_JS_ASM({ D.stack.push(null); });
+          DROMOZOA_JS_ASM(D.stack.push(null));
         } else {
           throw DROMOZOA_LOGIC_ERROR("null lightuserdata expected, got non-null lightuserdata");
         }

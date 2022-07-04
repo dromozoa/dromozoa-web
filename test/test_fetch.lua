@@ -47,7 +47,7 @@ while not done do
   coroutine.yield()
 end
 
-D.window.console:log { foo = 17, bar = 23, baz = D.array { 1, 2, D.null, 3, qux = true } }
+D.window.console:log { foo = 17, bar = 23, baz = D.array { [0] = 0, 1, 2, D.null, 4, qux = true }, qux = { [0] = 0, 1, 2, D.null, 4, qux = true } }
 
 local array = D.array { 1, 2, 3, qux = true }
 print(array)

@@ -25,6 +25,7 @@
 #include "lua.hpp"
 #include "js_array.hpp"
 #include "js_error.hpp"
+#include "js_object.hpp"
 #include "stack_guard.hpp"
 
 namespace dromozoa {
@@ -46,6 +47,7 @@ namespace dromozoa {
       initialize_ffi(L);
       initialize_js_array(L);
       initialize_js_error(L);
+      initialize_js_object(L);
     }
 
     void boot(lua_State* L) {

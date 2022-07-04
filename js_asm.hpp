@@ -35,7 +35,7 @@ namespace dromozoa {
 /**/
 
 #define DROMOZOA_JS_ASM_EPILOGUE \
-  "} catch (e) {" \
+  ";} catch (e) {" \
     "const size = lengthBytesUTF8(e.message) + 1;" \
     "const data = _malloc(size);" \
     "stringToUTF8(e.message, data, size);" \

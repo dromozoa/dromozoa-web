@@ -139,6 +139,10 @@ namespace dromozoa {
     lua_pushcfunction(L, value);
   }
 
+  inline void push(lua_State* L, std::nullptr_t) {
+    lua_pushlightuserdata(L, nullptr);
+  }
+
   template <class T_key, class T_value>
   inline void set_field(lua_State* L, int index, T_key&& key, T_value&& value) {
     index = lua_absindex(L, index);

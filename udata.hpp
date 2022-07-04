@@ -33,16 +33,16 @@ namespace dromozoa {
   }
 
   template <class T>
-  inline T* check_udata(lua_State* L, int index) {
-    return static_cast<T*>(luaL_checkudata(L, index, T::NAME));
-  }
-
-  template <class T>
   inline T* test_udata(lua_State* L, int index) noexcept {
     try {
       return static_cast<T*>(luaL_testudata(L, index, T::NAME));
     } catch (...) {}
     return nullptr;
+  }
+
+  template <class T>
+  inline T* check_udata(lua_State* L, int index) {
+    return static_cast<T*>(luaL_checkudata(L, index, T::NAME));
   }
 
   template <class T>

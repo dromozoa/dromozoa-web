@@ -33,7 +33,7 @@
 
 namespace dromozoa {
   template <class T, class... T_args>
-  inline T* new_userdata(lua_State* L, T_args&&... args) {
+  inline T* new_udata(lua_State* L, T_args&&... args) {
     auto* data = static_cast<T*>(lua_newuserdata(L, sizeof(T)));
     new(data) T(std::forward<T_args>(args)...);
     luaL_setmetatable(L, T::NAME);
@@ -48,6 +48,18 @@ namespace dromozoa {
   template <class T>
   inline T* check_udata(lua_State* L, int index) {
     return static_cast<T*>(luaL_checkudata(L, index, T::NAME));
+  }
+
+  template <class T>
+  inline int gc_udata(lua_State* L) {
+    check_udata<T>(L, 1)->~T();
+    return 0;
+  }
+
+  template <class T>
+  inline int close_udata(lua_State* L) {
+    check_udata<T>(L, 1)->close();
+    return 0;
   }
 
   template <class T, T (*)(lua_State*)>

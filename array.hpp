@@ -15,14 +15,14 @@
 // You should have received a copy of the GNU General Public License
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef DROMOZOA_WEB_ARRAY_HPP
-#define DROMOZOA_WEB_ARRAY_HPP
+#ifndef DROMOZOA_WEB_JS_ARRAY_HPP
+#define DROMOZOA_WEB_JS_ARRAY_HPP
 
 #include "lua.hpp"
 
 namespace dromozoa {
-  bool is_array(lua_State*, int);
-  void initialize_array(lua_State*);
+  bool is_js_array(lua_State*, int);
+  void initialize_js_array(lua_State*);
 }
 
 #endif

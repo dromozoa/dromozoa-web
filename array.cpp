@@ -15,14 +15,14 @@
 // You should have received a copy of the GNU General Public License
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "array.hpp"
 #include "common.hpp"
+#include "js_array.hpp"
 #include "lua.hpp"
 
 namespace dromozoa {
   namespace {
-    constexpr char NAME[] = "dromozoa.web.array";
-    constexpr char KEY[] = "dromozoa.web.is_array";
+    constexpr char NAME[] = "dromozoa.web.js_array";
+    constexpr char KEY[] = "dromozoa.web.is_js_array";
 
     void impl_array(lua_State* L) {
       // tableかどうかを調べる？
@@ -31,7 +31,7 @@ namespace dromozoa {
     }
   }
 
-  bool is_array(lua_State* L, int index) {
+  bool is_js_array(lua_State* L, int index) {
     stack_guard guard(L);
     if (lua_getmetatable(L, index)) {
       lua_getfield(L, -1, KEY);
@@ -44,7 +44,7 @@ namespace dromozoa {
     return false;
   }
 
-  void initialize_array(lua_State* L) {
+  void initialize_js_array(lua_State* L) {
     luaL_newmetatable(L, NAME);
     set_field(L, -1, KEY, true);
     lua_pop(L, 1);

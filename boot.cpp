@@ -23,6 +23,7 @@
 #include "common.hpp"
 #include "error.hpp"
 #include "lua.hpp"
+#include "js_error.hpp"
 #include "stack_guard.hpp"
 
 namespace dromozoa {
@@ -42,6 +43,7 @@ namespace dromozoa {
       lua_newtable(L);
       initialize_core(L);
       initialize_ffi(L);
+      initialize_js_error(L);
     }
 
     void boot(lua_State* L) {

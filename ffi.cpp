@@ -16,11 +16,9 @@
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <emscripten.h>
-#include <cstdlib>
 #include <cstring>
 #include <deque>
 #include <exception>
-#include <memory>
 #include "common.hpp"
 #include "error.hpp"
 #include "js.hpp"

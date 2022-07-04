@@ -18,6 +18,7 @@
 #ifndef DROMOZOA_JS_HPP
 #define DROMOZOA_JS_HPP
 
+#include <emscripten.h>
 #include <cstdlib>
 #include <memory>
 #include "error.hpp"

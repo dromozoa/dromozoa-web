@@ -24,6 +24,32 @@
 #include "udata.hpp"
 
 namespace dromozoa {
+  namespace {
+    void js_push_function(lua_State* L, int index) {
+      DROMOZOA_JS_ASM({
+        const v = (...args) => {
+          const L = D.get_thread();
+          if (L) {
+            const n = args.length;
+            D.push_ref(L, v.ref);
+            for (let i = 0; i < n; ++i) {
+              D.push(L, args[i]);
+            }
+            switch (D.call(L, n)) {
+              case 1:
+                return D.stack.pop();
+              case 2:
+                throw new Error(D.stack.pop());
+            }
+          }
+        };
+        v.ref = D.ref_registry($0, $1);
+        D.refs.register(v, v.ref);
+        D.stack.push(v);
+      }, L, index);
+    }
+  }
+
   void js_push(lua_State* L, int index) {
     switch (lua_type(L, index)) {
       case LUA_TNONE:
@@ -74,35 +100,13 @@ namespace dromozoa {
         }
         break;
       case LUA_TFUNCTION:
-        {
-          DROMOZOA_JS_ASM({
-            const v = (...args) => {
-              const L = D.get_thread();
-              if (L) {
-                const n = args.length;
-                D.push_ref(L, v.ref);
-                for (let i = 0; i < n; ++i) {
-                  D.push(L, args[i]);
-                }
-                switch (D.call(L, n)) {
-                  case 1:
-                    return D.stack.pop();
-                  case 2:
-                    throw new Error(D.stack.pop());
-                }
-              }
-            };
-            v.ref = D.ref_registry($0, $1);
-            D.refs.register(v, v.ref);
-            D.stack.push(v);
-          }, L, index);
-        }
+        js_push_function(L, index);
         break;
       case LUA_TUSERDATA:
         if (auto* that = test_udata<js_object>(L, index)) {
           DROMOZOA_JS_ASM(D.stack.push(D.objs[$0]), that->get());
         } else {
-          throw DROMOZOA_LOGIC_ERROR(js_object::NAME, " expected, got ", luaL_typename(L, index));
+          js_push_function(L, index);
         }
         break;
       case LUA_TLIGHTUSERDATA:

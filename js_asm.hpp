@@ -24,9 +24,8 @@
 #include "error.hpp"
 
 namespace dromozoa {
-  template <class T>
-  inline std::unique_ptr<T, decltype(&std::free)> make_js_asm_error_impl(void* ptr) {
-    return std::unique_ptr<T, decltype(&std::free)>(static_cast<T*>(ptr), std::free);
+  inline std::unique_ptr<char, decltype(&std::free)> make_js_asm_error(void* ptr) {
+    return std::unique_ptr<char, decltype(&std::free)>(static_cast<char*>(ptr), std::free);
   }
 }
 
@@ -35,12 +34,11 @@ namespace dromozoa {
 /**/
 
 #define DROMOZOA_JS_ASM_EPILOGUE \
-  ";} catch (e) { return D.catch(e); }" \
-  "return 0;" \
+  ";} catch (e) { return D.catch(e); } return 0;" \
 /**/
 
 #define DROMOZOA_JS_ASM(code, ...) \
-  if (auto error = dromozoa::make_js_asm_error_impl<char>(emscripten_asm_const_ptr(CODE_EXPR(DROMOZOA_JS_ASM_PROLOGUE #code DROMOZOA_JS_ASM_EPILOGUE) _EM_ASM_PREP_ARGS(__VA_ARGS__)))) \
+  if (auto error = dromozoa::make_js_asm_error(emscripten_asm_const_ptr(CODE_EXPR(DROMOZOA_JS_ASM_PROLOGUE #code DROMOZOA_JS_ASM_EPILOGUE) _EM_ASM_PREP_ARGS(__VA_ARGS__)))) \
     throw DROMOZOA_LOGIC_ERROR(error.get()) \
 /**/
 

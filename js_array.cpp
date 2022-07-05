@@ -24,21 +24,14 @@ namespace dromozoa {
     constexpr char NAME[] = "dromozoa.web.js_array";
 
     void impl_array(lua_State* L) {
-      // tableかどうかを調べる？
-      // metatableがあったらエラー？
       luaL_setmetatable(L, NAME);
     }
   }
 
   bool is_js_array(lua_State* L, int index) {
     stack_guard guard(L);
-    if (lua_getmetatable(L, index)) {
-      lua_getfield(L, -1, NAME);
+    if (luaL_getmetafield(L, index, NAME) != LUA_TNIL) {
       return lua_toboolean(L, -1);
-      // luaL_getmetatable(L, NAME);
-      // if (lua_rawequal(L, -1, -2)) {
-      //   return true;
-      // }
     }
     return false;
   }

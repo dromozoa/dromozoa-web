@@ -24,7 +24,7 @@
 
 namespace dromozoa {
   template <class... T>
-  std::string make_error_impl(const char* file, int line, T&&... message) {
+  std::string make_error(const char* file, int line, T&&... message) {
     std::ostringstream out;
     ((out << file << ":" << line << ": ") << ... << std::forward<T>(message));
     return out.str();
@@ -32,11 +32,11 @@ namespace dromozoa {
 }
 
 #define DROMOZOA_LOGIC_ERROR(...) \
-  std::logic_error(dromozoa::make_error_impl(__FILE__, __LINE__, __VA_ARGS__)) \
+  std::logic_error(dromozoa::make_error(__FILE__, __LINE__, __VA_ARGS__)) \
 /**/
 
 #define DROMOZOA_RUNTIME_ERROR(...) \
-  std::runtime_error(dromozoa::make_error_impl(__FILE__, __LINE__, __VA_ARGS__)) \
+  std::runtime_error(dromozoa::make_error(__FILE__, __LINE__, __VA_ARGS__)) \
 /**/
 
 #endif

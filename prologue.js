@@ -50,11 +50,7 @@ const D = {
         D.push_nil(L, v);
         break;
       case "number":
-        if (Number.isInteger(v)) {
-          D.push_integer(L, v);
-        } else {
-          D.push_number(L, v);
-        }
+        D.push_number(L, v);
         break;
       case "boolean":
         D.push_boolean(L, !!v);
@@ -79,10 +75,10 @@ const D = {
     return new T(...a);
   },
 
-  eval: (code) => {
+  eval: (code, name) => {
     const L = D.get_thread();
     if (L) {
-      switch (D.evaluate(L, code)) {
+      switch (D.evaluate(L, code, name || "=(load)")) {
         case 1:
           return D.stack.pop();
         case 2:
@@ -92,7 +88,7 @@ const D = {
   },
 
   get_thread: cwrap("dromozoa_web_get_thread", "pointer", []),
-  evaluate: cwrap("dromozoa_web_evaluate", "number", ["pointer", "string"]),
+  evaluate: cwrap("dromozoa_web_evaluate", "number", ["pointer", "string", "string"]),
   call: cwrap("dromozoa_web_call", "number", ["pointer", "number"]),
   push_nil: cwrap("dromozoa_web_push_nil", null, ["pointer"]),
   push_integer: cwrap("dromozoa_web_push_integer", null, ["pointer", "number"]),

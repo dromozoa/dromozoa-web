@@ -120,5 +120,7 @@ namespace dromozoa {
 
     DROMOZOA_JS_ASM(D.push_object($0, D.ref_object(window)), L);
     lua_setfield(L, -2, "window");
+
+    set_field(L, -1, "null", nullptr);
   }
 }

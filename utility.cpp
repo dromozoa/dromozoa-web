@@ -49,6 +49,5 @@ namespace dromozoa {
   void initialize_utility(lua_State* L) {
     set_field(L, -1, "new", function<impl_new>());
     set_field(L, -1, "ref", function<impl_ref>());
-    set_field(L, -1, "null", nullptr);
   }
 }

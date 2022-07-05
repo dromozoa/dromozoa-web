@@ -40,12 +40,6 @@ df:append(ul)
 body:append(df)
 
 while true do
-  while true do
-    local e = D.get_error()
-    if not e then
-      break
-    end
-    io.stderr:write(e, "\n")
-  end
+  assert(D.get_error_queue())
   coroutine.yield()
 end

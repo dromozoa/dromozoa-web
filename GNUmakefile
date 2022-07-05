@@ -31,7 +31,7 @@ endif
 OBJS = \
 	boot.o \
 	error_queue.o \
-	ffi.o \
+	export.o \
 	js_array.o \
 	js_error.o \
 	js_object.o \

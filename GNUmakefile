@@ -22,7 +22,7 @@ CXX = em++
 CPPFLAGS += -Ilua/src -DLUA_USE_POSIX -MMD
 CXXFLAGS += -Wall -W -std=c++20 $(BASE_CXXFALGS)
 LDFLAGS += -Llua/src $(BASE_LDFLAGS) -sEXPORTED_RUNTIME_METHODS=ccall,cwrap --shell-file shell.html --pre-js prologue.js --post-js epilogue.js
-LDLIBS += -llua
+LDLIBS += -llua -lidbfs.js
 
 ifneq ($(CLOSURE),)
 LDFLAGS += --closure=$(CLOSURE)

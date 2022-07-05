@@ -22,7 +22,7 @@ CXX = em++
 CPPFLAGS += -Ilua/src -DLUA_USE_POSIX -MMD
 CXXFLAGS += -Wall -W -std=c++20 $(BASE_CXXFALGS)
 LDFLAGS += -Llua/src $(BASE_LDFLAGS) -sEXPORTED_RUNTIME_METHODS=ccall,cwrap --shell-file shell.html --pre-js prologue.js --post-js epilogue.js
-LDLIBS += -llua
+LDLIBS += -llua -lidbfs.js
 
 ifneq ($(CLOSURE),)
 LDFLAGS += --closure=$(CLOSURE)
@@ -30,14 +30,16 @@ endif
 
 OBJS = \
 	boot.o \
-	core.o \
-	ffi.o \
+	error_queue.o \
+	export.o \
 	js_array.o \
 	js_error.o \
 	js_object.o \
 	js_push.o \
 	js_thread.o \
-	module.o
+	module.o \
+	runtime.o \
+	utility.o
 TARGET = index.html
 
 all: all-recursive $(TARGET)

@@ -18,9 +18,9 @@
 #include "common.hpp"
 #include "js_asm.hpp"
 #include "js_object.hpp"
+#include "js_object.hpp"
 #include "js_push.hpp"
 #include "lua.hpp"
-#include "js_object.hpp"
 #include "udata.hpp"
 
 namespace dromozoa {
@@ -29,7 +29,7 @@ namespace dromozoa {
       auto* self = test_udata<js_object>(L, 1);
       auto* that = test_udata<js_object>(L, 2);
       if (self && that) {
-        DROMOZOA_JS_ASM({ D.push_boolean($0, D.objs[$1] === D.objs[$2]); }, L, self->get(), that->get());
+        DROMOZOA_JS_ASM(D.push_boolean($0, D.objs[$1] === D.objs[$2]), L, self->get(), that->get());
       } else {
         push(L, false);
       }
@@ -39,10 +39,10 @@ namespace dromozoa {
       auto* self = check_udata<js_object>(L, 1);
       switch (lua_type(L, 2)) {
         case LUA_TNUMBER:
-          DROMOZOA_JS_ASM({ D.push($0, D.objs[$1][$2]); }, L, self->get(), lua_tonumber(L, 2));
+          DROMOZOA_JS_ASM(D.push($0, D.objs[$1][$2]), L, self->get(), lua_tonumber(L, 2));
           break;
         case LUA_TSTRING:
-          DROMOZOA_JS_ASM({ D.push($0, D.objs[$1][UTF8ToString($2)]); }, L, self->get(), lua_tostring(L, 2));
+          DROMOZOA_JS_ASM(D.push($0, D.objs[$1][UTF8ToString($2)]), L, self->get(), lua_tostring(L, 2));
           break;
         default:
           luaL_typeerror(L, 2, "number or string");
@@ -54,11 +54,11 @@ namespace dromozoa {
       switch (lua_type(L, 2)) {
         case LUA_TNUMBER:
           js_push(L, 3);
-          DROMOZOA_JS_ASM({ D.objs[$0][$1] = D.stack.pop(); }, self->get(), lua_tonumber(L, 2));
+          DROMOZOA_JS_ASM(D.objs[$0][$1] = D.stack.pop(), self->get(), lua_tonumber(L, 2));
           break;
         case LUA_TSTRING:
           js_push(L, 3);
-          DROMOZOA_JS_ASM({ D.objs[$0][UTF8ToString($1)] = D.stack.pop(); }, self->get(), lua_tostring(L, 2));
+          DROMOZOA_JS_ASM(D.objs[$0][UTF8ToString($1)] = D.stack.pop(), self->get(), lua_tostring(L, 2));
           break;
         default:
           luaL_typeerror(L, 2, "number or string");
@@ -118,7 +118,7 @@ namespace dromozoa {
     set_field(L, -1, "__gc", gc_udata<js_object>);
     lua_pop(L, 1);
 
-    DROMOZOA_JS_ASM({ D.push_object($0, D.ref_object(window)); }, L);
+    DROMOZOA_JS_ASM(D.push_object($0, D.ref_object(window)), L);
     lua_setfield(L, -2, "window");
 
     set_field(L, -1, "null", nullptr);

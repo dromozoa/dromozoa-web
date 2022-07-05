@@ -15,28 +15,14 @@
 // You should have received a copy of the GNU General Public License
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef DROMOZOA_WEB_ERROR_HPP
-#define DROMOZOA_WEB_ERROR_HPP
+#ifndef DROMOZOA_WEB_ERROR_QUEUE_HPP
+#define DROMOZOA_WEB_ERROR_QUEUE_HPP
 
-#include <sstream>
-#include <stdexcept>
-#include <string>
+#include "lua.hpp"
 
 namespace dromozoa {
-  template <class... T>
-  std::string make_error(const char* file, int line, T&&... message) {
-    std::ostringstream out;
-    ((out << file << ":" << line << ": ") << ... << std::forward<T>(message));
-    return out.str();
-  }
+  void push_error_queue();
+  void initialize_error_queue(lua_State*);
 }
-
-#define DROMOZOA_LOGIC_ERROR(...) \
-  std::logic_error(dromozoa::make_error(__FILE__, __LINE__, __VA_ARGS__)) \
-/**/
-
-#define DROMOZOA_RUNTIME_ERROR(...) \
-  std::runtime_error(dromozoa::make_error(__FILE__, __LINE__, __VA_ARGS__)) \
-/**/
 
 #endif

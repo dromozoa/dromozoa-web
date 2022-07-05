@@ -15,25 +15,39 @@
 // You should have received a copy of the GNU General Public License
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef DROMOZOA_WEB_STACK_GUARD_HPP
-#define DROMOZOA_WEB_STACK_GUARD_HPP
-
+#include "common.hpp"
+#include "js_asm.hpp"
+#include "js_push.hpp"
 #include "lua.hpp"
-#include "noncopyable.hpp"
+#include "utility.hpp"
 
 namespace dromozoa {
-  class stack_guard : noncopyable {
-  public:
-    explicit stack_guard(lua_State* L) : state_(L), top_(lua_gettop(L)) {}
+  namespace {
+    void impl_new(lua_State* L) {
+      auto top = lua_gettop(L);
 
-    ~stack_guard() {
-      lua_settop(state_, top_);
+      DROMOZOA_JS_ASM({ D.args = []; });
+
+      for (auto i = 1; i <= top; ++i) {
+        js_push(L, i);
+        DROMOZOA_JS_ASM(D.args.push(D.stack.pop()));
+      }
+
+      DROMOZOA_JS_ASM({
+        const args = D.args;
+        D.args = undefined;
+        D.push($0, D.new.apply(undefined, args));
+      }, L);
     }
 
-  private:
-    lua_State* state_;
-    int top_;
-  };
-}
+    void impl_ref(lua_State* L) {
+      js_push(L, 1);
+      DROMOZOA_JS_ASM(D.push_object($0, D.ref_object(D.stack.pop())), L);
+    }
+  }
 
-#endif
+  void initialize_utility(lua_State* L) {
+    set_field(L, -1, "new", function<impl_new>());
+    set_field(L, -1, "ref", function<impl_ref>());
+  }
+}

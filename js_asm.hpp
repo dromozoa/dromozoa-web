@@ -24,26 +24,19 @@
 #include "error.hpp"
 
 namespace dromozoa {
-  template <class T>
-  inline std::unique_ptr<T, decltype(&std::free)> make_unique_impl(void* ptr) {
-    return std::unique_ptr<T, decltype(&std::free)>(static_cast<T*>(ptr), std::free);
+  inline void js_asm_impl(const char* file, int line, void* result) {
+    if (std::unique_ptr<char, decltype(&std::free)> error{static_cast<char*>(result), std::free}) {
+      throw std::logic_error(make_error(file, line, error.get()));
+    }
   }
 }
 
-#define DROMOZOA_JS_ASM_PROLOGUE \
-  "try {" \
-/**/
-
-#define DROMOZOA_JS_ASM_EPILOGUE \
-  ";} catch (e) {" \
-    "return allocateUTF8(e.toString());" \
-  "}" \
-  "return 0;" \
-/**/
-
 #define DROMOZOA_JS_ASM(code, ...) \
-  if (auto error = dromozoa::make_unique_impl<char>(emscripten_asm_const_ptr(CODE_EXPR(DROMOZOA_JS_ASM_PROLOGUE #code DROMOZOA_JS_ASM_EPILOGUE) _EM_ASM_PREP_ARGS(__VA_ARGS__)))) \
-    throw DROMOZOA_LOGIC_ERROR(error.get()) \
+  dromozoa::js_asm_impl(__FILE__, __LINE__, emscripten_asm_const_ptr(CODE_EXPR( \
+    "try {" \
+    #code \
+    ";} catch (e) { return D.catch(e); } return 0;" \
+  ) _EM_ASM_PREP_ARGS(__VA_ARGS__))) \
 /**/
 
 #endif

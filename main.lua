@@ -23,7 +23,7 @@ local body = document.body
 local df = document:createDocumentFragment()
 
 local ul = document:createElement "ul"
-for i, v in ipairs { "core", "fetch", "fetch2", "fetch3", "ffi" } do
+for i, v in ipairs { "core", "fetch", "fetch2", "fetch3", "ffi", "file" } do
   local name = "test_" .. v
   ul:append(document:createElement "li"
     :append(document:createElement "a"
@@ -40,12 +40,6 @@ df:append(ul)
 body:append(df)
 
 while true do
-  while true do
-    local e = D.get_error()
-    if not e then
-      break
-    end
-    io.stderr:write(e, "\n")
-  end
+  assert(D.get_error_queue())
   coroutine.yield()
 end

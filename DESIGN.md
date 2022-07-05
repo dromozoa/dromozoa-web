@@ -39,3 +39,54 @@ end)
 - promise.then_は初期にインストールしてしまうか？
 - luacの結果をインクルードする？
 
+- メインスレッドでエラーキューをチェックして、問題があったら、死ぬことにする
+- エラーキューの内容をまず全部出力する
+- そのなかで、メインのエラーでluaのエラーで終了する
+- エラーキューの内容を
+- tableで返す
+- 結合した文字列で返す
+- `error_queue:empty()`
+- `#error_queue > 0`
+- `tostring(error_queue)`
+
+```
+while true do
+  push_error_queue()
+  get_error_queue()
+
+  assert(D.check_error_queue())
+
+  repeat
+    local e = D.get_error()
+  until not e
+
+  local e
+  while true do
+    local e = D.get_error()
+    if not e then
+      break
+    end
+  end
+
+
+  local error_queue = D.clear_error_queue()
+
+
+  local error_queue = D.pop_error_queue()
+  if error_queue then
+    error(tostring(error_queue))
+  end
+
+  if D.error_queue then
+    D.get_error_queue()
+  end
+
+  if D.error_queue then
+    error(tostring(D.error_queue))
+  end
+  coroutine.yield()
+end
+```
+
+
+

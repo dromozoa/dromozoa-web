@@ -46,23 +46,15 @@ local t2 = fetch("prologue.js", coroutine.create(function (result, url, v) print
 local t3 = fetch("no-such-file.txt", coroutine.create(function (result, url, v) print(result, url) end))
 local t4 = fetch("README.md", coroutine.create(function (result, url, v) print(result, url) end))
 
+warn "@on"
+warn "WARN"
+warn "あいうえお"
+
+D.window:setTimeout(function () error "die1" end, 1000)
+D.window:setTimeout(function () error "die2" end, 1000)
+D.window:setTimeout(function () error "die3" end, 1000)
+
 while true do
-  if coroutine.status(t1) == "dead"
-    and coroutine.status(t2) == "dead"
-    and coroutine.status(t3) == "dead"
-    and coroutine.status(t4) == "dead" then
-    break
-  end
-
-  while true do
-    local e = D.get_error()
-    if not e then
-      break
-    end
-    io.stderr:write(e, "\n")
-  end
-
+  assert(D.get_error_queue())
   coroutine.yield()
 end
-
-print "done"

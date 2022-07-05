@@ -52,7 +52,7 @@ local thread = coroutine.create(function ()
 
   while true do
     while true do
-      local e = D.get_error()
+      local e = D.pop_error_queue()
       if not e then
         break
       end
@@ -68,7 +68,7 @@ local thread = coroutine.create(function ()
     error(data)
   end
 
-  return assert(load(data, filename))()
+  return assert(load(data, "@" .. filename))()
 end)
 
 return function ()

@@ -17,9 +17,6 @@
 
 local core = require "dromozoa.web"
 
-print(core.run_script_string [[document.location.href]])
-print(core.run_script_string [[document.location.search]])
-
 print(core.get_device_pixel_ratio())
 print(core.get_window_title())
 core.set_window_title "タイトル変更"

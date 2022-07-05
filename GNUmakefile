@@ -30,6 +30,7 @@ endif
 
 OBJS = \
 	boot.o \
+	error_queue.o \
 	ffi.o \
 	js_array.o \
 	js_error.o \

@@ -21,6 +21,7 @@
 #include <exception>
 #include "common.hpp"
 #include "error.hpp"
+#include "error_queue.hpp"
 #include "js_array.hpp"
 #include "js_asm.hpp"
 #include "js_error.hpp"
@@ -33,27 +34,6 @@
 
 namespace dromozoa {
   namespace {
-    std::deque<std::exception_ptr> error_queue;
-
-    void push_error() {
-      error_queue.emplace_back(std::current_exception());
-    }
-
-    void impl_get_error(lua_State* L) {
-      try {
-        if (!error_queue.empty()) {
-          auto e = error_queue.front();
-          error_queue.pop_front();
-          std::rethrow_exception(e);
-        }
-        lua_pushnil(L);
-      } catch (const std::exception& e) {
-        lua_pushstring(L, e.what());
-      } catch (...) {
-        lua_pushstring(L, "unknown error");
-      }
-    }
-
     void impl_new(lua_State* L) {
       auto top = lua_gettop(L);
 
@@ -78,7 +58,6 @@ namespace dromozoa {
   }
 
   void initialize_ffi(lua_State* L) {
-    set_field(L, -1, "get_error", function<impl_get_error>());
     set_field(L, -1, "new", function<impl_new>());
     set_field(L, -1, "ref", function<impl_ref>());
     set_field(L, -1, "null", nullptr);
@@ -110,7 +89,7 @@ extern "C" {
         return 1;
       }
     } catch (...) {
-      push_error();
+      push_error_queue();
     }
     return 0;
   }
@@ -134,7 +113,7 @@ extern "C" {
         return 1;
       }
     } catch (...) {
-      push_error();
+      push_error_queue();
     }
     return 0;
   }

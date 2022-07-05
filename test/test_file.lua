@@ -76,7 +76,7 @@ assert(coroutine.resume(thread, thread))
 
 while true do
   while true do
-    local e = D.get_error()
+    local e = D.pop_error_queue()
     if not e then
       break
     end

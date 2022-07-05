@@ -32,38 +32,6 @@
 #include "stack_guard.hpp"
 #include "udata.hpp"
 
-namespace dromozoa {
-  namespace {
-    void impl_new(lua_State* L) {
-      auto top = lua_gettop(L);
-
-      DROMOZOA_JS_ASM({ D.args = []; });
-
-      for (auto i = 1; i <= top; ++i) {
-        js_push(L, i);
-        DROMOZOA_JS_ASM({ D.args.push(D.stack.pop()); });
-      }
-
-      DROMOZOA_JS_ASM({
-        const args = D.args;
-        D.args = undefined;
-        D.push($0, D.new.apply(undefined, args));
-      }, L);
-    }
-
-    void impl_ref(lua_State* L) {
-      js_push(L, 1);
-      DROMOZOA_JS_ASM({ D.push_object($0, D.ref_object(D.stack.pop())); }, L);
-    }
-  }
-
-  void initialize_ffi(lua_State* L) {
-    set_field(L, -1, "new", function<impl_new>());
-    set_field(L, -1, "ref", function<impl_ref>());
-    set_field(L, -1, "null", nullptr);
-  }
-}
-
 extern "C" {
   using namespace dromozoa;
 

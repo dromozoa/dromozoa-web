@@ -38,7 +38,8 @@ OBJS = \
 	js_push.o \
 	js_thread.o \
 	module.o \
-	runtime.o
+	runtime.o \
+	utility.o
 TARGET = index.html
 
 all: all-recursive $(TARGET)

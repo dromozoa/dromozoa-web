@@ -26,8 +26,7 @@ namespace dromozoa {
   template <class... T>
   std::string make_error_impl(const char* file, int line, T&&... message) {
     std::ostringstream out;
-    // ((out << "[" << file << ":" << line << "] ") << ... << std::forward<T>(message));
-    (out << ... << std::forward<T>(message)) << " at " << file << ":" << line;
+    ((out << file << ":" << line << ": ") << ... << std::forward<T>(message));
     return out.str();
   }
 }

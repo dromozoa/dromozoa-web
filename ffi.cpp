@@ -81,6 +81,7 @@ namespace dromozoa {
     set_field(L, -1, "get_error", function<impl_get_error>());
     set_field(L, -1, "new", function<impl_new>());
     set_field(L, -1, "ref", function<impl_ref>());
+    set_field(L, -1, "null", nullptr);
   }
 }
 

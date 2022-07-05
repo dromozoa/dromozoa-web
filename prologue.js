@@ -75,10 +75,10 @@ const D = {
     return new T(...a);
   },
 
-  eval: (code, name) => {
+  eval: (code) => {
     const L = D.get_thread();
     if (L) {
-      switch (D.evaluate(L, code, name || "=(load)")) {
+      switch (D.dostring(L, code)) {
         case 1:
           return D.stack.pop();
         case 2:
@@ -88,7 +88,7 @@ const D = {
   },
 
   get_thread: cwrap("dromozoa_web_get_thread", "pointer", []),
-  evaluate: cwrap("dromozoa_web_evaluate", "number", ["pointer", "string", "string"]),
+  dostring: cwrap("dromozoa_web_dostring", "number", ["pointer", "string"]),
   call: cwrap("dromozoa_web_call", "number", ["pointer", "number"]),
   push_nil: cwrap("dromozoa_web_push_nil", null, ["pointer"]),
   push_integer: cwrap("dromozoa_web_push_integer", null, ["pointer", "number"]),

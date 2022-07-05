@@ -16,7 +16,6 @@
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <emscripten.h>
-#include <cstring>
 #include "error.hpp"
 #include "error_queue.hpp"
 #include "js_asm.hpp"
@@ -50,11 +49,11 @@ namespace dromozoa {
 extern "C" {
   using namespace dromozoa;
 
-  int EMSCRIPTEN_KEEPALIVE dromozoa_web_evaluate(lua_State* L, const char* code, const char* name) {
+  int EMSCRIPTEN_KEEPALIVE dromozoa_web_dostring(lua_State* L, const char* code) {
     try {
       stack_guard guard(L);
-      if (luaL_loadbuffer(L, code, std::strlen(code), name) != LUA_OK) {
-        throw DROMOZOA_LOGIC_ERROR("cannot luaL_loadbuffer: ", lua_tostring(L, -1));
+      if (luaL_loadstring(L, code) != LUA_OK) {
+        throw DROMOZOA_LOGIC_ERROR("cannot load: ", lua_tostring(L, -1));
       }
       return call(L, 0);
     } catch (...) {

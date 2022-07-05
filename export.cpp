@@ -26,9 +26,28 @@
 #include "stack_guard.hpp"
 #include "udata.hpp"
 
-namespace dromozoa {
-  namespace {
-    int call(lua_State* L, int n) {
+extern "C" {
+  using namespace dromozoa;
+
+  int EMSCRIPTEN_KEEPALIVE dromozoa_web_load_string(lua_State* L, const char* code) {
+    stack_guard guard(L);
+    try {
+      if (luaL_loadstring(L, code) == LUA_OK) {
+        guard.release();
+        return 1;
+      }
+      if (const auto* error = luaL_tolstring(L, -1, nullptr)) {
+        throw DROMOZOA_LOGIC_ERROR(error);
+      }
+      throw DROMOZOA_LOGIC_ERROR("unknown error");
+    } catch (...) {
+      push_error_queue();
+    }
+    return 0;
+  }
+
+  int EMSCRIPTEN_KEEPALIVE dromozoa_web_call(lua_State* L, int n) {
+    try {
       stack_guard guard(L);
       if (lua_pcall(L, n, 1, 0) == LUA_OK) {
         js_push(L, -1);
@@ -42,29 +61,6 @@ namespace dromozoa {
         throw DROMOZOA_LOGIC_ERROR(error);
       }
       throw DROMOZOA_LOGIC_ERROR("unknown error");
-    }
-  }
-}
-
-extern "C" {
-  using namespace dromozoa;
-
-  int EMSCRIPTEN_KEEPALIVE dromozoa_web_dostring(lua_State* L, const char* code) {
-    try {
-      stack_guard guard(L);
-      if (luaL_loadstring(L, code) != LUA_OK) {
-        throw DROMOZOA_LOGIC_ERROR("cannot load: ", lua_tostring(L, -1));
-      }
-      return call(L, 0);
-    } catch (...) {
-      push_error_queue();
-    }
-    return 0;
-  }
-
-  int EMSCRIPTEN_KEEPALIVE dromozoa_web_call(lua_State* L, int n) {
-    try {
-      return call(L, n);
     } catch (...) {
       push_error_queue();
     }

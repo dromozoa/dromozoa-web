@@ -75,20 +75,22 @@ const D = {
     return new T(...a);
   },
 
-  eval: (code) => {
+  do_string: (code) => {
     const L = D.get_thread();
     if (L) {
-      switch (D.dostring(L, code)) {
-        case 1:
-          return D.stack.pop();
-        case 2:
-          throw new Error(D.stack.pop());
+      if (D.load_string(L, code)) {
+        switch (D.call(L, 0)) {
+          case 1:
+            return D.stack.pop();
+          case 2:
+            throw new Error(D.stack.pop());
+        }
       }
     }
   },
 
   get_thread: cwrap("dromozoa_web_get_thread", "pointer", []),
-  dostring: cwrap("dromozoa_web_dostring", "number", ["pointer", "string"]),
+  load_string: cwrap("dromozoa_web_load_string", "number", ["pointer", "string"]),
   call: cwrap("dromozoa_web_call", "number", ["pointer", "number"]),
   push_nil: cwrap("dromozoa_web_push_nil", null, ["pointer"]),
   push_integer: cwrap("dromozoa_web_push_integer", null, ["pointer", "number"]),

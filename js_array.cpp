@@ -18,6 +18,7 @@
 #include "common.hpp"
 #include "js_array.hpp"
 #include "lua.hpp"
+#include "stack_guard.hpp"
 
 namespace dromozoa {
   namespace {

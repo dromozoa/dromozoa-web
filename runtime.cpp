@@ -21,21 +21,6 @@
 
 namespace dromozoa {
   namespace {
-    void impl_run_script(lua_State* L) {
-      const auto* script = luaL_checkstring(L, 1);
-      emscripten_run_script(script);
-    }
-
-    void impl_run_script_int(lua_State* L) {
-      const auto* script = luaL_checkstring(L, 1);
-      push(L, emscripten_run_script_int(script));
-    }
-
-    void impl_run_script_string(lua_State* L) {
-      const auto* script = luaL_checkstring(L, 1);
-      push(L, emscripten_run_script_string(script));
-    }
-
     void impl_get_device_pixel_ratio(lua_State* L) {
       push(L, emscripten_get_device_pixel_ratio());
     }
@@ -45,8 +30,7 @@ namespace dromozoa {
     }
 
     void impl_set_window_title(lua_State* L) {
-      const auto* title = luaL_checkstring(L, 1);
-      emscripten_set_window_title(title);
+      emscripten_set_window_title(luaL_checkstring(L, 1));
     }
 
     void impl_get_screen_size(lua_State* L) {
@@ -70,10 +54,7 @@ namespace dromozoa {
     }
   }
 
-  void initialize_core(lua_State* L) {
-    set_field(L, -1, "run_script", function<impl_run_script>());
-    set_field(L, -1, "run_script_int", function<impl_run_script_int>());
-    set_field(L, -1, "run_script_string", function<impl_run_script_string>());
+  void initialize_runtime(lua_State* L) {
     set_field(L, -1, "get_device_pixel_ratio", function<impl_get_device_pixel_ratio>());
     set_field(L, -1, "get_window_title", function<impl_get_window_title>());
     set_field(L, -1, "set_window_title", function<impl_set_window_title>());

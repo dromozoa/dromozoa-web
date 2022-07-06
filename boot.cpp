@@ -15,11 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <emscripten.h>
 #include <cstring>
+#include <emscripten.h>
 #include <exception>
 #include <iostream>
-#include <utility>
 #include "common.hpp"
 #include "error.hpp"
 #include "lua.hpp"
@@ -28,17 +27,9 @@
 
 namespace dromozoa {
   namespace {
-    template <class T_key, class T_value>
-    void preload(lua_State* L, T_key&& key, T_value&& value) {
-      stack_guard guard(L);
-      lua_getglobal(L, "package");
-      lua_getfield(L, -1, "preload");
-      set_field(L, -1, std::forward<T_key>(key), std::forward<T_value>(value));
-    }
-
     void boot(lua_State* L) {
       luaL_openlibs(L);
-      preload(L, "dromozoa.web", function<open_module>());
+      preload(L, "dromozoa.web", luaopen_dromozoa_web);
 
       static const char code[] =
       #include "boot.lua"
@@ -51,6 +42,7 @@ namespace dromozoa {
         }
         throw DROMOZOA_LOGIC_ERROR("unknown error");
       }
+
       if (lua_pcall(L, 0, 1, 0) != LUA_OK) {
         if (const auto* e = luaL_tolstring(L, -1, nullptr)) {
           throw DROMOZOA_LOGIC_ERROR(e);
@@ -74,6 +66,8 @@ namespace dromozoa {
         throw DROMOZOA_LOGIC_ERROR("unknown error");
       } catch (const std::exception& e) {
         std::cerr << e.what() << "\n";
+      } catch (...) {
+        std::cerr << "unknown error\n";
       }
       emscripten_cancel_main_loop();
       lua_close(L);
@@ -81,9 +75,9 @@ namespace dromozoa {
   }
 }
 
-using namespace dromozoa;
-
 int main() {
+  using namespace dromozoa;
+
   if (auto* L = luaL_newstate()) {
     try {
       boot(L);
@@ -91,7 +85,11 @@ int main() {
       return 0;
     } catch (const std::exception& e) {
       std::cerr << e.what() << "\n";
+    } catch (...) {
+      std::cerr << "unknown error\n";
     }
+    emscripten_cancel_main_loop();
+    lua_close(L);
   } else {
     std::cerr << "cannot luaL_newstate\n";
   }

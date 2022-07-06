@@ -20,8 +20,8 @@
 
 #include "lua.hpp"
 
-namespace dromozoa {
-  void open_module(lua_State*);
+extern "C" {
+  int luaopen_dromozoa_web(lua_State*);
 }
 
 #endif

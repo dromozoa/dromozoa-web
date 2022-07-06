@@ -18,13 +18,16 @@
 #include "array.hpp"
 #include "error.hpp"
 #include "error_queue.hpp"
+#include "lua.hpp"
 #include "object.hpp"
 #include "thread.hpp"
 #include "runtime.hpp"
 #include "utility.hpp"
 
-namespace dromozoa {
-  void open_module(lua_State* L) {
+extern "C" {
+  using namespace dromozoa;
+
+  int luaopen_dromozoa_web(lua_State* L) {
     lua_newtable(L);
     initialize_array(L);
     initialize_error(L);
@@ -33,5 +36,6 @@ namespace dromozoa {
     initialize_runtime(L);
     initialize_thread(L);
     initialize_utility(L);
+    return 1;
   }
 }

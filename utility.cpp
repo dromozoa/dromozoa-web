@@ -26,7 +26,7 @@ namespace dromozoa {
     void impl_new(lua_State* L) {
       auto top = lua_gettop(L);
 
-      DROMOZOA_JS_ASM({ D.args = []; });
+      DROMOZOA_JS_ASM(D.args = []);
 
       for (auto i = 1; i <= top; ++i) {
         js_push(L, i);

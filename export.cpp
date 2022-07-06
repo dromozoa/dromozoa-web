@@ -19,10 +19,9 @@
 #include "error.hpp"
 #include "error_queue.hpp"
 #include "js_asm.hpp"
-#include "js_error.hpp"
-#include "js_object.hpp"
 #include "js_push.hpp"
 #include "lua.hpp"
+#include "object.hpp"
 #include "stack_guard.hpp"
 #include "udata.hpp"
 
@@ -36,8 +35,8 @@ extern "C" {
         guard.release();
         return 1;
       }
-      if (const auto* error = luaL_tolstring(L, -1, nullptr)) {
-        throw DROMOZOA_LOGIC_ERROR(error);
+      if (const auto* e = luaL_tolstring(L, -1, nullptr)) {
+        throw DROMOZOA_LOGIC_ERROR(e);
       }
       throw DROMOZOA_LOGIC_ERROR("unknown error");
     } catch (...) {
@@ -53,12 +52,12 @@ extern "C" {
         js_push(L, -1);
         return 1;
       }
-      if (auto* error = test_udata<js_error>(L, -1)) {
-        DROMOZOA_JS_ASM(D.stack.push(UTF8ToString($0)), error->what());
+      if (auto* e = test_udata<error>(L, -1)) {
+        DROMOZOA_JS_ASM(D.stack.push(UTF8ToString($0)), e->what());
         return 2;
       }
-      if (const auto* error = luaL_tolstring(L, -1, nullptr)) {
-        throw DROMOZOA_LOGIC_ERROR(error);
+      if (const auto* e = luaL_tolstring(L, -1, nullptr)) {
+        throw DROMOZOA_LOGIC_ERROR(e);
       }
       throw DROMOZOA_LOGIC_ERROR("unknown error");
     } catch (...) {
@@ -88,7 +87,7 @@ extern "C" {
   }
 
   void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_object(lua_State* L, int id) {
-    new_udata<js_object>(L, id);
+    new_udata<object>(L, id);
   }
 
   void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_ref(lua_State* L, int ref) {

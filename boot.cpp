@@ -46,14 +46,14 @@ namespace dromozoa {
 
       stack_guard guard(L);
       if (luaL_loadbuffer(L, code, std::strlen(code), "@boot.lua") != LUA_OK) {
-        if (const auto* error = luaL_tolstring(L, -1, nullptr)) {
-          throw DROMOZOA_LOGIC_ERROR(error);
+        if (const auto* e = luaL_tolstring(L, -1, nullptr)) {
+          throw DROMOZOA_LOGIC_ERROR(e);
         }
         throw DROMOZOA_LOGIC_ERROR("unknown error");
       }
       if (lua_pcall(L, 0, 1, 0) != LUA_OK) {
-        if (const auto* error = luaL_tolstring(L, -1, nullptr)) {
-          throw DROMOZOA_LOGIC_ERROR(error);
+        if (const auto* e = luaL_tolstring(L, -1, nullptr)) {
+          throw DROMOZOA_LOGIC_ERROR(e);
         }
         throw DROMOZOA_LOGIC_ERROR("unknown error");
       }
@@ -68,8 +68,8 @@ namespace dromozoa {
         if (lua_pcall(L, 0, 0, 0) == LUA_OK) {
           return;
         }
-        if (const auto* error = luaL_tolstring(L, -1, nullptr)) {
-          throw DROMOZOA_LOGIC_ERROR(error);
+        if (const auto* e = luaL_tolstring(L, -1, nullptr)) {
+          throw DROMOZOA_LOGIC_ERROR(e);
         }
         throw DROMOZOA_LOGIC_ERROR("unknown error");
       } catch (const std::exception& e) {

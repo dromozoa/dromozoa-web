@@ -18,9 +18,9 @@
 #include "array.hpp"
 #include "error.hpp"
 #include "js_asm.hpp"
-#include "js_object.hpp"
 #include "js_push.hpp"
 #include "lua.hpp"
+#include "object.hpp"
 #include "udata.hpp"
 
 namespace dromozoa {
@@ -103,7 +103,7 @@ namespace dromozoa {
         js_push_function(L, index);
         break;
       case LUA_TUSERDATA:
-        if (auto* that = test_udata<js_object>(L, index)) {
+        if (auto* that = test_udata<object>(L, index)) {
           DROMOZOA_JS_ASM(D.stack.push(D.objs[$0]), that->get());
         } else {
           js_push_function(L, index);

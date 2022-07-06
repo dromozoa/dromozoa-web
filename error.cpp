@@ -16,21 +16,21 @@
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "common.hpp"
-#include "js_error.hpp"
+#include "error.hpp"
 #include "lua.hpp"
 #include "udata.hpp"
 
 namespace dromozoa {
   namespace {
     void impl_throw(lua_State* L) {
-      new_udata<js_error>(L, luaL_checkstring(L, 1));
+      new_udata<error>(L, luaL_checkstring(L, 1));
       lua_error(L);
     }
   }
 
-  void initialize_js_error(lua_State* L) {
-    luaL_newmetatable(L, js_error::NAME);
-    set_field(L, -1, "__gc", gc_udata<js_error>);
+  void initialize_error(lua_State* L) {
+    luaL_newmetatable(L, error::NAME);
+    set_field(L, -1, "__gc", gc_udata<error>);
     lua_pop(L, 1);
 
     set_field(L, -1, "throw", function<impl_throw>());

@@ -19,7 +19,7 @@
 #include "js_array.hpp"
 #include "js_error.hpp"
 #include "js_object.hpp"
-#include "js_thread.hpp"
+#include "thread.hpp"
 #include "runtime.hpp"
 #include "utility.hpp"
 
@@ -30,7 +30,7 @@ namespace dromozoa {
     initialize_js_array(L);
     initialize_js_error(L);
     initialize_js_object(L);
-    initialize_js_thread(L);
+    initialize_thread(L);
     initialize_runtime(L);
     initialize_utility(L);
   }

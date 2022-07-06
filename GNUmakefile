@@ -36,8 +36,8 @@ OBJS = \
 	js_error.o \
 	js_object.o \
 	js_push.o \
-	js_thread.o \
 	module.o \
+	thread.o \
 	runtime.o \
 	utility.o
 TARGET = index.html

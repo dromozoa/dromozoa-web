@@ -17,21 +17,21 @@
 
 #include <emscripten.h>
 #include "common.hpp"
-#include "js_thread.hpp"
 #include "lua.hpp"
+#include "thread.hpp"
 
 namespace dromozoa {
   namespace {
-    lua_State* js_thread = nullptr;
+    lua_State* thread = nullptr;
 
     void impl_gc(lua_State*) {
-      js_thread = nullptr;
+      thread = nullptr;
     }
   }
 
-  void initialize_js_thread(lua_State* L) {
+  void initialize_thread(lua_State* L) {
     lua_newtable(L);
-    js_thread = lua_newthread(L);
+    thread = lua_newthread(L);
     set_field(L, -2, 1);
     lua_newtable(L);
     set_field(L, -1, "__gc", function<impl_gc>());
@@ -44,6 +44,6 @@ extern "C" {
   using namespace dromozoa;
 
   lua_State* EMSCRIPTEN_KEEPALIVE dromozoa_web_get_thread() {
-    return js_thread;
+    return thread;
   }
 }

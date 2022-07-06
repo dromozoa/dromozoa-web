@@ -31,6 +31,7 @@ endif
 OBJS = \
 	array.o \
 	boot.o \
+	browser.o \
 	error.o \
 	error_queue.o \
 	export.o \
@@ -38,7 +39,6 @@ OBJS = \
 	module.o \
 	thread.o \
 	object.o \
-	runtime.o \
 	utility.o
 TARGET = index.html
 

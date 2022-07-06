@@ -54,7 +54,7 @@ namespace dromozoa {
     }
   }
 
-  void initialize_runtime(lua_State* L) {
+  void initialize_browser(lua_State* L) {
     set_field(L, -1, "get_device_pixel_ratio", function<impl_get_device_pixel_ratio>());
     set_field(L, -1, "get_window_title", function<impl_get_window_title>());
     set_field(L, -1, "set_window_title", function<impl_set_window_title>());

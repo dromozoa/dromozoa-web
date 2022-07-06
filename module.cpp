@@ -16,12 +16,12 @@
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "array.hpp"
+#include "browser.hpp"
 #include "error.hpp"
 #include "error_queue.hpp"
 #include "lua.hpp"
 #include "object.hpp"
 #include "thread.hpp"
-#include "runtime.hpp"
 #include "utility.hpp"
 
 extern "C" {
@@ -30,10 +30,10 @@ extern "C" {
   int luaopen_dromozoa_web(lua_State* L) {
     lua_newtable(L);
     initialize_array(L);
+    initialize_browser(L);
     initialize_error(L);
     initialize_error_queue(L);
     initialize_object(L);
-    initialize_runtime(L);
     initialize_thread(L);
     initialize_utility(L);
     return 1;

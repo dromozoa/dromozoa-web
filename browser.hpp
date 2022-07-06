@@ -15,13 +15,13 @@
 // You should have received a copy of the GNU General Public License
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef DROMOZOA_WEB_RUNTIME_HPP
-#define DROMOZOA_WEB_RUNTIME_HPP
+#ifndef DROMOZOA_WEB_BROWSER_HPP
+#define DROMOZOA_WEB_BROWSER_HPP
 
 #include "lua.hpp"
 
 namespace dromozoa {
-  void initialize_runtime(lua_State*);
+  void initialize_browser(lua_State*);
 }
 
 #endif

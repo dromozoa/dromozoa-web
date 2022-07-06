@@ -31,6 +31,7 @@ endif
 OBJS = \
 	array.o \
 	boot.o \
+	browser.o \
 	error.o \
 	error_queue.o \
 	export.o \
@@ -38,14 +39,13 @@ OBJS = \
 	module.o \
 	thread.o \
 	object.o \
-	runtime.o \
 	utility.o
 TARGET = index.html
 
 all: all-recursive $(TARGET)
 
 all-recursive:
-	(cd lua/src && $(MAKE) CC=em++ AR="emar rcu" RANLIB=emranlib CFLAGS="-Wall -Wextra -DLUA_COMPAT_5_3 $(BASE_CXXFALGS)" MYLDFLAGS="$(BASE_LDFLAGS)" LUA_T=lua.html LUAC_T=luac.html posix)
+	(cd lua/src && $(MAKE) CC=emcc AR="emar rcu" RANLIB=emranlib CFLAGS="-x c++ -Wall -Wextra -DLUA_COMPAT_5_3 $(BASE_CXXFALGS)" MYLDFLAGS="$(BASE_LDFLAGS)" LUA_T=lua.html LUAC_T=luac.html posix)
 
 clean:
 	$(RM) *.d *.o $(TARGET) index.html index.js index.wasm

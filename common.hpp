@@ -154,6 +154,14 @@ namespace dromozoa {
     lua_settable(L, index);
     lua_pop(L, 1);
   }
+
+  template <class T_key, class T_value>
+  void preload(lua_State* L, T_key&& key, T_value&& value) {
+    lua_getglobal(L, "package");
+    lua_getfield(L, -1, "preload");
+    set_field(L, -1, std::forward<T_key>(key), std::forward<T_value>(value));
+    lua_pop(L, 2);
+  }
 }
 
 #endif

@@ -29,7 +29,8 @@ namespace dromozoa {
   namespace {
     void boot(lua_State* L) {
       luaL_openlibs(L);
-      preload(L, "dromozoa.web", luaopen_dromozoa_web);
+      preload(L, "dromozoa.web", function<luaopen_dromozoa_web>());
+      preload(L, "dromozoa.web.async", function<luaopen_dromozoa_web_async>());
 
       static const char code[] =
       #include "boot.lua"
@@ -42,7 +43,6 @@ namespace dromozoa {
         }
         throw DROMOZOA_LOGIC_ERROR("unknown error");
       }
-
       if (lua_pcall(L, 0, 1, 0) != LUA_OK) {
         if (const auto* e = luaL_tolstring(L, -1, nullptr)) {
           throw DROMOZOA_LOGIC_ERROR(e);

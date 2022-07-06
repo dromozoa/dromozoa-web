@@ -21,13 +21,14 @@
 #include "error_queue.hpp"
 #include "lua.hpp"
 #include "object.hpp"
+#include "stack_guard.hpp"
 #include "thread.hpp"
 #include "utility.hpp"
 
 extern "C" {
   using namespace dromozoa;
 
-  int luaopen_dromozoa_web(lua_State* L) {
+  void luaopen_dromozoa_web(lua_State* L) {
     lua_newtable(L);
     initialize_array(L);
     initialize_browser(L);
@@ -36,6 +37,26 @@ extern "C" {
     initialize_object(L);
     initialize_thread(L);
     initialize_utility(L);
-    return 1;
+  }
+
+  void luaopen_dromozoa_web_async(lua_State* L) {
+    static const char code[] =
+    #include "async.lua"
+    ;
+
+    stack_guard guard(L);
+    if (luaL_loadbuffer(L, code, std::strlen(code), "@dromozoa/web/async.lua") != LUA_OK) {
+      if (const auto* e = luaL_tolstring(L, -1, nullptr)) {
+        throw DROMOZOA_LOGIC_ERROR(e);
+      }
+      throw DROMOZOA_LOGIC_ERROR("unknown error");
+    }
+    if (lua_pcall(L, 0, 1, 0) != LUA_OK) {
+      if (const auto* e = luaL_tolstring(L, -1, nullptr)) {
+        throw DROMOZOA_LOGIC_ERROR(e);
+      }
+      throw DROMOZOA_LOGIC_ERROR("unknown error");
+    }
+    guard.release();
   }
 }

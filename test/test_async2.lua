@@ -16,66 +16,7 @@
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 local D = require "dromozoa.web"
-
-----------------------------------------------------------------------
-
-local class = {}
-local metatable = {
-  __index = class;
-  __name = "dromozoa.web.async";
-}
-
-function class:resume(...)
-  local thread = self.thread
-  -- 死んだスレッドで処理を続けようとしているかもしれない
-  if thread then
-    local result = table.pack(coroutine.resume(thread, ...))
-    if coroutine.status(thread) == "dead" then
-      self.thread = nil
-      self.value = result
-      self.status = "ready"
-    end
-  end
-end
-
-function class:await(promise)
-  promise["then"](promise, function (...)
-    self:resume(true, ...)
-  end):catch(function (...)
-    self:resume(false, ...)
-  end)
-  return coroutine.yield()
-end
-
-function class:is_ready()
-  return self.status == "ready"
-end
-
-function class:get()
-  local value = self.value
-  if value[1] then
-    return table.unpack(value, 2)
-  else
-    error(value[2])
-  end
-end
-
-local async = setmetatable(class, {
-  __call = function (_, f)
-    local self = setmetatable({
-      status = "initial";
-      thread = coroutine.create(function (self)
-        self.status = "running"
-        print("f", f)
-        return f(self)
-      end);
-    }, metatable)
-    self:resume(self)
-    return self
-  end;
-})
-
-----------------------------------------------------------------------
+local async = require "dromozoa.web.async"
 
 local function timeout_promise(t, k)
   return D.new(D.window.Promise, function (resolve, reject)

@@ -21,7 +21,8 @@
 #include "lua.hpp"
 
 extern "C" {
-  int luaopen_dromozoa_web(lua_State*);
+  void luaopen_dromozoa_web(lua_State*);
+  void luaopen_dromozoa_web_async(lua_State*);
 }
 
 #endif

@@ -26,17 +26,20 @@ namespace dromozoa {
     void impl_new(lua_State* L) {
       auto top = lua_gettop(L);
 
-      DROMOZOA_JS_ASM(D.args = []);
+      js_push(L, 1);
+      DROMOZOA_JS_ASM({
+        D.args = [];
+        D.args.constructor = D.stack.pop();
+      });
 
-      for (auto i = 1; i <= top; ++i) {
+      for (auto i = 2; i <= top; ++i) {
         js_push(L, i);
         DROMOZOA_JS_ASM(D.args.push(D.stack.pop()));
       }
 
       DROMOZOA_JS_ASM({
         const args = D.args;
-        D.args = undefined;
-        D.push($0, D.new.apply(undefined, args));
+        D.push($0, new args.constructor(...args));
       }, L);
     }
 

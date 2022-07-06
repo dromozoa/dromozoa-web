@@ -84,14 +84,6 @@ const D = {
     }
   },
 
-  catch: (e) => {
-    return allocateUTF8(e.toString());
-  },
-
-  new: (T, ...a) => {
-    return new T(...a);
-  },
-
   stack: [],
   objs: [ 0 ],
   refs: new FinalizationRegistry((ref) => {

@@ -90,16 +90,16 @@ extern "C" {
     new_udata<object>(L, id);
   }
 
-  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_ref(lua_State* L, int ref) {
+  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_function(lua_State* L, int ref) {
     lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
   }
 
-  int EMSCRIPTEN_KEEPALIVE dromozoa_web_ref_registry(lua_State* L, int index) {
+  int EMSCRIPTEN_KEEPALIVE dromozoa_web_ref(lua_State* L, int index) {
     lua_pushvalue(L, index);
     return luaL_ref(L, LUA_REGISTRYINDEX);
   }
 
-  void EMSCRIPTEN_KEEPALIVE dromozoa_web_unref_registry(lua_State* L, int ref) {
+  void EMSCRIPTEN_KEEPALIVE dromozoa_web_unref(lua_State* L, int ref) {
     luaL_unref(L, LUA_REGISTRYINDEX, ref);
   }
 }

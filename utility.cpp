@@ -42,7 +42,7 @@ namespace dromozoa {
 
     void impl_ref(lua_State* L) {
       js_push(L, 1);
-      DROMOZOA_JS_ASM(D.push_object($0, D.ref_object(D.stack.pop())), L);
+      DROMOZOA_JS_ASM(D.push($0, D.stack.pop()), L);
     }
   }
 

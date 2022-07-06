@@ -31,7 +31,7 @@ namespace dromozoa {
           const L = D.get_thread();
           if (L) {
             const n = args.length;
-            D.push_ref(L, v.ref);
+            D.push_function(L, v.ref);
             for (let i = 0; i < n; ++i) {
               D.push(L, args[i]);
             }
@@ -43,7 +43,7 @@ namespace dromozoa {
             }
           }
         };
-        v.ref = D.ref_registry($0, $1);
+        v.ref = D.ref($0, $1);
         D.refs.register(v, v.ref);
         D.stack.push(v);
       }, L, index);

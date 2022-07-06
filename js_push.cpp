@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
+#include "array.hpp"
 #include "error.hpp"
-#include "js_array.hpp"
 #include "js_asm.hpp"
 #include "js_object.hpp"
 #include "js_push.hpp"
@@ -69,7 +69,7 @@ namespace dromozoa {
         {
           index = lua_absindex(L, index);
 
-          double origin = is_js_array(L, index);
+          double origin = is_array(L, index);
           if (origin) {
             DROMOZOA_JS_ASM(D.stack.push([]));
           } else {

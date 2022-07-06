@@ -50,10 +50,26 @@ namespace dromozoa {
       js_push(L, 1);
       DROMOZOA_JS_ASM(D.push($0, D.stack.pop()), L);
     }
+
+    void impl_typeof(lua_State* L) {
+      js_push(L, 1);
+      DROMOZOA_JS_ASM(D.push($0, typeof D.stack.pop()), L);
+    }
+
+    void impl_instanceof(lua_State* L) {
+      js_push(L, 1);
+      js_push(L, 2);
+      DROMOZOA_JS_ASM({
+        const cstr = D.stack.pop();
+        D.push($0, D.stack.pop() instanceof cstr);
+      }, L);
+    }
   }
 
   void initialize_utility(lua_State* L) {
     set_field(L, -1, "new", function<impl_new>());
     set_field(L, -1, "ref", function<impl_ref>());
+    set_field(L, -1, "typeof", function<impl_typeof>());
+    set_field(L, -1, "instanceof", function<impl_instanceof>());
   }
 }

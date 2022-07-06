@@ -87,10 +87,14 @@ end
 
 local a = async(function (self)
   print "start"
-  print(self:await(timeout_promise(500, "A")))
+  local p = timeout_promise(500, "A")
+  print(D.typeof(p), D.typeof(42), D.typeof(function () end))
+  print(D.instanceof(p, D.window.Object), D.instanceof(p, D.window.Promise), D.instanceof(p, D.window.Array))
+  print(D.instanceof(42, D.window.Object), D.instanceof(42, D.window.Promise), D.instanceof(42, D.window.Array))
+  print(self:await(p))
   print(self:await(timeout_promise(500, "B")))
   print(self:await(timeout_promise(500, "C")))
-  error "X"
+  -- error "X"
   print(self:await(timeout_promise(500, "D")))
   print "goal"
   return "z"

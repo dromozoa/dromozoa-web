@@ -15,62 +15,55 @@
 // You should have received a copy of the GNU General Public License
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <cstring>
 #include <emscripten.h>
 #include <exception>
 #include <iostream>
+#include <optional>
+#include <string>
+#include <string_view>
 #include "common.hpp"
-#include "error.hpp"
 #include "lua.hpp"
 #include "module.hpp"
 #include "stack_guard.hpp"
 
 namespace dromozoa {
   namespace {
-    void boot(lua_State* L) {
+    std::optional<std::string> boot(lua_State* L) {
       luaL_openlibs(L);
       preload(L, "dromozoa.web", function<luaopen_dromozoa_web>());
       preload(L, "dromozoa.web.async", function<luaopen_dromozoa_web_async>());
 
-      static const char code[] =
+      static constexpr char CODE[] =
       #include "boot.lua"
       ;
 
-      stack_guard guard(L);
-      if (luaL_loadbuffer(L, code, std::strlen(code), "@boot.lua") != LUA_OK) {
-        if (const auto* e = luaL_tolstring(L, -1, nullptr)) {
-          throw DROMOZOA_LOGIC_ERROR(e);
-        }
-        throw DROMOZOA_LOGIC_ERROR("unknown error");
+      if (auto e = load_buffer(L, std::string_view(CODE), "@dromozoa/web/async.lua")) {
+        return e;
       }
-      if (lua_pcall(L, 0, 1, 0) != LUA_OK) {
-        if (const auto* e = luaL_tolstring(L, -1, nullptr)) {
-          throw DROMOZOA_LOGIC_ERROR(e);
-        }
-        throw DROMOZOA_LOGIC_ERROR("unknown error");
+      if (auto e = pcall(L, 0, 1)) {
+        return e;
       }
-      guard.release();
+      return std::nullopt;
     }
 
     void each(void* state) {
-      auto* L = static_cast<lua_State*>(state);
       try {
+        auto* L = static_cast<lua_State*>(state);
         stack_guard guard(L);
+
         lua_pushvalue(L, -1);
-        if (lua_pcall(L, 0, 0, 0) == LUA_OK) {
-          return;
+        if (auto e = pcall(L, 0, 0)) {
+          std::cerr << *e << "\n";
+          emscripten_cancel_main_loop();
+          // このタイミングでは早すぎる
+          // JSからの呼び出しがまだ終わっていない？
+          // lua_close(L);
         }
-        if (const auto* e = luaL_tolstring(L, -1, nullptr)) {
-          throw DROMOZOA_LOGIC_ERROR(e);
-        }
-        throw DROMOZOA_LOGIC_ERROR("unknown error");
       } catch (const std::exception& e) {
         std::cerr << e.what() << "\n";
       } catch (...) {
         std::cerr << "unknown error\n";
       }
-      emscripten_cancel_main_loop();
-      lua_close(L);
     }
   }
 }
@@ -79,19 +72,14 @@ int main() {
   using namespace dromozoa;
 
   if (auto* L = luaL_newstate()) {
-    try {
-      boot(L);
-      emscripten_set_main_loop_arg(each, L, 0, false);
-      return 0;
-    } catch (const std::exception& e) {
-      std::cerr << e.what() << "\n";
-    } catch (...) {
-      std::cerr << "unknown error\n";
+    if (auto e = boot(L)) {
+      std::cerr << *e << "\n";
+      lua_close(L);
+      return 1;
     }
-    emscripten_cancel_main_loop();
-    lua_close(L);
-  } else {
-    std::cerr << "cannot luaL_newstate\n";
+    emscripten_set_main_loop_arg(each, L, 0, false);
+    return 0;
   }
+  std::cerr << "cannot luaL_newstate\n";
   return 1;
 }

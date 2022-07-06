@@ -20,11 +20,15 @@
 
 #include <limits>
 #include <exception>
+#include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
+#include "common.hpp"
 #include "lua.hpp"
+#include "stack_guard.hpp"
 
 namespace dromozoa {
   template <class T, T (*)(lua_State*)>
@@ -156,11 +160,35 @@ namespace dromozoa {
   }
 
   template <class T_key, class T_value>
-  void preload(lua_State* L, T_key&& key, T_value&& value) {
+  inline void preload(lua_State* L, T_key&& key, T_value&& value) {
     lua_getglobal(L, "package");
     lua_getfield(L, -1, "preload");
     set_field(L, -1, std::forward<T_key>(key), std::forward<T_value>(value));
     lua_pop(L, 2);
+  }
+
+  inline std::optional<std::string> load_buffer(lua_State* L, const std::string_view& code, const char* name) {
+    stack_guard guard(L);
+    if (luaL_loadbuffer(L, code.data(), code.size(), name) == LUA_OK) {
+      guard.release();
+      return std::nullopt;
+    }
+    if (const auto* e = luaL_tolstring(L, -1, nullptr)) {
+      return e;
+    }
+    return "unknown error";
+  }
+
+  inline std::optional<std::string> pcall(lua_State* L, int num_arguments, int num_results) {
+    // stack_guard guard(L);
+    if (lua_pcall(L, num_arguments, num_results, 0) == LUA_OK) {
+      // guard.release();
+      return std::nullopt;
+    }
+    if (const auto* e = luaL_tolstring(L, -1, nullptr)) {
+      return e;
+    }
+    return "unknown error";
   }
 }
 

@@ -26,7 +26,7 @@ local function timeout_promise(t, k)
   end)
 end
 
-local a = async(function (self)
+local f = async(function (self)
   print "start"
   local p = timeout_promise(500, "A")
   print(D.typeof(p), D.typeof(42), D.typeof(function () end))
@@ -43,12 +43,10 @@ end)
 
 while true do
   assert(D.get_error_queue())
-
-  if a and a:is_ready() then
-    print "ready"
-    print(a:get())
-    a = nil
+  if f and f:is_ready() then
+    local v = f:get()
+    f = nil
+    print(v)
   end
-
   coroutine.yield()
 end

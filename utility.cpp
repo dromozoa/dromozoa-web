@@ -28,8 +28,8 @@ namespace dromozoa {
 
       js_push(L, 1);
       DROMOZOA_JS_ASM({
+        D.cstr = D.stack.pop();
         D.args = [];
-        D.args.constructor = D.stack.pop();
       });
 
       for (auto i = 2; i <= top; ++i) {
@@ -38,8 +38,11 @@ namespace dromozoa {
       }
 
       DROMOZOA_JS_ASM({
+        const cstr = D.cstr;
         const args = D.args;
-        D.push($0, new args.constructor(...args));
+        D.cstr = undefined;
+        D.args = undefined;
+        D.push($0, new cstr(...args));
       }, L);
     }
 

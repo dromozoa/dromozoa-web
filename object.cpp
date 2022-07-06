@@ -68,13 +68,8 @@ namespace dromozoa {
       auto* self = check_udata<object>(L, 1);
       auto top = lua_gettop(L);
 
-      js_push(L, 2);
-      DROMOZOA_JS_ASM({
-        D.args = [];
-        D.args.thisArg = D.stack.pop();
-      });
-
-      for (auto i = 3; i <= top; ++i) {
+      DROMOZOA_JS_ASM(D.args = []);
+      for (auto i = 2; i <= top; ++i) {
         js_push(L, i);
         DROMOZOA_JS_ASM(D.args.push(D.stack.pop()));
       }
@@ -82,9 +77,9 @@ namespace dromozoa {
       DROMOZOA_JS_ASM({
         const args = D.args;
         D.args = undefined;
-        const result = D.objs[$1].apply(args.thisArg, args);
+        const result = D.objs[$1].call(...args);
         if (result === undefined) {
-          D.push($0, args.thisArg);
+          D.push($0, args[0]);
         } else {
           D.push($0, result);
         }

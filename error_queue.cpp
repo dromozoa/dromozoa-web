@@ -44,8 +44,8 @@ namespace dromozoa {
     }
 
     void impl_pop_error_queue(lua_State* L) {
-      if (auto error = pop_error_queue()) {
-        lua_pushstring(L, error->c_str());
+      if (auto e = pop_error_queue()) {
+        lua_pushstring(L, e->c_str());
       } else {
         lua_pushnil(L);
       }
@@ -59,11 +59,11 @@ namespace dromozoa {
 
       const char* sep = luaL_optstring(L, 1, "\n\t");
       std::ostringstream out;
-      for (int i = 0; auto error = pop_error_queue(); ++i) {
+      for (int i = 0; auto e = pop_error_queue(); ++i) {
         if (i > 0) {
           out << sep;
         }
-        out << *error;
+        out << *e;
       }
       lua_pushnil(L);
       push(L, out.str());

@@ -29,15 +29,15 @@ LDFLAGS += --closure=$(CLOSURE)
 endif
 
 OBJS = \
+	array.o \
 	boot.o \
+	error.o \
 	error_queue.o \
 	export.o \
-	js_array.o \
-	js_error.o \
-	js_object.o \
 	js_push.o \
-	js_thread.o \
 	module.o \
+	thread.o \
+	object.o \
 	runtime.o \
 	utility.o
 TARGET = index.html

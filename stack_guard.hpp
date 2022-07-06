@@ -27,7 +27,15 @@ namespace dromozoa {
     explicit stack_guard(lua_State* L) : state_(L), top_(lua_gettop(L)) {}
 
     ~stack_guard() {
-      lua_settop(state_, top_);
+      if (state_) {
+        lua_settop(state_, top_);
+      }
+    }
+
+    lua_State* release() {
+      auto* state = state_;
+      state_ = nullptr;
+      return state;
     }
 
   private:

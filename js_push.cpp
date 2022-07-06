@@ -15,12 +15,12 @@
 // You should have received a copy of the GNU General Public License
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
+#include "array.hpp"
 #include "error.hpp"
-#include "js_array.hpp"
 #include "js_asm.hpp"
-#include "js_object.hpp"
 #include "js_push.hpp"
 #include "lua.hpp"
+#include "object.hpp"
 #include "udata.hpp"
 
 namespace dromozoa {
@@ -31,7 +31,7 @@ namespace dromozoa {
           const L = D.get_thread();
           if (L) {
             const n = args.length;
-            D.push_ref(L, v.ref);
+            D.push_function(L, v.ref);
             for (let i = 0; i < n; ++i) {
               D.push(L, args[i]);
             }
@@ -43,7 +43,7 @@ namespace dromozoa {
             }
           }
         };
-        v.ref = D.ref_registry($0, $1);
+        v.ref = D.ref($0, $1);
         D.refs.register(v, v.ref);
         D.stack.push(v);
       }, L, index);
@@ -69,7 +69,7 @@ namespace dromozoa {
         {
           index = lua_absindex(L, index);
 
-          double origin = is_js_array(L, index);
+          double origin = is_array(L, index);
           if (origin) {
             DROMOZOA_JS_ASM(D.stack.push([]));
           } else {
@@ -103,7 +103,7 @@ namespace dromozoa {
         js_push_function(L, index);
         break;
       case LUA_TUSERDATA:
-        if (auto* that = test_udata<js_object>(L, index)) {
+        if (auto* that = test_udata<object>(L, index)) {
           DROMOZOA_JS_ASM(D.stack.push(D.objs[$0]), that->get());
         } else {
           js_push_function(L, index);

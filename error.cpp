@@ -16,32 +16,23 @@
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "common.hpp"
-#include "js_array.hpp"
+#include "error.hpp"
 #include "lua.hpp"
-#include "stack_guard.hpp"
+#include "udata.hpp"
 
 namespace dromozoa {
   namespace {
-    constexpr char NAME[] = "dromozoa.web.js_array";
-
-    void impl_array(lua_State* L) {
-      luaL_setmetatable(L, NAME);
+    void impl_throw(lua_State* L) {
+      new_udata<error>(L, luaL_checkstring(L, 1));
+      lua_error(L);
     }
   }
 
-  bool is_js_array(lua_State* L, int index) {
-    stack_guard guard(L);
-    if (luaL_getmetafield(L, index, NAME) != LUA_TNIL) {
-      return lua_toboolean(L, -1);
-    }
-    return false;
-  }
-
-  void initialize_js_array(lua_State* L) {
-    luaL_newmetatable(L, NAME);
-    set_field(L, -1, NAME, true);
+  void initialize_error(lua_State* L) {
+    luaL_newmetatable(L, error::NAME);
+    set_field(L, -1, "__gc", gc_udata<error>);
     lua_pop(L, 1);
 
-    set_field(L, -1, "array", function<impl_array>());
+    set_field(L, -1, "throw", function<impl_throw>());
   }
 }

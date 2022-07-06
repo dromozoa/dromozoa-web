@@ -44,29 +44,39 @@ namespace dromozoa {
       #include "boot.lua"
       ;
 
-      if (luaL_loadbuffer(L, code, std::strlen(code), "boot.lua") != LUA_OK) {
-        throw DROMOZOA_LOGIC_ERROR("cannot luaL_loadbuffer: ", lua_tostring(L, -1));
+      stack_guard guard(L);
+      if (luaL_loadbuffer(L, code, std::strlen(code), "@boot.lua") != LUA_OK) {
+        if (const auto* e = luaL_tolstring(L, -1, nullptr)) {
+          throw DROMOZOA_LOGIC_ERROR(e);
+        }
+        throw DROMOZOA_LOGIC_ERROR("unknown error");
       }
       if (lua_pcall(L, 0, 1, 0) != LUA_OK) {
-        throw DROMOZOA_LOGIC_ERROR("cannot lua_pcall: ", lua_tostring(L, -1));
+        if (const auto* e = luaL_tolstring(L, -1, nullptr)) {
+          throw DROMOZOA_LOGIC_ERROR(e);
+        }
+        throw DROMOZOA_LOGIC_ERROR("unknown error");
       }
+      guard.release();
     }
 
     void each(void* state) {
-      if (auto* L = static_cast<lua_State*>(state)) {
-        try {
-          stack_guard guard(L);
-          lua_pushvalue(L, -1);
-          if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
-            throw DROMOZOA_LOGIC_ERROR("cannot lua_pcall: ", lua_tostring(L, -1));
-          }
+      auto* L = static_cast<lua_State*>(state);
+      try {
+        stack_guard guard(L);
+        lua_pushvalue(L, -1);
+        if (lua_pcall(L, 0, 0, 0) == LUA_OK) {
           return;
-        } catch (const std::exception& e) {
-          std::cerr << e.what() << "\n";
         }
-        emscripten_cancel_main_loop();
-        lua_close(L);
+        if (const auto* e = luaL_tolstring(L, -1, nullptr)) {
+          throw DROMOZOA_LOGIC_ERROR(e);
+        }
+        throw DROMOZOA_LOGIC_ERROR("unknown error");
+      } catch (const std::exception& e) {
+        std::cerr << e.what() << "\n";
       }
+      emscripten_cancel_main_loop();
+      lua_close(L);
     }
   }
 }
@@ -74,7 +84,7 @@ namespace dromozoa {
 using namespace dromozoa;
 
 int main() {
-  if (lua_State* L = luaL_newstate()) {
+  if (auto* L = luaL_newstate()) {
     try {
       boot(L);
       emscripten_set_main_loop_arg(each, L, 0, false);

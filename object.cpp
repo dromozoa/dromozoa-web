@@ -17,26 +17,25 @@
 
 #include "common.hpp"
 #include "js_asm.hpp"
-#include "js_object.hpp"
-#include "js_object.hpp"
 #include "js_push.hpp"
 #include "lua.hpp"
+#include "object.hpp"
 #include "udata.hpp"
 
 namespace dromozoa {
   namespace {
     void impl_eq(lua_State* L) {
-      auto* self = test_udata<js_object>(L, 1);
-      auto* that = test_udata<js_object>(L, 2);
+      auto* self = test_udata<object>(L, 1);
+      auto* that = test_udata<object>(L, 2);
       if (self && that) {
-        DROMOZOA_JS_ASM(D.push_boolean($0, D.objs[$1] === D.objs[$2]), L, self->get(), that->get());
+        DROMOZOA_JS_ASM(D.push($0, D.objs[$1] === D.objs[$2]), L, self->get(), that->get());
       } else {
         push(L, false);
       }
     }
 
     void impl_index(lua_State* L) {
-      auto* self = check_udata<js_object>(L, 1);
+      auto* self = check_udata<object>(L, 1);
       switch (lua_type(L, 2)) {
         case LUA_TNUMBER:
           DROMOZOA_JS_ASM(D.push($0, D.objs[$1][$2]), L, self->get(), lua_tonumber(L, 2));
@@ -50,7 +49,7 @@ namespace dromozoa {
     }
 
     void impl_newindex(lua_State* L) {
-      auto* self = check_udata<js_object>(L, 1);
+      auto* self = check_udata<object>(L, 1);
       switch (lua_type(L, 2)) {
         case LUA_TNUMBER:
           js_push(L, 3);
@@ -66,26 +65,21 @@ namespace dromozoa {
     }
 
     void impl_call(lua_State* L) {
-      auto* self = check_udata<js_object>(L, 1);
+      auto* self = check_udata<object>(L, 1);
       auto top = lua_gettop(L);
 
-      js_push(L, 2);
-      DROMOZOA_JS_ASM({
-        D.args = [];
-        D.args.thisArg = D.stack.pop();
-      });
-
-      for (auto i = 3; i <= top; ++i) {
+      DROMOZOA_JS_ASM(D.args = []);
+      for (auto i = 2; i <= top; ++i) {
         js_push(L, i);
-        DROMOZOA_JS_ASM({ D.args.push(D.stack.pop()); });
+        DROMOZOA_JS_ASM(D.args.push(D.stack.pop()));
       }
 
       DROMOZOA_JS_ASM({
         const args = D.args;
         D.args = undefined;
-        const result = D.objs[$1].apply(args.thisArg, args);
+        const result = D.objs[$1].call(...args);
         if (result === undefined) {
-          D.push($0, args.thisArg);
+          D.push($0, args[0]);
         } else {
           D.push($0, result);
         }
@@ -93,32 +87,32 @@ namespace dromozoa {
     }
 
     void impl_tostring(lua_State* L) {
-      auto* self = check_udata<js_object>(L, 1);
-      DROMOZOA_JS_ASM({ D.push($0, D.objs[$1].toString()); }, L, self->get());
+      auto* self = check_udata<object>(L, 1);
+      DROMOZOA_JS_ASM(D.push($0, D.objs[$1].toString()), L, self->get());
     }
   }
 
-  void js_object::close() noexcept {
+  void object::close() noexcept {
     if (ref_) {
       try {
-        DROMOZOA_JS_ASM({ D.unref_object($0) }, ref_);
+        DROMOZOA_JS_ASM(D.unref_object($0), ref_);
       } catch (...) {}
       ref_ = 0;
     }
   }
 
-  void initialize_js_object(lua_State* L) {
-    luaL_newmetatable(L, js_object::NAME);
+  void initialize_object(lua_State* L) {
+    luaL_newmetatable(L, object::NAME);
     set_field(L, -1, "__eq", function<impl_eq>());
     set_field(L, -1, "__index", function<impl_index>());
     set_field(L, -1, "__newindex", function<impl_newindex>());
     set_field(L, -1, "__call", function<impl_call>());
     set_field(L, -1, "__tostring", function<impl_tostring>());
-    set_field(L, -1, "__close", close_udata<js_object>);
-    set_field(L, -1, "__gc", gc_udata<js_object>);
+    set_field(L, -1, "__close", close_udata<object>);
+    set_field(L, -1, "__gc", gc_udata<object>);
     lua_pop(L, 1);
 
-    DROMOZOA_JS_ASM(D.push_object($0, D.ref_object(window)), L);
+    DROMOZOA_JS_ASM(D.push($0, window), L);
     lua_setfield(L, -2, "window");
 
     set_field(L, -1, "null", nullptr);

@@ -35,7 +35,7 @@ namespace dromozoa {
   dromozoa::js_asm_impl(__FILE__, __LINE__, emscripten_asm_const_ptr(CODE_EXPR( \
     "try {" \
     #code \
-    ";} catch (e) { return D.catch(e); } return 0;" \
+    ";} catch (e) { return allocateUTF8(e.toString()); } return 0;" \
   ) _EM_ASM_PREP_ARGS(__VA_ARGS__))) \
 /**/
 

@@ -21,8 +21,17 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include "lua.hpp"
 
 namespace dromozoa {
+  class error : public std::logic_error {
+  public:
+    static constexpr char NAME[] = "dromozoa.web.error";
+    explicit error(const char* what) : std::logic_error(what) {}
+  };
+
+  void initialize_error(lua_State*);
+
   template <class... T>
   std::string make_error(const char* file, int line, T&&... message) {
     std::ostringstream out;

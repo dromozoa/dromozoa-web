@@ -29,21 +29,17 @@ const D = {
   ref:           cwrap("dromozoa_web_ref",           "number",  ["pointer"          ]),
   unref:         cwrap("dromozoa_web_unref",         null,      ["pointer", "number"]),
 
-  ref_object: (obj) => {
-    let ref = D.objs[0];
-    if (ref === 0) {
-      ref = D.objs.length;
-    } else {
-      D.objs[0] = D.objs[ref]
-    }
-    D.objs[ref] = obj;
-    return ref;
-  },
-
-  unref_object: (ref) => {
-    if (ref > 0) {
-      D.objs[ref] = D.objs[0];
-      D.objs[0] = ref;
+  do_string: (code) => {
+    const L = D.get_thread();
+    if (L) {
+      if (D.load_string(L, code)) {
+        switch (D.call(L, 0)) {
+          case 1:
+            return D.stack.pop();
+          case 2:
+            throw new Error(D.stack.pop());
+        }
+      }
     }
   },
 
@@ -70,15 +66,23 @@ const D = {
     }
   },
 
-  stack: [],
-  objs: [ 0 ],
-
-  refs: new FinalizationRegistry((ref) => {
-    const L = D.get_thread();
-    if (L) {
-      D.unref(L, ref);
+  ref_object: (obj) => {
+    let ref = D.objs[0];
+    if (ref === 0) {
+      ref = D.objs.length;
+    } else {
+      D.objs[0] = D.objs[ref]
     }
-  }),
+    D.objs[ref] = obj;
+    return ref;
+  },
+
+  unref_object: (ref) => {
+    if (ref !== 0) {
+      D.objs[ref] = D.objs[0];
+      D.objs[0] = ref;
+    }
+  },
 
   catch: (e) => {
     return allocateUTF8(e.toString());
@@ -88,18 +92,12 @@ const D = {
     return new T(...a);
   },
 
-  do_string: (code) => {
+  stack: [],
+  objs: [ 0 ],
+  refs: new FinalizationRegistry((ref) => {
     const L = D.get_thread();
     if (L) {
-      if (D.load_string(L, code)) {
-        switch (D.call(L, 0)) {
-          case 1:
-            return D.stack.pop();
-          case 2:
-            throw new Error(D.stack.pop());
-        }
-      }
+      D.unref(L, ref);
     }
-  },
-
+  }),
 };

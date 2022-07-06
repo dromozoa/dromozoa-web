@@ -28,7 +28,7 @@ namespace dromozoa {
       auto* self = test_udata<object>(L, 1);
       auto* that = test_udata<object>(L, 2);
       if (self && that) {
-        DROMOZOA_JS_ASM(D.push_boolean($0, D.objs[$1] === D.objs[$2]), L, self->get(), that->get());
+        DROMOZOA_JS_ASM(D.push($0, D.objs[$1] === D.objs[$2]), L, self->get(), that->get());
       } else {
         push(L, false);
       }

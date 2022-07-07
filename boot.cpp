@@ -25,10 +25,13 @@
 #include "lua.hpp"
 #include "module.hpp"
 #include "stack_guard.hpp"
+#include "thread.hpp"
 
 namespace dromozoa {
   namespace {
-    std::optional<std::string> boot(lua_State* L) {
+    lua_State* L = nullptr;
+
+    std::optional<std::string> boot() {
       luaL_openlibs(L);
       preload(L, "dromozoa.web", function<luaopen_dromozoa_web>());
       preload(L, "dromozoa.web.async", function<luaopen_dromozoa_web_async>());
@@ -48,16 +51,25 @@ namespace dromozoa {
 
     void each(void* state) {
       try {
-        auto* L = static_cast<lua_State*>(state);
-        stack_guard guard(L);
+        // auto* L = static_cast<lua_State*>(state);
+        bool do_close = false;
+        {
+          stack_guard guard(L);
 
-        lua_pushvalue(L, -1);
-        if (auto e = pcall(L, 0, 0)) {
-          std::cerr << *e << "\n";
+          lua_pushvalue(L, -1);
+          if (auto e = pcall(L, 0, 0)) {
+            std::cerr << *e << "\n";
+            do_close = true;
+            // std::cout << "thread count " << get_thread_count() << "\n";
+            // このタイミングでは早すぎる
+            // JSからの呼び出しがまだ終わっていない？
+          }
+        }
+
+        if (do_close) {
           emscripten_cancel_main_loop();
-          // このタイミングでは早すぎる
-          // JSからの呼び出しがまだ終わっていない？
-          // lua_close(L);
+          lua_close(L);
+          L = nullptr;
         }
       } catch (const std::exception& e) {
         std::cerr << e.what() << "\n";
@@ -71,13 +83,16 @@ namespace dromozoa {
 int main() {
   using namespace dromozoa;
 
-  if (auto* L = luaL_newstate()) {
-    if (auto e = boot(L)) {
+  L = luaL_newstate();
+
+  if (L) {
+    if (auto e = boot()) {
       std::cerr << *e << "\n";
       lua_close(L);
+      L = nullptr;
       return 1;
     }
-    emscripten_set_main_loop_arg(each, L, 0, false);
+    emscripten_set_main_loop_arg(each, nullptr, 0, false);
     return 0;
   }
   std::cerr << "cannot luaL_newstate\n";

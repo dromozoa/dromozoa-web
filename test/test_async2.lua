@@ -18,6 +18,9 @@
 local D = require "dromozoa.web"
 local async = require "dromozoa.web.async"
 
+-- error
+-- error "!!!"
+
 local function timeout_promise(t, k)
   return D.new(D.window.Promise, function (resolve, reject)
     D.window:setTimeout(function ()

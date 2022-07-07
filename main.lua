@@ -18,8 +18,6 @@
 local D = require "dromozoa.web"
 local async = require "dromozoa.web.async"
 
-warn "@on"
-
 local future = async(function (self)
   local window = D.window
   local document = window.document
@@ -45,7 +43,8 @@ end)
 
 while true do
   if future and future:is_ready() then
-    future:get(warn)
+    warn "@on"
+    future:get(function (e) warn(tostring(e)) end)
     future = nil
   end
 

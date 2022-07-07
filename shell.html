@@ -7,27 +7,32 @@
   <body>
     <script>
       var Module = {
-        preRun: [],
+        preRun: [
+          // () => {
+          //   ENV.dromozoa_web_fps = "0";
+          //   ENV.dromozoa_web_main = "main.lua";
+          // },
+        ],
         postRun: [],
-        print: function (text) {
+        print: (text) => {
           console.log(text);
         },
-        setStatus: function (text) {
+        setStatus: (text) => {
           console.log("[STATUS] " + text);
         },
         totalDependencies: 0,
-        monitorRunDependencies: function (left) {
+        monitorRunDependencies: (left) => {
           Module.totalDependencies = Math.max(Module.totalDependencies, left);
           Module.setStatus("Preparing... (" + (Module.totalDependencies - left) + "/" + Module.totalDependencies + ")");
           if (!left) {
-            Module.setStatus("All downloads complete.");
+            Module.setStatus("All downloads complete");
           }
-        }
+        },
       };
-      window.onerror = function () {
-        Module.setStatus('Exception thrown');
-      };
-      Module.setStatus('Downloading...');
+      window.addEventListener("error", (ev) => {
+        Module.setStatus("Exception thrown");
+      });
+      Module.setStatus("Downloading...");
     </script>
     {{{ SCRIPT }}}
   </body>

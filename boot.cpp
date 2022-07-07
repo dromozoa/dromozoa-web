@@ -16,8 +16,10 @@
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <emscripten.h>
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <string>
 #include "common.hpp"
 #include "lua.hpp"
 #include "module.hpp"
@@ -69,6 +71,15 @@ namespace dromozoa {
         lua_close(L);
         L = nullptr;
         return 1;
+      }
+
+      int fps = 0;
+      try {
+        if (const auto* v = std::getenv("dromozoa_web_fps")) {
+          fps = std::stoi(v);
+        }
+      } catch (const std::exception& e) {
+        std::cerr << e.what() << "\n";
       }
 
       emscripten_set_main_loop_arg(each, L, 0, false);

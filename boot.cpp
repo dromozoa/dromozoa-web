@@ -40,7 +40,7 @@ namespace dromozoa {
       #include "boot.lua"
       ;
 
-      if (auto e = load_buffer(L, std::string_view(CODE), "@dromozoa/web/async.lua")) {
+      if (auto e = load_buffer(L, std::string_view(CODE), "@boot.lua")) {
         return e;
       }
       if (auto e = pcall(L, 0, 1)) {
@@ -49,32 +49,17 @@ namespace dromozoa {
       return std::nullopt;
     }
 
-    void each(void* state) {
-      try {
-        // auto* L = static_cast<lua_State*>(state);
-        bool do_close = false;
-        {
-          stack_guard guard(L);
-
-          lua_pushvalue(L, -1);
-          if (auto e = pcall(L, 0, 0)) {
-            std::cerr << *e << "\n";
-            do_close = true;
-            // std::cout << "thread count " << get_thread_count() << "\n";
-            // このタイミングでは早すぎる
-            // JSからの呼び出しがまだ終わっていない？
-          }
-        }
-
-        if (do_close) {
+    void each() {
+      if (L) {
+        stack_guard guard(L);
+        lua_pushvalue(L, -1);
+        if (auto e = pcall(L, 0, 1)) {
+          guard.release();
+          std::cerr << *e << "\n";
           emscripten_cancel_main_loop();
           lua_close(L);
           L = nullptr;
         }
-      } catch (const std::exception& e) {
-        std::cerr << e.what() << "\n";
-      } catch (...) {
-        std::cerr << "unknown error\n";
       }
     }
   }
@@ -84,17 +69,18 @@ int main() {
   using namespace dromozoa;
 
   L = luaL_newstate();
-
-  if (L) {
-    if (auto e = boot()) {
-      std::cerr << *e << "\n";
-      lua_close(L);
-      L = nullptr;
-      return 1;
-    }
-    emscripten_set_main_loop_arg(each, nullptr, 0, false);
-    return 0;
+  if (!L) {
+    std::cerr << "cannot luaL_newstate\n";
+    return 1;
   }
-  std::cerr << "cannot luaL_newstate\n";
-  return 1;
+
+  if (auto e = boot()) {
+    std::cerr << *e << "\n";
+    lua_close(L);
+    L = nullptr;
+    return 1;
+  }
+
+  emscripten_set_main_loop(each, 0, false);
+  return 0;
 }

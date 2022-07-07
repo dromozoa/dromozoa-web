@@ -27,23 +27,23 @@ namespace dromozoa {
     std::deque<std::string> error_queue;
 
     void impl_get_error_queue(lua_State* L) {
-      const char* sep = luaL_optstring(L, 1, "\n\t");
-
       if (error_queue.empty()) {
         push(L, true);
         return;
       }
 
       std::ostringstream out;
-      out << error_queue.front();
+      out << "error_queue { " << error_queue.front();
       error_queue.pop_front();
       for (const auto& e : error_queue) {
-        out << sep << e;
+        out << " ; " << e;
       }
       error_queue.clear();
+      out << " }";
 
       luaL_pushfail(L);
       push(L, out.str());
+      error_queue.clear();
     }
   }
 

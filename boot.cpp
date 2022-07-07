@@ -42,7 +42,6 @@ namespace dromozoa {
       if (luaL_loadbuffer(L, code, std::strlen(code), "@boot.lua") != LUA_OK) {
         lua_error(L);
       }
-
       lua_call(L, 0, 1);
     }
 

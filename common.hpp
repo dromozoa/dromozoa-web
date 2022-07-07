@@ -168,31 +168,6 @@ namespace dromozoa {
     lua_pop(L, 2);
   }
 
-  template <class T>
-  inline std::optional<std::string> load_buffer(lua_State* L, T&& code, const char* name) {
-    stack_guard guard(L);
-    if (luaL_loadbuffer(L, code.data(), code.size(), name) == LUA_OK) {
-      guard.release();
-      return std::nullopt;
-    }
-    if (const auto* e = luaL_tolstring(L, -1, nullptr)) {
-      return e;
-    }
-    return "unknown error";
-  }
-
-  inline std::optional<std::string> pcall(lua_State* L, int num_arguments, int num_results) {
-    // stack_guard guard(L);
-    if (lua_pcall(L, num_arguments, num_results, 0) == LUA_OK) {
-      // guard.release();
-      return std::nullopt;
-    }
-    if (const auto* e = luaL_tolstring(L, -1, nullptr)) {
-      return e;
-    }
-    return "unknown error";
-  }
-
   inline std::optional<std::string> protected_call(lua_State* L, int num_arguments, int num_results) {
     auto status = lua_pcall(L, num_arguments, num_results, 0);
     if (status == LUA_OK) {

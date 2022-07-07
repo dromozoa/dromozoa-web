@@ -21,6 +21,10 @@
 
 local D = require "dromozoa.web"
 
+-- error
+-- error "!!!"
+-- error(D.null)
+
 local class = {}
 local metatable = {
   __index = class;

@@ -20,6 +20,7 @@ local async = require "dromozoa.web.async"
 
 -- error
 -- error "!!!"
+-- error(D.null)
 
 local function timeout_promise(t, k)
   return D.new(D.window.Promise, function (resolve, reject)

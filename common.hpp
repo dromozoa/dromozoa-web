@@ -192,6 +192,34 @@ namespace dromozoa {
     }
     return "unknown error";
   }
+
+  inline std::optional<std::string> protected_call(lua_State* L, int num_arguments, int num_results) {
+    auto status = lua_pcall(L, num_arguments, num_results, 0);
+    if (status == LUA_OK) {
+      return std::nullopt;
+    }
+
+    stack_guard guard(L);
+    lua_getglobal(L, "tostring");
+    lua_pushvalue(L, -2);
+    if (lua_pcall(L, 1, 1, 0) == LUA_OK) {
+      std::size_t size = 0;
+      if (const auto* data = lua_tolstring(L, -1, &size)) {
+        return std::string(data, size);
+      }
+    }
+
+    switch (status) {
+      case LUA_ERRRUN:
+        return "LUA_ERRRUN";
+      case LUA_ERRMEM:
+        return "LUA_ERRMEM";
+      case LUA_ERRERR:
+        return "LUA_ERRERR";
+      default:
+        return "unknown error";
+    }
+  }
 }
 
 #endif

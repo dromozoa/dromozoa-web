@@ -22,6 +22,8 @@
 local D = require "dromozoa.web"
 local async = require "dromozoa.web.async"
 
+-- error
+-- error "!!!"
 -- error(D.null)
 
 local thread

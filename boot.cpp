@@ -40,29 +40,41 @@ namespace dromozoa {
       preload(L, "dromozoa.web.async", function<luaopen_dromozoa_web_async>());
 
       if (luaL_loadbuffer(L, code, std::strlen(code), "@boot.lua") != LUA_OK) {
-        throw DROMOZOA_LOGIC_ERROR(luaL_tolstring(L, -1, nullptr));
+        lua_error(L);
       }
 
-      if (lua_pcall(L, 0, 1, 0) != LUA_OK) {
-        throw DROMOZOA_LOGIC_ERROR(luaL_tolstring(L, -1, nullptr));
-      }
+      lua_call(L, 0, 1);
     }
 
-    // 標準例外はとびうる。
-    std::string protected_tostring(lua_State* L, int index) {
+/*
+    inline std::string protected_to_string(lua_State* L, int index) {
       stack_guard guard(L);
       index = lua_absindex(L, index);
+
       lua_getglobal(L, "tostring");
       lua_pushvalue(L, index);
       if (lua_pcall(L, 1, 1, 0) == LUA_OK) {
         std::size_t size = 0;
-        if (const char* data = lua_tolstring(L, -1, &size)) {
+        if (const auto* data = lua_tolstring(L, -1, &size)) {
           return std::string(data, size);
+        } else {
         }
       }
-      return "protected_tostring error";
+      return "unknown error";
     }
 
+    inline const char* status_to_string(int status) {
+      switch (status) {
+        case LUA_ERRRUN: return "LUA_ERRRUN";
+        case LUA_ERRMEM: return "LUA_ERRMEM";
+        case LUA_ERRERR: return "LUA_ERRERR";
+      }
+      return "unknown error";
+    }
+
+    // 標準例外が飛ぶ可能性はある
+    // stack_guardしたいなら、外側で行う
+    // スタックは、pcallを実行したのと同じ状態にする
     // どこでエラーがでるかわからなければ、つねにpcallで囲む必要がある
     // pcllの外では標準例外しか出ないものとする
     std::optional<std::string> protected_call(lua_State* L, int num_arguments, int num_results) {
@@ -71,42 +83,19 @@ namespace dromozoa {
         return std::nullopt;
       }
 
-      std::ostringstream out;
-      switch (status) {
-        case LUA_ERRRUN:
-          out << "LUA_ERRRUN";
-          break;
-        case LUA_ERRMEM:
-          out << "LUA_ERRMEM";
-          break;
-        case LUA_ERRERR:
-          out << "LUA_ERRERR";
-          break;
-      }
-      if (lua_isstring(L, -1)) {
-        out << ": " << lua_tostring(L, -1);
-      }
-      return out.str();
+      return protected_to_string(L, -1);
     }
-
-    std::optional<std::string> boot(lua_State* L) {
-      push(L, function<impl_boot>());
-      return protected_call(L, 0, 1);
-    }
+*/
 
     void impl_each(lua_State* L) {
-      // std::cout << lua_gettop(L) << "\n";
       lua_pushvalue(L, 1);
-      if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
-        throw DROMOZOA_LOGIC_ERROR(luaL_tolstring(L, -1, nullptr));
-      }
+      lua_call(L, 0, 0);
     }
 
     lua_State* L = nullptr;
 
     void each() {
       if (L) {
-        // std::cout << lua_gettop(L) << "\n";
         push(L, function<impl_each>());
         lua_pushvalue(L, -2);
         if (auto e = protected_call(L, 1, 0)) {
@@ -117,25 +106,29 @@ namespace dromozoa {
         }
       }
     }
+
+    int boot() {
+      L = luaL_newstate();
+      if (!L) {
+        std::cerr << "cannot luaL_newstate\n";
+        return 1;
+      }
+
+      push(L, function<impl_boot>());
+      if (auto e = protected_call(L, 0, 1)) {
+        std::cerr << *e << "\n";
+        lua_close(L);
+        L = nullptr;
+        return 1;
+      }
+
+      emscripten_set_main_loop(each, 0, false);
+      return 0;
+    }
   }
 }
 
 int main() {
   using namespace dromozoa;
-
-  L = luaL_newstate();
-  if (!L) {
-    std::cerr << "cannot luaL_newstate\n";
-    return 1;
-  }
-
-  if (auto e = boot(L)) {
-    std::cerr << *e << "\n";
-    lua_close(L);
-    L = nullptr;
-    return 1;
-  }
-
-  emscripten_set_main_loop(each, 0, false);
-  return 0;
+  return boot();
 }

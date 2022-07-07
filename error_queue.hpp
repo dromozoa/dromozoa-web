@@ -18,6 +18,7 @@
 #ifndef DROMOZOA_WEB_ERROR_QUEUE_HPP
 #define DROMOZOA_WEB_ERROR_QUEUE_HPP
 
+#include <string>
 #include "lua.hpp"
 
 namespace dromozoa {

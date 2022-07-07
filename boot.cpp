@@ -44,25 +44,22 @@ namespace dromozoa {
       lua_call(L, 0, 0);
     }
 
-    lua_State* L = nullptr;
-
-    void each() {
-      if (L) {
-        push(L, function<impl_each>());
-        lua_pushvalue(L, -2);
-        if (auto e = protected_call(L, 1, 0)) {
-          std::cerr << *e << "\n";
-          emscripten_cancel_main_loop();
-          lua_close(L);
-          L = nullptr;
-        }
+    void each(void* state) {
+      auto* L = static_cast<lua_State*>(state);
+      push(L, function<impl_each>());
+      lua_pushvalue(L, -2);
+      if (auto e = protected_call(L, 1, 0)) {
+        std::cerr << *e << "\n";
+        emscripten_cancel_main_loop();
+        lua_close(L);
+        L = nullptr;
       }
     }
 
     int boot() {
-      L = luaL_newstate();
+      auto* L = luaL_newstate();
       if (!L) {
-        std::cerr << "cannot luaL_newstate\n";
+        std::cerr << "cannot create a new state\n";
         return 1;
       }
 
@@ -74,7 +71,7 @@ namespace dromozoa {
         return 1;
       }
 
-      emscripten_set_main_loop(each, 0, false);
+      emscripten_set_main_loop_arg(each, L, 0, false);
       return 0;
     }
   }

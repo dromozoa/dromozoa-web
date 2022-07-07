@@ -27,7 +27,18 @@ local metatable = {
   __name = "dromozoa.web.async";
 }
 
-local function resume(self, ...)
+local function new(fn)
+  local self = setmetatable({
+    status = "initial";
+    thread = coroutine.create(function (self)
+      return fn(self)
+    end);
+  }, metatable)
+  self:resume(self)
+  return self
+end
+
+function class:resume(...)
   local thread = assert(self.thread)
   self.status = "running"
   local result = table.pack(coroutine.resume(thread, ...))
@@ -38,29 +49,18 @@ local function resume(self, ...)
   end
 end
 
-local function yield(self)
+function class:yield()
   self.status = "suspended"
   return table.pack(coroutine.yield())
 end
 
-local function new(fn)
-  local self = setmetatable({
-    status = "initial";
-    thread = coroutine.create(function (self)
-      return fn(self)
-    end);
-  }, metatable)
-  resume(self, self)
-  return self
-end
-
 function class:await(promise)
   promise["then"](promise, function (...)
-    resume(self, true, ...)
+    self:resume(true, ...)
   end):catch(function (...)
-    resume(self, false, ...)
+    self:resume(false, ...)
   end)
-  local result = yield(self)
+  local result = self:yield()
   if result[1] then
     return table.unpack(result, 2, result.n)
   else
@@ -72,13 +72,13 @@ function class:is_ready()
   return self.status == "ready"
 end
 
-function class:get()
+function class:get(fn)
   local result = assert(self.result)
   self.result = nil
   if result[1] then
     return table.unpack(result, 2)
   else
-    error(result[2])
+    (fn or error)(result[2])
   end
 end
 

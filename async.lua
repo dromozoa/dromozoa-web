@@ -54,12 +54,16 @@ function class:yield()
   return table.pack(coroutine.yield())
 end
 
-function class:await(promise)
-  promise["then"](promise, function (...)
-    self:resume(true, ...)
-  end):catch(function (...)
-    self:resume(false, ...)
-  end)
+function class:await(that)
+  if type(that) == "function" then
+    that(self)
+  else
+    that["then"](that, function (...)
+      self:resume(true, ...)
+    end):catch(function (...)
+      that:resume(false, ...)
+    end)
+  end
   local result = self:yield()
   if result[1] then
     return table.unpack(result, 2, result.n)

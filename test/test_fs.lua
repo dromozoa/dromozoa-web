@@ -22,24 +22,22 @@ local future = async(function (self)
   local window = D.window
   local FS = window.FS
 
-  local function sync_promise(populate)
-    return D.new(window.Promise, function (resolve, reject)
-      FS:syncfs(populate, function (e)
-        if not e or e == D.null then
-          resolve()
-        else
-          reject(nil, e)
-        end
-      end)
-    end)
-  end
-
   print "mkdir /save"
   FS:mkdir "/save"
   print "mount IDBFS /save"
   FS:mount(D.window.IDBFS, {}, "/save")
+
   print "sync true"
-  self:await(sync_promise(true))
+  self:await(function (self)
+    FS:syncfs(true, function (e)
+      print(e)
+      if not e or e == D.null then
+        self:resume(true)
+      else
+        self:resume(false, e)
+      end
+    end)
+  end)
 
   print "chdir /save"
   FS:chdir "/save"
@@ -51,10 +49,20 @@ local future = async(function (self)
   print "close test.txt"
   assert(out:close())
 
-  print "sync false"
-  self:await(sync_promise(false))
   print "unmount /save"
   FS:unmount "/save"
+
+  print "sync false"
+  self:await(function (self)
+    FS:syncfs(function (e)
+      print(e)
+      if not e or e == D.null then
+        self:resume(true)
+      else
+        self:resume(false, e)
+      end
+    end)
+  end)
 end)
 
 while true do
@@ -63,73 +71,6 @@ while true do
     future = nil
   end
 
-  assert(D.get_error_queue())
-  coroutine.yield()
-end
-
-
-
-
-
-
-
-
-local thread = coroutine.create(function (thread)
-  FS:mkdir "/save"
-  FS:mount(D.window.IDBFS, {}, "/save")
-  FS:syncfs(true, function (e)
-    print("syncfs callback", e)
-    assert(coroutine.resume(thread, e))
-  end)
-
-  local e = coroutine.yield(thread)
-  print("?", e)
-  if e and e ~= D.null then
-    return
-  end
-
-  FS:chdir "/save"
-
-  if true then
-    local out = assert(io.open("test.txt", "w"))
-    out:write [[
-日本語
-日本語
-日本語
-]]
-    out:close()
-  end
-
-  if true then
-    local handle, message = io.open "test.txt"
-    if handle then
-      print(handle:read "*a")
-      handle:close()
-    else
-      print("cannot open", message)
-    end
-  end
-
-  if false then
-    D.window:setTimeout(function ()
-      print "timeout"
-      assert(coroutine.resume(thread))
-    end, 1000)
-
-    coroutine.yield(thread)
-  end
-
-  FS:syncfs(function (e)
-    print("syncfs callback", e)
-    assert(coroutine.resume(thread, e))
-  end)
-
-  coroutine.yield(thread)
-  FS:unmount("/save")
-end)
-assert(coroutine.resume(thread, thread))
-
-while true do
   assert(D.get_error_queue())
   coroutine.yield()
 end

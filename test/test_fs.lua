@@ -16,8 +16,63 @@
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 local D = require "dromozoa.web"
+local async = require "dromozoa.web.async"
 
-local FS = D.window.FS
+local future = async(function (self)
+  local window = D.window
+  local FS = window.FS
+
+  local function sync_promise(populate)
+    return D.new(window.Promise, function (resolve, reject)
+      FS:syncfs(populate, function (e)
+        if not e or e == D.null then
+          resolve()
+        else
+          reject(nil, e)
+        end
+      end)
+    end)
+  end
+
+  print "mkdir /save"
+  FS:mkdir "/save"
+  print "mount IDBFS /save"
+  FS:mount(D.window.IDBFS, {}, "/save")
+  print "sync true"
+  self:await(sync_promise(true))
+
+  print "chdir /save"
+  FS:chdir "/save"
+
+  print "open test.txt"
+  local out = assert(io.open("test.txt", "w"))
+  print "write test.txt"
+  out:write(os.date "%Y-%m-%d %H:%M:%S", "\n")
+  print "close test.txt"
+  assert(out:close())
+
+  print "sync false"
+  self:await(sync_promise(false))
+  print "unmount /save"
+  FS:unmount "/save"
+end)
+
+while true do
+  if future and future:is_ready() then
+    future:get()
+    future = nil
+  end
+
+  assert(D.get_error_queue())
+  coroutine.yield()
+end
+
+
+
+
+
+
+
 
 local thread = coroutine.create(function (thread)
   FS:mkdir "/save"

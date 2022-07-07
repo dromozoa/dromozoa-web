@@ -38,7 +38,6 @@ local function new(fn)
   return self
 end
 
-
 function class:resume(...)
   local thread = assert(self.thread)
   self.status = "running"

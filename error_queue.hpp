@@ -21,7 +21,6 @@
 #include "lua.hpp"
 
 namespace dromozoa {
-  void push_error_queue();
   void push_error_queue(const std::string&);
   void initialize_error_queue(lua_State*);
 }

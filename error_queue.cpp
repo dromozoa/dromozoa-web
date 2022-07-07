@@ -16,7 +16,6 @@
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <deque>
-#include <exception>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -26,28 +25,15 @@
 
 namespace dromozoa {
   namespace {
-    std::deque<std::exception_ptr> error_queue;
-
-    std::optional<std::string> pop_error_queue() {
-      if (error_queue.empty()) {
-        return std::nullopt;
-      }
-
-      try {
-        auto e = error_queue.front();
-        error_queue.pop_front();
-        std::rethrow_exception(e);
-      } catch (const std::exception& e) {
-        return e.what();
-      } catch (...) {}
-      return "unknown exception";
-    }
+    std::deque<std::string> error_queue;
 
     void impl_pop_error_queue(lua_State* L) {
-      if (auto e = pop_error_queue()) {
-        lua_pushstring(L, e->c_str());
-      } else {
+      if (error_queue.empty()) {
         lua_pushnil(L);
+      } else {
+        auto e = error_queue.front();
+        error_queue.pop_front();
+        push(L, e);
       }
     }
 
@@ -57,29 +43,27 @@ namespace dromozoa {
         return;
       }
 
+      std::deque<std::string> queue;
+      std::swap(queue, error_queue);
+
       const char* sep = luaL_optstring(L, 1, "\n\t");
+      int i = 0;
       std::ostringstream out;
-      for (int i = 0; auto e = pop_error_queue(); ++i) {
+      for (const auto& e : queue) {
         if (i > 0) {
           out << sep;
         }
-        out << *e;
+        ++i;
+        out << e;
       }
+
       luaL_pushfail(L);
       push(L, out.str());
     }
   }
 
-  void push_error_queue() {
-    error_queue.emplace_back(std::current_exception());
-  }
-
   void push_error_queue(const std::string& e) {
-    try {
-      throw std::logic_error(e);
-    } catch (...) {
-      error_queue.emplace_back(std::current_exception());
-    }
+    error_queue.emplace_back(e);
   }
 
   void initialize_error_queue(lua_State* L) {

@@ -43,10 +43,6 @@ local p4 = p3:catch(function (e)
   done = true
 end)
 
-while not done do
-  coroutine.yield()
-end
-
 D.window.console:log { foo = 17, bar = 23, baz = D.array { [0] = 0, 1, 2, D.null, 4, qux = true }, qux = { [0] = 0, 1, 2, D.null, 4, qux = true } }
 
 local array = D.array { 1, 2, 3, qux = true }
@@ -59,3 +55,8 @@ print(D.window.JSON:stringify({
   bar = 23,
   baz = D.array { 1, 2, D.null, 3, qux = true }
 }))
+
+while not done do
+  assert(D.get_error_queue())
+  coroutine.yield()
+end

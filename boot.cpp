@@ -59,6 +59,15 @@ namespace dromozoa {
     }
 
     int boot() {
+      int fps = 0;
+      try {
+        if (const auto* v = std::getenv("dromozoa_web_fps")) {
+          fps = std::stoi(v);
+        }
+      } catch (const std::exception& e) {
+        std::cerr << e.what() << "\n";
+      }
+
       auto* L = luaL_newstate();
       if (!L) {
         std::cerr << "cannot create a new state\n";
@@ -73,16 +82,7 @@ namespace dromozoa {
         return 1;
       }
 
-      int fps = 0;
-      try {
-        if (const auto* v = std::getenv("dromozoa_web_fps")) {
-          fps = std::stoi(v);
-        }
-      } catch (const std::exception& e) {
-        std::cerr << e.what() << "\n";
-      }
-
-      emscripten_set_main_loop_arg(each, L, 0, false);
+      emscripten_set_main_loop_arg(each, L, fps, false);
       return 0;
     }
   }

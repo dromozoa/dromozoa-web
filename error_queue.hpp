@@ -18,10 +18,11 @@
 #ifndef DROMOZOA_WEB_ERROR_QUEUE_HPP
 #define DROMOZOA_WEB_ERROR_QUEUE_HPP
 
+#include <string>
 #include "lua.hpp"
 
 namespace dromozoa {
-  void push_error_queue();
+  void push_error_queue(const std::string&);
   void initialize_error_queue(lua_State*);
 }
 

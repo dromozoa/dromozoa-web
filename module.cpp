@@ -15,13 +15,13 @@
 // You should have received a copy of the GNU General Public License
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <cstring>
 #include "array.hpp"
 #include "browser.hpp"
 #include "error.hpp"
 #include "error_queue.hpp"
 #include "lua.hpp"
 #include "object.hpp"
-#include "stack_guard.hpp"
 #include "thread.hpp"
 #include "utility.hpp"
 
@@ -40,23 +40,13 @@ extern "C" {
   }
 
   void luaopen_dromozoa_web_async(lua_State* L) {
-    static const char code[] =
+    static constexpr char code[] =
     #include "async.lua"
     ;
 
-    stack_guard guard(L);
     if (luaL_loadbuffer(L, code, std::strlen(code), "@dromozoa/web/async.lua") != LUA_OK) {
-      if (const auto* e = luaL_tolstring(L, -1, nullptr)) {
-        throw DROMOZOA_LOGIC_ERROR(e);
-      }
-      throw DROMOZOA_LOGIC_ERROR("unknown error");
+      lua_error(L);
     }
-    if (lua_pcall(L, 0, 1, 0) != LUA_OK) {
-      if (const auto* e = luaL_tolstring(L, -1, nullptr)) {
-        throw DROMOZOA_LOGIC_ERROR(e);
-      }
-      throw DROMOZOA_LOGIC_ERROR("unknown error");
-    }
-    guard.release();
+    lua_call(L, 0, 1);
   }
 }

@@ -30,14 +30,14 @@ namespace dromozoa {
     explicit error(const char* what) : std::logic_error(what) {}
   };
 
-  void initialize_error(lua_State*);
-
   template <class... T>
   std::string make_error(const char* file, int line, T&&... message) {
     std::ostringstream out;
     ((out << file << ":" << line << ": ") << ... << std::forward<T>(message));
     return out.str();
   }
+
+  void initialize_error(lua_State*);
 }
 
 #define DROMOZOA_LOGIC_ERROR(...) \

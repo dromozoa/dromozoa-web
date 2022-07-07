@@ -1,4 +1,7 @@
-R""--(
+#if 0
+--[[
+#endif
+"\n\n\n" R"]]--(
 -- Copyright (C) 2022 Tomoyuki Fujimori <moyu@dromozoa.com>
 --
 -- This file is part of dromozoa-web.
@@ -17,6 +20,10 @@ R""--(
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 local D = require "dromozoa.web"
+
+-- error
+-- error "!!!"
+-- error(D.null)
 
 local class = {}
 local metatable = {
@@ -54,7 +61,12 @@ function class:await(promise)
   end):catch(function (...)
     resume(self, false, ...)
   end)
-  return coroutine.yield()
+  local result = table.pack(coroutine.yield())
+  if result[1] then
+    return table.unpack(result, 2)
+  else
+    error(result[2])
+  end
 end
 
 function class:is_ready()
@@ -79,4 +91,4 @@ return setmetatable(class, {
   end;
 })
 
---)"--"
+--)]]--"

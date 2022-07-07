@@ -16,53 +16,50 @@
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <emscripten.h>
+#include "common.hpp"
 #include "error.hpp"
 #include "error_queue.hpp"
 #include "js_asm.hpp"
 #include "js_push.hpp"
 #include "lua.hpp"
 #include "object.hpp"
-#include "stack_guard.hpp"
 #include "udata.hpp"
+
+namespace dromozoa {
+  namespace {
+    void impl_load_string(lua_State* L) {
+      const auto* code = luaL_checkstring(L, 1);
+      if (luaL_loadstring(L, code) != LUA_OK) {
+        lua_error(L);
+      }
+    }
+  }
+}
 
 extern "C" {
   using namespace dromozoa;
 
   int EMSCRIPTEN_KEEPALIVE dromozoa_web_load_string(lua_State* L, const char* code) {
-    stack_guard guard(L);
-    try {
-      if (luaL_loadstring(L, code) == LUA_OK) {
-        guard.release();
-        return 1;
-      }
-      if (const auto* e = luaL_tolstring(L, -1, nullptr)) {
-        throw DROMOZOA_LOGIC_ERROR(e);
-      }
-      throw DROMOZOA_LOGIC_ERROR("unknown error");
-    } catch (...) {
-      push_error_queue();
+    push(L, function<impl_load_string>());
+    push(L, code);
+    if (auto e = protected_call(L, 1, 1)) {
+      push_error_queue(*e);
+      return 0;
     }
-    return 0;
+    return 1;
   }
 
   int EMSCRIPTEN_KEEPALIVE dromozoa_web_call(lua_State* L, int n) {
-    try {
-      stack_guard guard(L);
-      if (lua_pcall(L, n, 1, 0) == LUA_OK) {
-        js_push(L, -1);
-        return 1;
-      }
-      if (auto* e = test_udata<error>(L, -1)) {
-        DROMOZOA_JS_ASM(D.stack.push(UTF8ToString($0)), e->what());
-        return 2;
-      }
-      if (const auto* e = luaL_tolstring(L, -1, nullptr)) {
-        throw DROMOZOA_LOGIC_ERROR(e);
-      }
-      throw DROMOZOA_LOGIC_ERROR("unknown error");
-    } catch (...) {
-      push_error_queue();
+    auto status = lua_pcall(L, n, 1, 0);
+    if (status == LUA_OK) {
+      js_push(L, -1);
+      return 1;
     }
+    if (auto* e = test_udata<error>(L, -1)) {
+      DROMOZOA_JS_ASM(D.stack.push(UTF8ToString($0)), e->what());
+      return 2;
+    }
+    push_error_queue(make_protected_call_error(L, -1, status));
     return 0;
   }
 
@@ -90,7 +87,7 @@ extern "C" {
     new_udata<object>(L, id);
   }
 
-  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_function(lua_State* L, int ref) {
+  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_ref(lua_State* L, int ref) {
     lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
   }
 

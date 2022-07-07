@@ -20,11 +20,14 @@
 
 #include <limits>
 #include <exception>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <utility>
+#include "common.hpp"
 #include "lua.hpp"
+#include "stack_guard.hpp"
 
 namespace dromozoa {
   template <class T, T (*)(lua_State*)>
@@ -36,7 +39,7 @@ namespace dromozoa {
       try {
         return T(L);
       } catch (const std::runtime_error& e) {
-        lua_pushnil(L);
+        luaL_pushfail(L);
         lua_pushstring(L, e.what());
         return 2;
       } catch (const std::exception& e) {
@@ -63,7 +66,7 @@ namespace dromozoa {
           return 1;
         }
       } catch (const std::runtime_error& e) {
-        lua_pushnil(L);
+        luaL_pushfail(L);
         lua_pushstring(L, e.what());
         return 2;
       } catch (const std::exception& e) {
@@ -127,11 +130,13 @@ namespace dromozoa {
 
   template <class T, T (*T_function)(lua_State*)>
   inline void push(lua_State* L, function_wrapper<T, T_function>) {
-    lua_pushcfunction(L, (function_wrapper<T, T_function>::value));
+    lua_pushcclosure(L, function_wrapper<T, T_function>::value, 0);
   }
 
-  inline void push(lua_State* L, lua_CFunction value) {
-    lua_pushcfunction(L, value);
+  template <bool T>
+  inline void push(lua_State* L, int (*value)(lua_State*) noexcept(T)) {
+    static_assert(T);
+    lua_pushcclosure(L, value, 0);
   }
 
   inline void push(lua_State* L, std::nullptr_t) {
@@ -156,11 +161,44 @@ namespace dromozoa {
   }
 
   template <class T_key, class T_value>
-  void preload(lua_State* L, T_key&& key, T_value&& value) {
+  inline void preload(lua_State* L, T_key&& key, T_value&& value) {
     lua_getglobal(L, "package");
     lua_getfield(L, -1, "preload");
     set_field(L, -1, std::forward<T_key>(key), std::forward<T_value>(value));
     lua_pop(L, 2);
+  }
+
+  inline std::string make_protected_call_error(lua_State* L, int index, int status) {
+    stack_guard guard(L);
+
+    index = lua_absindex(L, index);
+    lua_getglobal(L, "tostring");
+    lua_pushvalue(L, index);
+    if (lua_pcall(L, 1, 1, 0) == LUA_OK) {
+      std::size_t size = 0;
+      if (const auto* data = lua_tolstring(L, -1, &size)) {
+        return std::string(data, size);
+      }
+    }
+
+    switch (status) {
+      case LUA_ERRRUN:
+        return "LUA_ERRRUN";
+      case LUA_ERRMEM:
+        return "LUA_ERRMEM";
+      case LUA_ERRERR:
+        return "LUA_ERRERR";
+      default:
+        return "unknown error";
+    }
+  }
+
+  inline std::optional<std::string> protected_call(lua_State* L, int num_arguments, int num_results) {
+    auto status = lua_pcall(L, num_arguments, num_results, 0);
+    if (status == LUA_OK) {
+      return std::nullopt;
+    }
+    return make_protected_call_error(L, -1, status);
   }
 }
 

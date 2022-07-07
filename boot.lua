@@ -1,4 +1,7 @@
-R""--(
+#if 0
+--[[
+#endif
+"\n\n\n" R"]]--(
 -- Copyright (C) 2022 Tomoyuki Fujimori <moyu@dromozoa.com>
 --
 -- This file is part of dromozoa-web.
@@ -17,11 +20,14 @@ R""--(
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 local D = require "dromozoa.web"
+local async = require "dromozoa.web.async"
 
-local prototype = D.window.Promise.prototype
-prototype.then_ = prototype["then"]
+-- error
+-- error "!!!"
+-- error(D.null)
 
-local thread = coroutine.create(function ()
+local thread
+local future = async(function (self)
   local window = D.window
   local document = window.document
 
@@ -30,59 +36,27 @@ local thread = coroutine.create(function ()
     filename = "main.lua"
   end
 
-  local result
-  local data
-
-  window:fetch(filename, { cache = "no-store" })
-    :then_(function (response)
-      if response.ok then
-        return response:text()
-      else
-        D.throw(("%d %s"):format(response.status, response.statusText))
-      end
-    end)
-    :then_(function (text)
-      result = true
-      data = text
-    end)
-    :catch(function (e)
-      result = false
-      data = e.message
-    end)
-
-  while true do
-    while true do
-      local e = D.pop_error_queue()
-      if not e then
-        break
-      end
-      io.stderr:write(e, "\n")
-    end
-    if result ~= nil then
-      break
-    end
-    coroutine.yield()
+  local response = self:await(window:fetch(filename, { cache = "no-store" }))
+  if not response.ok then
+    error(("cannot fetch %s: %d %s"):format(filename, response.status, response.statusText))
   end
 
-  if not result then
-    error(data)
-  end
-
-  return assert(load(data, "@" .. filename))()
+  local code = self:await(response:text())
+  return coroutine.create(assert(load(code, "@" .. filename)))
 end)
 
 return function ()
-  if not thread then
-    return
+  if future and future:is_ready() then
+    thread = future:get()
+    future = nil
   end
 
-  local result, data = coroutine.resume(thread)
-  if coroutine.status(thread) == "dead" then
-    thread = nil
-  end
-
-  if not result then
-    error(data)
+  if thread then
+    assert(coroutine.resume(thread))
+    if coroutine.status(thread) == "dead" then
+      thread = nil
+    end
   end
 end
---)"--"
+
+--)]]--"

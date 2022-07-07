@@ -16,18 +16,18 @@
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 const D = {
-  get_thread:    cwrap("dromozoa_web_get_thread",    "pointer", [                   ]),
-  load_string:   cwrap("dromozoa_web_load_string",   "number",  ["pointer", "string"]),
-  call:          cwrap("dromozoa_web_call",          "number",  ["pointer", "number"]),
-  push_nil:      cwrap("dromozoa_web_push_nil",      null,      ["pointer"          ]),
-  push_number:   cwrap("dromozoa_web_push_number",   null,      ["pointer", "number"]),
-  push_boolean:  cwrap("dromozoa_web_push_boolean",  null,      ["pointer", "number"]),
-  push_string:   cwrap("dromozoa_web_push_string",   null,      ["pointer", "string"]),
-  push_null:     cwrap("dromozoa_web_push_null",     null,      ["pointer"          ]),
-  push_object:   cwrap("dromozoa_web_push_object",   null,      ["pointer", "number"]),
-  push_function: cwrap("dromozoa_web_push_function", null,      ["number"           ]),
-  ref:           cwrap("dromozoa_web_ref",           "number",  ["pointer"          ]),
-  unref:         cwrap("dromozoa_web_unref",         null,      ["pointer", "number"]),
+  get_thread:    cwrap("dromozoa_web_get_thread",  "pointer", [                   ]),
+  load_string:   cwrap("dromozoa_web_load_string", "number",  ["pointer", "string"]),
+  call:          cwrap("dromozoa_web_call",        "number",  ["pointer", "number"]),
+  push_nil:      cwrap("dromozoa_web_push_nil",    null,      ["pointer"          ]),
+  push_number:   cwrap("dromozoa_web_push_number", null,      ["pointer", "number"]),
+  push_boolean:  cwrap("dromozoa_web_push_boolean",null,      ["pointer", "number"]),
+  push_string:   cwrap("dromozoa_web_push_string", null,      ["pointer", "string"]),
+  push_null:     cwrap("dromozoa_web_push_null",   null,      ["pointer"          ]),
+  push_object:   cwrap("dromozoa_web_push_object", null,      ["pointer", "number"]),
+  push_ref:      cwrap("dromozoa_web_push_ref",    null,      ["number"           ]),
+  ref:           cwrap("dromozoa_web_ref",         "number",  ["pointer"          ]),
+  unref:         cwrap("dromozoa_web_unref",       null,      ["pointer", "number"]),
 
   do_string: (code) => {
     const L = D.get_thread();

@@ -21,10 +21,6 @@
 
 local D = require "dromozoa.web"
 
--- error
--- error "!!!"
--- error(D.null)
-
 local class = {}
 local metatable = {
   __index = class;
@@ -32,22 +28,25 @@ local metatable = {
 }
 
 local function resume(self, ...)
-  local thread = self.thread
-  if thread then
-    local result = table.pack(coroutine.resume(thread, ...))
-    if coroutine.status(thread) == "dead" then
-      self.status = "ready"
-      self.thread = nil
-      self.result = result
-    end
+  local thread = assert(self.thread)
+  self.status = "running"
+  local result = table.pack(coroutine.resume(thread, ...))
+  if coroutine.status(thread) == "dead" then
+    self.status = "ready"
+    self.thread = nil
+    self.result = result
   end
+end
+
+local function yield(self)
+  self.status = "suspended"
+  return table.pack(coroutine.yield())
 end
 
 local function new(fn)
   local self = setmetatable({
     status = "initial";
     thread = coroutine.create(function (self)
-      self.status = "running"
       return fn(self)
     end);
   }, metatable)
@@ -61,9 +60,9 @@ function class:await(promise)
   end):catch(function (...)
     resume(self, false, ...)
   end)
-  local result = table.pack(coroutine.yield())
+  local result = yield(self)
   if result[1] then
-    return table.unpack(result, 2)
+    return table.unpack(result, 2, result.n)
   else
     error(result[2])
   end
@@ -74,14 +73,12 @@ function class:is_ready()
 end
 
 function class:get()
-  local result = self.result
+  local result = assert(self.result)
   self.result = nil
-  if result then
-    if result[1] then
-      return table.unpack(result, 2)
-    else
-      error(result[2])
-    end
+  if result[1] then
+    return table.unpack(result, 2)
+  else
+    error(result[2])
   end
 end
 

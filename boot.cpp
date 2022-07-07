@@ -46,47 +46,6 @@ namespace dromozoa {
       lua_call(L, 0, 1);
     }
 
-/*
-    inline std::string protected_to_string(lua_State* L, int index) {
-      stack_guard guard(L);
-      index = lua_absindex(L, index);
-
-      lua_getglobal(L, "tostring");
-      lua_pushvalue(L, index);
-      if (lua_pcall(L, 1, 1, 0) == LUA_OK) {
-        std::size_t size = 0;
-        if (const auto* data = lua_tolstring(L, -1, &size)) {
-          return std::string(data, size);
-        } else {
-        }
-      }
-      return "unknown error";
-    }
-
-    inline const char* status_to_string(int status) {
-      switch (status) {
-        case LUA_ERRRUN: return "LUA_ERRRUN";
-        case LUA_ERRMEM: return "LUA_ERRMEM";
-        case LUA_ERRERR: return "LUA_ERRERR";
-      }
-      return "unknown error";
-    }
-
-    // 標準例外が飛ぶ可能性はある
-    // stack_guardしたいなら、外側で行う
-    // スタックは、pcallを実行したのと同じ状態にする
-    // どこでエラーがでるかわからなければ、つねにpcallで囲む必要がある
-    // pcllの外では標準例外しか出ないものとする
-    std::optional<std::string> protected_call(lua_State* L, int num_arguments, int num_results) {
-      int status = lua_pcall(L, num_arguments, num_results, 0);
-      if (status == LUA_OK) {
-        return std::nullopt;
-      }
-
-      return protected_to_string(L, -1);
-    }
-*/
-
     void impl_each(lua_State* L) {
       lua_pushvalue(L, 1);
       lua_call(L, 0, 0);

@@ -22,11 +22,6 @@
 local D = require "dromozoa.web"
 local async = require "dromozoa.web.async"
 
--- error
--- error "!!!"
--- error(D.null)
-
-local thread
 local future = async(function (self)
   local window = D.window
   local document = window.document
@@ -44,6 +39,8 @@ local future = async(function (self)
   local code = self:await(response:text())
   return coroutine.create(assert(load(code, "@" .. filename)))
 end)
+
+local thread
 
 return function ()
   if future and future:is_ready() then

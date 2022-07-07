@@ -25,13 +25,13 @@
 
 namespace dromozoa {
   namespace {
-    void js_push_function(lua_State* L, int index) {
+    void js_push_ref(lua_State* L, int index) {
       DROMOZOA_JS_ASM({
         const v = (...args) => {
           const L = D.get_thread();
           if (L) {
             const n = args.length;
-            D.push_function(L, v.ref);
+            D.push_ref(L, v.ref);
             for (let i = 0; i < n; ++i) {
               D.push(L, args[i]);
             }
@@ -100,13 +100,13 @@ namespace dromozoa {
         }
         break;
       case LUA_TFUNCTION:
-        js_push_function(L, index);
+        js_push_ref(L, index);
         break;
       case LUA_TUSERDATA:
         if (auto* that = test_udata<object>(L, index)) {
           DROMOZOA_JS_ASM(D.stack.push(D.objs[$0]), that->get());
         } else {
-          js_push_function(L, index);
+          js_push_ref(L, index);
         }
         break;
       case LUA_TLIGHTUSERDATA:

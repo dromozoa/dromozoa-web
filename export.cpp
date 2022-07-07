@@ -90,7 +90,7 @@ extern "C" {
     new_udata<object>(L, id);
   }
 
-  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_function(lua_State* L, int ref) {
+  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_ref(lua_State* L, int ref) {
     lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
   }
 

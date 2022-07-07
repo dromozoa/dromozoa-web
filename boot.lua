@@ -22,6 +22,8 @@
 local D = require "dromozoa.web"
 local async = require "dromozoa.web.async"
 
+-- error(D.null)
+
 local thread
 local future = async(function (self)
   local window = D.window

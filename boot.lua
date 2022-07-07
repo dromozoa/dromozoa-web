@@ -26,8 +26,12 @@ local future = async(function (self)
   local window = D.window
   local document = window.document
 
-  local filename = D.new(window.URLSearchParams, document.location.search):get "main"
+  local query = D.new(window.URLSearchParams, document.location.search)
+  local filename = query:get "dromozoa_web_main"
   if D.is_falsy(filename) then
+    filename = os.getenv "dromozoa_web_main"
+  end
+  if not filename then
     filename = "main.lua"
   end
 

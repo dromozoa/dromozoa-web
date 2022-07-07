@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-BASE_CXXFALGS = -Oz -fexceptions -sNO_DISABLE_EXCEPTION_CATCHING
+BASE_CXXFALGS = -O2 -fexceptions -sNO_DISABLE_EXCEPTION_CATCHING
 BASE_LDFLAGS = -fexceptions
 
 CXX = em++
@@ -42,13 +42,13 @@ OBJS = \
 	utility.o
 TARGET = index.html
 
-all: all-recursive $(TARGET)
+all: all-recursive $(TARGET) main.txt
 
 all-recursive:
 	(cd lua/src && $(MAKE) CC=emcc AR="emar rcu" RANLIB=emranlib CFLAGS="-x c++ -Wall -Wextra -DLUA_COMPAT_5_3 $(BASE_CXXFALGS)" MYLDFLAGS="$(BASE_LDFLAGS)" LUA_T=lua.html LUAC_T=luac.html posix)
 
 clean:
-	$(RM) *.d *.o $(TARGET) index.html index.js index.wasm
+	$(RM) *.d *.o $(TARGET) index.html index.js index.wasm main.txt
 
 clean-recursive: clean
 	(cd lua/src && $(MAKE) clean && $(RM) *.d lua*.html lua*.js lua*.wasm)
@@ -58,5 +58,8 @@ $(TARGET): $(OBJS) shell.html prologue.js epilogue.js
 
 .cpp.o:
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $<
+
+main.txt: $(wildcard test/test_*.lua)
+	ls $^ >$@
 
 -include $(OBJS:.o=.d)

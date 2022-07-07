@@ -16,30 +16,39 @@
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 local D = require "dromozoa.web"
-local window = D.window
-local document = window.document
-local body = document.body
+local async = require "dromozoa.web.async"
 
-local df = document:createDocumentFragment()
+warn "@on"
 
-local ul = document:createElement "ul"
-for i, v in ipairs { "core", "fetch", "fetch2", "fetch3", "ffi", "file", "async", "async2" } do
-  local name = "test_" .. v
-  ul:append(document:createElement "li"
-    :append(document:createElement "a"
-      :setAttribute("href", "?main=test/" .. name .. ".lua")
-      :append(name)))
-end
-df:append(ul)
+local future = async(function (self)
+  local window = D.window
+  local document = window.document
 
--- local div = document:createElement "div"
---   :setAttribute("style", "color: red")
--- div.innerHTML = [[<ol><li>あいうえお</li><li>かきくけこ</li><li>さしすせそ</li></ol>]]
--- df:append(div)
+  local filename = "main.txt"
+  local response = self:await(window:fetch(filename, { cache = "no-store" }))
 
-body:append(df)
+  if not response.ok then
+    error(("cannot fetch %s: %d %s"):format(filename, response.status, response.statusText))
+  end
+
+  local text = self:await(response:text())
+
+  local ul = document:createElement "ul"
+  for filename in text:gmatch "(.-)\n" do
+    ul:append(document:createElement "li"
+      :append(document:createElement "a"
+        :setAttribute("href", "?main=" .. filename)
+        :append(filename)))
+  end
+  document.body:append(ul)
+end)
 
 while true do
+  if future and future:is_ready() then
+    future:get(warn)
+    future = nil
+  end
+
   assert(D.get_error_queue())
   coroutine.yield()
 end

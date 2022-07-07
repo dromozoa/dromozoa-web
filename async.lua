@@ -72,13 +72,13 @@ function class:is_ready()
   return self.status == "ready"
 end
 
-function class:get()
+function class:get(fn)
   local result = assert(self.result)
   self.result = nil
   if result[1] then
     return table.unpack(result, 2)
   else
-    error(result[2])
+    (fn or error)(result[2])
   end
 end
 

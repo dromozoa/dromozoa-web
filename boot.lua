@@ -27,7 +27,7 @@ local future = async(function (self)
   local document = window.document
 
   local filename = D.new(window.URLSearchParams, document.location.search):get "main"
-  if not filename or filename == D.null then
+  if D.is_falsy(filename) then
     filename = "main.lua"
   end
 

@@ -55,14 +55,14 @@ function class:yield()
 end
 
 function class:await(that)
-  if type(that) == "function" then
-    that(self)
-  else
+  if D.instanceof(that, D.window.Promise) then
     that["then"](that, function (...)
       self:resume(true, ...)
     end):catch(function (...)
       that:resume(false, ...)
     end)
+  else
+    that(self)
   end
   local result = self:yield()
   if result[1] then

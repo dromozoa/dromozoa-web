@@ -26,7 +26,7 @@
 namespace dromozoa {
   template <class T, class... T_args>
   inline T* new_udata(lua_State* L, T_args&&... args) {
-    auto* self = static_cast<T*>(lua_newuserdata(L, sizeof(T)));
+    auto* self = static_cast<T*>(lua_newuserdatauv(L, sizeof(T), 0));
     new(self) T(std::forward<T_args>(args)...);
     luaL_setmetatable(L, T::NAME);
     return self;

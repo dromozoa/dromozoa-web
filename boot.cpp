@@ -16,17 +16,11 @@
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <emscripten.h>
-#include <exception>
+#include <cstring>
 #include <iostream>
-#include <optional>
-#include <string>
-#include <string_view>
 #include "common.hpp"
-#include "error.hpp"
 #include "lua.hpp"
 #include "module.hpp"
-#include "stack_guard.hpp"
-#include "thread.hpp"
 
 namespace dromozoa {
   namespace {

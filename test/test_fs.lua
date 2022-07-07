@@ -30,8 +30,7 @@ local future = async(function (self)
   print "sync true"
   self:await(function (self)
     FS:syncfs(true, function (e)
-      print(e)
-      if not e or e == D.null then
+      if D.is_falsy(e) then
         self:resume(true)
       else
         self:resume(false, e)
@@ -55,8 +54,7 @@ local future = async(function (self)
   print "sync false"
   self:await(function (self)
     FS:syncfs(function (e)
-      print(e)
-      if not e or e == D.null then
+      if D.is_falsy(e) then
         self:resume(true)
       else
         self:resume(false, e)

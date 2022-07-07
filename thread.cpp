@@ -24,8 +24,9 @@ namespace dromozoa {
   namespace {
     lua_State* thread = nullptr;
 
-    void impl_gc(lua_State*) {
+    int impl_gc(lua_State*) noexcept {
       thread = nullptr;
+      return 0;
     }
   }
 
@@ -34,7 +35,7 @@ namespace dromozoa {
     thread = lua_newthread(L);
     set_field(L, -2, 1);
     lua_newtable(L);
-    set_field(L, -1, "__gc", function<impl_gc>());
+    set_field(L, -1, "__gc", impl_gc);
     lua_setmetatable(L, -2);
     luaL_ref(L, LUA_REGISTRYINDEX);
   }

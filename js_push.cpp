@@ -113,7 +113,7 @@ namespace dromozoa {
         if (!lua_touserdata(L, index)) {
           DROMOZOA_JS_ASM(D.stack.push(null));
         } else {
-          throw DROMOZOA_LOGIC_ERROR("null lightuserdata expected, got non-null lightuserdata");
+          throw DROMOZOA_LOGIC_ERROR("unexpected lightuserdata");
         }
         break;
       default:

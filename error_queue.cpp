@@ -65,7 +65,7 @@ namespace dromozoa {
         }
         out << *e;
       }
-      lua_pushnil(L);
+      luaL_pushfail(L);
       push(L, out.str());
     }
   }

@@ -39,7 +39,7 @@ namespace dromozoa {
       try {
         return T(L);
       } catch (const std::runtime_error& e) {
-        lua_pushnil(L);
+        luaL_pushfail(L);
         lua_pushstring(L, e.what());
         return 2;
       } catch (const std::exception& e) {
@@ -66,7 +66,7 @@ namespace dromozoa {
           return 1;
         }
       } catch (const std::runtime_error& e) {
-        lua_pushnil(L);
+        luaL_pushfail(L);
         lua_pushstring(L, e.what());
         return 2;
       } catch (const std::exception& e) {

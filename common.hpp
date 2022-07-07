@@ -168,15 +168,12 @@ namespace dromozoa {
     lua_pop(L, 2);
   }
 
-  inline std::optional<std::string> protected_call(lua_State* L, int num_arguments, int num_results) {
-    auto status = lua_pcall(L, num_arguments, num_results, 0);
-    if (status == LUA_OK) {
-      return std::nullopt;
-    }
-
+  inline std::string make_protected_call_error(lua_State* L, int index, int status) {
     stack_guard guard(L);
+
+    index = lua_absindex(L, index);
     lua_getglobal(L, "tostring");
-    lua_pushvalue(L, -2);
+    lua_pushvalue(L, index);
     if (lua_pcall(L, 1, 1, 0) == LUA_OK) {
       std::size_t size = 0;
       if (const auto* data = lua_tolstring(L, -1, &size)) {
@@ -194,6 +191,14 @@ namespace dromozoa {
       default:
         return "unknown error";
     }
+  }
+
+  inline std::optional<std::string> protected_call(lua_State* L, int num_arguments, int num_results) {
+    auto status = lua_pcall(L, num_arguments, num_results, 0);
+    if (status == LUA_OK) {
+      return std::nullopt;
+    }
+    return make_protected_call_error(L, -1, status);
   }
 }
 

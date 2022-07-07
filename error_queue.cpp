@@ -74,6 +74,14 @@ namespace dromozoa {
     error_queue.emplace_back(std::current_exception());
   }
 
+  void push_error_queue(const std::string& e) {
+    try {
+      throw std::logic_error(e);
+    } catch (...) {
+      error_queue.emplace_back(std::current_exception());
+    }
+  }
+
   void initialize_error_queue(lua_State* L) {
     set_field(L, -1, "pop_error_queue", function<impl_pop_error_queue>());
     set_field(L, -1, "get_error_queue", function<impl_get_error_queue>());

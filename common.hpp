@@ -23,7 +23,6 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <string_view>
 #include <type_traits>
 #include <utility>
 #include "common.hpp"
@@ -131,11 +130,13 @@ namespace dromozoa {
 
   template <class T, T (*T_function)(lua_State*)>
   inline void push(lua_State* L, function_wrapper<T, T_function>) {
-    lua_pushcfunction(L, (function_wrapper<T, T_function>::value));
+    lua_pushcclosure(L, function_wrapper<T, T_function>::value, 0);
   }
 
-  inline void push(lua_State* L, lua_CFunction value) {
-    lua_pushcfunction(L, value);
+  template <bool T>
+  inline void push(lua_State* L, int (*value)(lua_State*) noexcept(T)) {
+    static_assert(T);
+    lua_pushcclosure(L, value, 0);
   }
 
   inline void push(lua_State* L, std::nullptr_t) {
@@ -167,7 +168,8 @@ namespace dromozoa {
     lua_pop(L, 2);
   }
 
-  inline std::optional<std::string> load_buffer(lua_State* L, const std::string_view& code, const char* name) {
+  template <class T>
+  inline std::optional<std::string> load_buffer(lua_State* L, T&& code, const char* name) {
     stack_guard guard(L);
     if (luaL_loadbuffer(L, code.data(), code.size(), name) == LUA_OK) {
       guard.release();

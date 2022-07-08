@@ -100,6 +100,7 @@ function future:is_ready()
   return self[1].status == "ready"
 end
 
+-- TODO get後の動きを検討
 function future:get()
   local result = assert(self[1].result)
   self[1].result = nil

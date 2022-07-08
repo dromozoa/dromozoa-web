@@ -17,6 +17,7 @@
 
 local D = require "dromozoa.web"
 local async = require "dromozoa.web.async"
+local await = async.await
 
 local window = D.window
 local document = window.document
@@ -25,7 +26,7 @@ local future = async(function (self)
   local link = document:createElement "link"
     :setAttribute("href", "https://fonts.googleapis.com/css2?family=BIZ+UDPMincho&display=swap")
     :setAttribute("rel", "stylesheet")
-  local ev = self:await(function (self)
+  local ev = await(function (self)
     link:addEventListener("load", function (ev)
       self:resume(true, ev)
     end)

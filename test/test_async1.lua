@@ -17,6 +17,7 @@
 
 local D = require "dromozoa.web"
 local async = require "dromozoa.web.async"
+local await = async.await
 
 local window = D.window
 
@@ -32,13 +33,13 @@ v = 1
 
 local future = async(function (self)
   print("delay", D.get_now())
-  self:await(function (self)
+  await(function (self)
     self:resume(true)
   end)
   print("delay", D.get_now())
 
   print("setTimeout", D.get_now())
-  self:await(function (self)
+  await(function (self)
     window:setTimeout(function ()
       self:resume(true)
     end, 1000)

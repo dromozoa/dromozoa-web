@@ -17,6 +17,7 @@
 
 local D = require "dromozoa.web"
 local async = require "dromozoa.web.async"
+local await = async.await
 
 local window = D.window
 local crypto = window.crypto
@@ -38,32 +39,32 @@ end
 local future = async(function (self)
   print(crypto:randomUUID())
 
-  local buffer = self:await(subtle:digest("SHA-256", D.slice "foobarbaz"))
+  local buffer = await(subtle:digest("SHA-256", D.slice "foobarbaz"))
   local digest = to_hex_string(buffer)
   assert(digest == "97df3588b5a3f24babc3851b372f0ba71a9dcdded43b14b9d06961bfc1707d9d")
 
-  local buffer = self:await(subtle:digest("SHA-256", D.slice "日本語\0あいうえお"))
+  local buffer = await(subtle:digest("SHA-256", D.slice "日本語\0あいうえお"))
   local digest = to_hex_string(buffer)
   assert(digest == "43b0fa97739f6c418d9643ae9488cfd0180037bf7a04c59bba33617069d38067")
 
-  -- local key = self:await(subtle:generateKey({ name = "HMAC", hash = { name = "SHA-256" } }, true, D.array { "sign", "verify" }))
-  -- local jwk = self:await(subtle:exportKey("jwk", key))
+  -- local key = await(subtle:generateKey({ name = "HMAC", hash = { name = "SHA-256" } }, true, D.array { "sign", "verify" }))
+  -- local jwk = await(subtle:exportKey("jwk", key))
   -- print(window.JSON:stringify(jwk))
 
   -- https://docs.aws.amazon.com/general/latest/gr/signature-v4-examples.html
   local secret = D.slice("AWS4" .. "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY")
   assert(to_hex_string(secret) == "41575334774a616c725855746e46454d492f4b374d44454e472b62507852666943594558414d504c454b4559")
-  local key = self:await(import_key(secret))
-  local date = self:await(subtle:sign("HMAC", key, D.slice "20120215"))
+  local key = await(import_key(secret))
+  local date = await(subtle:sign("HMAC", key, D.slice "20120215"))
   assert(to_hex_string(date) == "969fbb94feb542b71ede6f87fe4d5fa29c789342b0f407474670f0c2489e0a0d")
-  local key = self:await(import_key(date))
-  local region = self:await(subtle:sign("HMAC", key, D.slice "us-east-1"))
+  local key = await(import_key(date))
+  local region = await(subtle:sign("HMAC", key, D.slice "us-east-1"))
   assert(to_hex_string(region) == "69daa0209cd9c5ff5c8ced464a696fd4252e981430b10e3d3fd8e2f197d7a70c")
-  local key = self:await(import_key(region))
-  local service = self:await(subtle:sign("HMAC", key, D.slice "iam"))
+  local key = await(import_key(region))
+  local service = await(subtle:sign("HMAC", key, D.slice "iam"))
   assert(to_hex_string(service) == "f72cfd46f26bc4643f06a11eabb6c0ba18780c19a8da0c31ace671265e3c87fa")
-  local key = self:await(import_key(service))
-  local signing = self:await(subtle:sign("HMAC", key, D.slice "aws4_request"))
+  local key = await(import_key(service))
+  local signing = await(subtle:sign("HMAC", key, D.slice "aws4_request"))
   assert(to_hex_string(signing) == "f4780e2d9f65fa895f9c67b32ce1baf0b0d8a43505a000a1a9e090d414db404d")
 
   print "finished"

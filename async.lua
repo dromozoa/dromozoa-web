@@ -22,10 +22,7 @@
 local D = require "dromozoa.web"
 
 local class = {
-  queue = {
-    min = 1;
-    max = 0;
-  };
+  queue = { min = 1, max = 0 };
   map = setmetatable({}, { __mode = "k" });
 }
 
@@ -34,9 +31,9 @@ local metatable = {
   __name = "dromozoa.web.async";
 }
 
-local function new(fn)
+local function async(fn)
   local thread = coroutine.create(function (self) return fn(self) end)
-  local self = setmetatable({ status = "initial"; thread = thread; }, metatable)
+  local self = setmetatable({ status = "initial", thread = thread }, metatable)
   class.map[thread] = self
   self:resume(self)
   return self
@@ -61,18 +58,15 @@ function class:resume(...)
     resume(self, ...)
   else
     local args = table.pack(...)
-    class.delay(function ()
-      resume(self, table.unpack(args, 1, args.n))
-    end)
+    class.delay(function () resume(self, table.unpack(args, 1, args.n)) end)
   end
 end
 
-function class:yield()
-  self.status = "suspended"
-  return table.pack(coroutine.yield())
-end
+function class.await(that)
+  local thread, is_main_thread = coroutine.running()
+  assert(not is_main_thread)
+  local self = assert(class.map[thread])
 
-function class:await(that)
   if D.instanceof(that, D.window.Promise) then
     that["then"](that, function (...)
       self:resume(true, ...)
@@ -82,27 +76,14 @@ function class:await(that)
   else
     that(self)
   end
-  local result = self:yield()
+
+  self.status = "suspended"
+  local result = table.pack(coroutine.yield())
   if result[1] then
     return table.unpack(result, 2, result.n)
   else
     error(result[2])
   end
-end
-
-function class.await2(that)
-  local thread, is_main_thread = coroutine.running()
-  assert(not is_main_thread)
-  local self = assert(class.map[thread])
-  return self:await(that)
-end
-
-function class.map_size()
-  local n = 0
-  for _ in pairs(class.map) do
-    n = n + 1
-  end
-  return n
 end
 
 function class:is_ready()
@@ -141,7 +122,7 @@ end
 
 return setmetatable(class, {
   __call = function (_, fn)
-    return new(fn)
+    return async(fn)
   end;
 })
 

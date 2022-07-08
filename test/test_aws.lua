@@ -17,6 +17,7 @@
 
 local D = require "dromozoa.web"
 local async = require "dromozoa.web.async"
+local await = async.await
 
 local window = D.window
 local crypto = window.crypto
@@ -31,25 +32,25 @@ local function to_hex_string(buffer)
   return table.concat(result)
 end
 
+local function hmac_sha256(k, m)
+  local key = await(subtle:importKey("raw", k, { name = "HMAC", hash = { name = "SHA-256"} }, false, D.array { "sign" }))
+  return await(subtle:sign("HMAC", key, m))
+end
+
+local function get_signature_key(key, date, region, service)
+  return hmac_sha256(hmac_sha256(hmac_sha256(hmac_sha256(
+    D.slice("AWS4" .. key),
+    D.slice(date)),
+    D.slice(region)),
+    D.slice(service)),
+    D.slice "aws4_request")
+end
+
+local function sha256(m)
+  return await(subtle:digest("SHA-256", D.slice(m)))
+end
+
 local future = async(function (self)
-  local function hmac_sha256(k, m)
-    local key = self:await(subtle:importKey("raw", k, { name = "HMAC", hash = { name = "SHA-256"} }, false, D.array { "sign" }))
-    return self:await(subtle:sign("HMAC", key, m))
-  end
-
-  local function get_signature_key(key, date, region, service)
-    return hmac_sha256(hmac_sha256(hmac_sha256(hmac_sha256(
-      D.slice("AWS4" .. key),
-      D.slice(date)),
-      D.slice(region)),
-      D.slice(service)),
-      D.slice "aws4_request")
-  end
-
-  local function sha256(m)
-    return self:await(subtle:digest("SHA-256", D.slice(m)))
-  end
-
   -- https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html
 
   local access_key = "AKIAIOSFODNN7EXAMPLE"

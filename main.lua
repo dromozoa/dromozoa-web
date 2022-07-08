@@ -17,19 +17,20 @@
 
 local D = require "dromozoa.web"
 local async = require "dromozoa.web.async"
+local await = async.await
 
-local future = async(function (self)
+local future = async(function ()
   local window = D.window
   local document = window.document
 
   local filename = "main.txt"
-  local response = self:await(window:fetch(filename, { cache = "no-store" }))
+  local response = await(window:fetch(filename, { cache = "no-store" }))
 
   if not response.ok then
     error(("cannot fetch %s: %d %s"):format(filename, response.status, response.statusText))
   end
 
-  local text = self:await(response:text())
+  local text = await(response:text())
 
   local ul = document:createElement "ul"
   for filename in text:gmatch "(.-)\n" do

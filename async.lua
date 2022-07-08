@@ -39,12 +39,12 @@ local function promise_resume(self, ...)
   local result = table.pack(coroutine.resume(thread, ...))
   if coroutine.status(thread) == "dead" then
     -- 終了フックがあったら、それを呼び出す
-    if self.parent then
+    if self.chain then
       self.status = "ready"
       self.thread = nil
       self.result = nil
       promise_map[thread] = nil
-      promise_resume(self.parent, table.unpack(result, 1, result.n))
+      promise_resume(self.chain, table.unpack(result, 1, result.n))
     else
       self.status = "ready"
       self.thread = nil
@@ -64,9 +64,15 @@ local function promise_new(fn)
   return self
 end
 
-local function promise_set_parent(self, parent)
-  assert(not self.parent)
-  self.parent = parent
+local function promise_get(self)
+  local result = assert(self.result)
+  self.result = nil
+  return result
+end
+
+local function promise_chain(self, chain)
+  assert(not self.chain)
+  self.chain = chain
   if self.status == "ready" then
     delay(function ()
       -- local thread = assert(self.thread)
@@ -75,7 +81,7 @@ local function promise_set_parent(self, parent)
       -- self.result = nil
       -- promise_map[thread] = nil
       local result = self.result
-      promise_resume(self.parent, table.unpack(result, 1, result.n))
+      promise_resume(self.chain, table.unpack(result, 1, result.n))
     end)
   end
 end
@@ -100,10 +106,8 @@ function future:is_ready()
   return self[1].status == "ready"
 end
 
--- TODO get後の動きを検討
 function future:get()
-  local result = assert(self[1].result)
-  self[1].result = nil
+  local result = promise_get(self[1])
   if result[1] then
     return table.unpack(result, 2, result.n)
   else
@@ -119,8 +123,7 @@ function class.await(that)
   local promise = assert(promise_map[thread])
 
   if getmetatable(that) == future_metatable then
-    -- print("promise_set_parent", that, that[1], promise)
-    promise_set_parent(that[1], promise)
+    promise_chain(that[1], promise)
   elseif D.instanceof(that, D.window.Promise) then
     that["then"](that, function (...)
       promise:set(true, ...)

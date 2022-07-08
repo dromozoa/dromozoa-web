@@ -29,30 +29,36 @@ local function delay(fn)
   delay_queue.max = max
 end
 
+local function unpack(t, i, j)
+  return table.unpack(t, i or 1, j or t.n)
+end
+
 local promise = {}
 local promise_metatable = { __index = promise, __name = "dromozoa.web.async.promise" }
 local promise_map = setmetatable({}, { __mode = "k" })
+
+local function promise_get(self)
+  local result = assert(self.result)
+  self.result = nil
+  return result
+end
 
 local function promise_resume(self, ...)
   local thread = self.thread
   self.status = "running"
   local result = table.pack(coroutine.resume(thread, ...))
   if coroutine.status(thread) == "dead" then
-    -- 終了フックがあったら、それを呼び出す
-    if self.chain then
-      self.status = "ready"
-      self.thread = nil
-      self.result = nil
-      promise_map[thread] = nil
-      promise_resume(self.chain, table.unpack(result, 1, result.n))
-    else
-      self.status = "ready"
-      self.thread = nil
-      self.result = result
-      promise_map[thread] = nil
+    self.status = "ready"
+    self.thread = nil
+    self.result = result
+    promise_map[thread] = nil
+
+    local chain = self.chain
+    if chain then
+      promise_resume(chain, unpack(promise_get(self)))
     end
   else
-    assert(table.unpack(result, 1, result.n))
+    assert(unpack(result))
   end
 end
 
@@ -64,25 +70,11 @@ local function promise_new(fn)
   return self
 end
 
-local function promise_get(self)
-  local result = assert(self.result)
-  self.result = nil
-  return result
-end
-
 local function promise_chain(self, chain)
   assert(not self.chain)
   self.chain = chain
   if self.status == "ready" then
-    delay(function ()
-      -- local thread = assert(self.thread)
-      -- self.status = "ready"
-      -- self.thread = nil
-      -- self.result = nil
-      -- promise_map[thread] = nil
-      local result = self.result
-      promise_resume(self.chain, table.unpack(result, 1, result.n))
-    end)
+    delay(function () promise_resume(chain, unpack(promise_get(self))) end)
   end
 end
 
@@ -91,7 +83,7 @@ function promise:set(...)
     promise_resume(self, ...)
   else
     local args = table.pack(...)
-    delay(function () promise_resume(self, table.unpack(args, 1, args.n)) end)
+    delay(function () promise_resume(self, unpack(args)) end)
   end
 end
 

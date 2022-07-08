@@ -18,10 +18,36 @@
 local D = require "dromozoa.web"
 local async = require "dromozoa.web.async"
 
-local future = async(function (self)
-  local window = D.window
-  local FS = window.FS
+local window = D.window
+local document = window.document
+local FS = window.FS
 
+local function readdir(parent_path, element)
+  local entries = FS:readdir(parent_path)
+  for i = 0, entries.length - 1 do
+    local entry = entries[i]
+    if entry ~= "." and entry ~= ".." then
+      local path
+      if parent_path == "/" then
+        path = "/" .. entry
+      else
+        path = parent_path .. "/" .. entry
+      end
+      element:append(document:createElement "li":append(path))
+
+      local status, result = pcall(function () return FS:stat(path) end)
+      if status then
+        if FS:isDir(result.mode) then
+          readdir(path, element)
+        end
+      else
+        io.stderr:write(("cannot stat %s: %s\n"):format(path, result))
+      end
+    end
+  end
+end
+
+local future = async(function (self)
   print "mkdir /save"
   FS:mkdir "/save"
   print "mount IDBFS /save"
@@ -29,38 +55,28 @@ local future = async(function (self)
 
   print "sync true"
   self:await(function (self)
-    FS:syncfs(true, function (e)
-      if D.is_falsy(e) then
-        self:resume(true)
-      else
-        self:resume(false, e)
-      end
-    end)
+    FS:syncfs(true, function (e) self:resume(D.is_falsy(e), e) end)
   end)
 
-  print "chdir /save"
-  FS:chdir "/save"
+  local ul = document:createElement "ul"
+  ul:append(document:createElement "li":append "/")
+  readdir("/", ul)
+  document.body:append(ul)
 
-  print "open test.txt"
-  local out = assert(io.open("test.txt", "w"))
   print "write test.txt"
+  local out = assert(io.open("/save/test.txt", "w"))
   out:write(os.date "%Y-%m-%d %H:%M:%S", "\n")
-  print "close test.txt"
   assert(out:close())
+
+  print "sync"
+  self:await(function (self)
+    FS:syncfs(function (e) self:resume(D.is_falsy(e), e) end)
+  end)
 
   print "unmount /save"
   FS:unmount "/save"
 
-  print "sync false"
-  self:await(function (self)
-    FS:syncfs(function (e)
-      if D.is_falsy(e) then
-        self:resume(true)
-      else
-        self:resume(false, e)
-      end
-    end)
-  end)
+  print "finished"
 end)
 
 while true do

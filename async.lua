@@ -21,7 +21,10 @@
 
 local D = require "dromozoa.web"
 
-local class = {}
+local class = {
+  tasks = {};
+}
+
 local metatable = {
   __index = class;
   __name = "dromozoa.web.async";
@@ -40,6 +43,7 @@ end
 
 function class:resume(...)
   local thread = assert(self.thread)
+  assert(coroutine.status(thread) == "suspended")
   self.status = "running"
   local result = table.pack(coroutine.resume(thread, ...))
   if coroutine.status(thread) == "dead" then
@@ -54,7 +58,7 @@ function class:yield()
   return table.pack(coroutine.yield())
 end
 
-function class:await(that)
+function class:await(that, not_push_task)
   if D.instanceof(that, D.window.Promise) then
     that["then"](that, function (...)
       self:resume(true, ...)
@@ -62,7 +66,11 @@ function class:await(that)
       that:resume(false, ...)
     end)
   else
-    that(self)
+    if not_push_task then
+      that(self)
+    else
+      class.push_task(function () that(self) end)
+    end
   end
   local result = self:yield()
   if result[1] then
@@ -83,6 +91,21 @@ function class:get(fn)
     return table.unpack(result, 2)
   else
     (fn or error)(result[2])
+  end
+end
+
+function class.push_task(fn)
+  local tasks = class.tasks
+  tasks[#tasks + 1] = fn
+end
+
+function class.process_tasks()
+  if #class.tasks > 0 then
+    local tasks = {}
+    tasks, class.tasks = class.tasks, tasks
+    for i = 1, #tasks do
+      tasks[i]()
+    end
   end
 end
 

@@ -55,7 +55,9 @@ local future = async(function (self)
 
   print "sync true"
   self:await(function (self)
-    FS:syncfs(true, function (e) self:resume(D.is_falsy(e), e) end)
+    FS:syncfs(true, function (e)
+      self:resume(D.is_falsy(e), e)
+    end)
   end)
 
   local ul = document:createElement "ul"
@@ -63,14 +65,28 @@ local future = async(function (self)
   readdir("/", ul)
   document.body:append(ul)
 
+  local data = os.date "%Y-%m-%d %H:%M:%S"
+
+  local path = "/save/test.txt"
+  local handle, result = io.open(path)
+  if handle then
+    local content = handle:read "*a"
+    print(content)
+    handle:close()
+  else
+    io.stderr:write(("cannot open %s: %s\n"):format(path, result))
+  end
+
   print "write test.txt"
   local out = assert(io.open("/save/test.txt", "w"))
-  out:write(os.date "%Y-%m-%d %H:%M:%S", "\n")
+  out:write(data)
   assert(out:close())
 
   print "sync"
   self:await(function (self)
-    FS:syncfs(function (e) self:resume(D.is_falsy(e), e) end)
+    FS:syncfs(function (e)
+      self:resume(D.is_falsy(e), e)
+    end)
   end)
 
   print "unmount /save"

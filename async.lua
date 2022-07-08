@@ -42,14 +42,26 @@ local function new(fn)
 end
 
 function class:resume(...)
+  local args = table.pack(...)
+
+  local fn = function ()
+    local thread = assert(self.thread)
+    self.status = "running"
+    local result = table.pack(coroutine.resume(thread, table.unpack(args, 1, args.n)))
+    if coroutine.status(thread) == "dead" then
+      self.status = "ready"
+      self.thread = nil
+      self.result = result
+    else
+      assert(table.unpack(result, 1, result.n))
+    end
+  end
+
   local thread = assert(self.thread)
-  assert(coroutine.status(thread) == "suspended")
-  self.status = "running"
-  local result = table.pack(coroutine.resume(thread, ...))
-  if coroutine.status(thread) == "dead" then
-    self.status = "ready"
-    self.thread = nil
-    self.result = result
+  if coroutine.status(thread) == "suspended" then
+    fn()
+  else
+    class.push_task(fn)
   end
 end
 
@@ -58,7 +70,7 @@ function class:yield()
   return table.pack(coroutine.yield())
 end
 
-function class:await(that, not_push_task)
+function class:await(that)
   if D.instanceof(that, D.window.Promise) then
     that["then"](that, function (...)
       self:resume(true, ...)
@@ -66,11 +78,7 @@ function class:await(that, not_push_task)
       that:resume(false, ...)
     end)
   else
-    if not_push_task then
-      that(self)
-    else
-      class.push_task(function () that(self) end)
-    end
+    that(self)
   end
   local result = self:yield()
   if result[1] then

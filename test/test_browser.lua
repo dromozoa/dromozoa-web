@@ -17,9 +17,31 @@
 
 local D = require "dromozoa.web"
 
-print(os.getenv "DROMOZOA_WEB_MAIN")
+print("device_pixel_ratio", D.get_device_pixel_ratio())
+print("window_title", D.get_window_title())
+D.set_window_title "タイトル変更"
+print("window_title", D.get_window_title())
+print("screen_size", D.get_screen_size())
 
-while true do
-  assert(D.get_error_queue())
+local data = {}
+local n = 100
+
+print "FPSを計測中"
+
+for i = 1, n + 1 do
+  data[i] = D.get_now()
   coroutine.yield()
 end
+
+local sum = (data[n + 1] - data[1])
+local avg = sum / n
+
+local v = 0
+for i = 1, n do
+  v = v + (data[i + 1] - data[i])^2
+end
+
+print("sum", sum)
+print("avg", avg)
+print("sd", math.sqrt(v))
+print("fps", 1000 / avg)

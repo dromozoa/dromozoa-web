@@ -18,49 +18,35 @@
 local D = require "dromozoa.web"
 local async = require "dromozoa.web.async"
 
-local future = async(function (self)
-  local window = D.window
-  local FS = window.FS
+local window = D.window
+local document = window.document
+local FS = window.FS
 
-  print "mkdir /save"
+local future = async(function (self)
   FS:mkdir "/save"
-  print "mount IDBFS /save"
   FS:mount(D.window.IDBFS, {}, "/save")
 
-  print "sync true"
   self:await(function (self)
     FS:syncfs(true, function (e)
-      if D.is_falsy(e) then
-        self:resume(true)
-      else
-        self:resume(false, e)
-      end
+      self:resume(D.is_falsy(e), e)
     end)
   end)
 
-  print "chdir /save"
-  FS:chdir "/save"
+  print "unlink test.txt"
+  local status, result = pcall(function () FS:unlink "/save/test.txt" end)
+  if not status then
+    io.stderr:write(("cannot unlink %s: %s\n"):format(path, result))
+  end
 
-  print "open test.txt"
-  local out = assert(io.open("test.txt", "w"))
-  print "write test.txt"
-  out:write(os.date "%Y-%m-%d %H:%M:%S", "\n")
-  print "close test.txt"
-  assert(out:close())
-
-  print "unmount /save"
-  FS:unmount "/save"
-
-  print "sync false"
   self:await(function (self)
     FS:syncfs(function (e)
-      if D.is_falsy(e) then
-        self:resume(true)
-      else
-        self:resume(false, e)
-      end
+      self:resume(D.is_falsy(e), e)
     end)
   end)
+
+  FS:unmount "/save"
+
+  print "finished"
 end)
 
 while true do

@@ -15,32 +15,45 @@
 -- You should have received a copy of the GNU General Public License
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-local core = require "dromozoa.web"
+local D = require "dromozoa.web"
+local async = require "dromozoa.web.async"
 
-print(core.get_device_pixel_ratio())
-print(core.get_window_title())
-core.set_window_title "タイトル変更"
-print(core.get_screen_size())
-
-local data = {}
-local n = 90
-
-print "FPSを計算中"
-
-for i = 1, n + 1 do
-  data[i] = core.get_now()
-  coroutine.yield()
-end
-
-local sum = (data[n + 1] - data[1])
-local avg = sum / n
+local window = D.window
 
 local v = 0
-for i = 1, n do
-  v = v + (data[i + 1] - data[i])^2
-end
+async.delay(function ()
+  print(v)
+  assert(v == 1)
+  v = 2
+end)
+print(v)
+assert(v == 0)
+v = 1
 
-print("sum", sum)
-print("avg", avg)
-print("sd", math.sqrt(v))
-print("fps", 1000 / avg)
+local future = async(function (self)
+  print("delay", D.get_now())
+  self:await(function (self)
+    self:resume(true)
+  end)
+  print("delay", D.get_now())
+
+  print("setTimeout", D.get_now())
+  self:await(function (self)
+    window:setTimeout(function ()
+      self:resume(true)
+    end, 1000)
+  end)
+  print("setTimeout", D.get_now())
+
+  print "finished"
+end)
+
+while true do
+  if future and future:is_ready() then
+    future:get()
+    future = nil
+  end
+
+  assert(D.get_error_queue())
+  coroutine.yield()
+end

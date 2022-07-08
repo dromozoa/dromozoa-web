@@ -21,7 +21,13 @@
 
 local D = require "dromozoa.web"
 
-local class = {}
+local class = {
+  queue = {
+    min = 1;
+    max = 0;
+  };
+}
+
 local metatable = {
   __index = class;
   __name = "dromozoa.web.async";
@@ -38,14 +44,27 @@ local function new(fn)
   return self
 end
 
-function class:resume(...)
-  local thread = assert(self.thread)
+local function resume(self, ...)
+  local thread = self.thread
   self.status = "running"
   local result = table.pack(coroutine.resume(thread, ...))
   if coroutine.status(thread) == "dead" then
     self.status = "ready"
     self.thread = nil
     self.result = result
+  else
+    assert(table.unpack(result, 1, result.n))
+  end
+end
+
+function class:resume(...)
+  if coroutine.status(self.thread) == "suspended" then
+    resume(self, ...)
+  else
+    local args = table.pack(...)
+    class.delay(function ()
+      resume(self, table.unpack(args, 1, args.n))
+    end)
   end
 end
 
@@ -83,6 +102,26 @@ function class:get(fn)
     return table.unpack(result, 2)
   else
     (fn or error)(result[2])
+  end
+end
+
+function class.delay(fn)
+  local queue = class.queue
+  local max = queue.max + 1
+  queue[max] = fn
+  queue.max = max
+end
+
+function class.dispatch()
+  local queue = class.queue
+  for i = queue.min, queue.max do
+    local fn = queue[i]
+    queue.min = i + 1
+    fn()
+  end
+  if queue.min > queue.max then
+    queue.min = 1
+    queue.max = 0
   end
 end
 

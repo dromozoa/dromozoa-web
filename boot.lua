@@ -47,6 +47,8 @@ end)
 local thread
 
 return function ()
+  async.dispatch()
+
   if future and future:is_ready() then
     thread = future:get()
     future = nil

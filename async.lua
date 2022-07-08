@@ -120,6 +120,10 @@ end
 
 local class = { delay = delay }
 
+function class.import(list)
+  return class, class.await
+end
+
 function class.await(that)
   local thread, is_main_thread = coroutine.running()
   assert(not is_main_thread)
@@ -155,10 +159,6 @@ function class.dispatch()
     delay_queue.min = 1
     delay_queue.max = 0
   end
-end
-
-function class.export()
-  return class, class.await
 end
 
 return setmetatable(class, {

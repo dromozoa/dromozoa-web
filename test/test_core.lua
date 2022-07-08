@@ -15,12 +15,12 @@
 -- You should have received a copy of the GNU General Public License
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-local core = require "dromozoa.web"
+local D = require "dromozoa.web"
 
-print(core.get_device_pixel_ratio())
-print(core.get_window_title())
-core.set_window_title "タイトル変更"
-print(core.get_screen_size())
+print(D.get_device_pixel_ratio())
+print(D.get_window_title())
+D.set_window_title "タイトル変更"
+print(D.get_screen_size())
 
 local data = {}
 local n = 90
@@ -28,7 +28,7 @@ local n = 90
 print "FPSを計算中"
 
 for i = 1, n + 1 do
-  data[i] = core.get_now()
+  data[i] = D.get_now()
   coroutine.yield()
 end
 

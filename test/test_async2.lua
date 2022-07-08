@@ -18,39 +18,38 @@
 local D = require "dromozoa.web"
 local async = require "dromozoa.web.async"
 
--- error
--- error "!!!"
--- error(D.null)
+local window = D.window
+local navigator = window.navigator
 
-local function timeout_promise(t, k)
-  return D.new(D.window.Promise, function (resolve, reject)
-    D.window:setTimeout(function ()
-      resolve(nil, k)
-    end, t)
+local future = async(function (self)
+  local devices = self:await(navigator.mediaDevices:enumerateDevices())
+  devices:forEach(function (device)
+    io.write(("kind=%s, label=%s, deviceId=%s\n"):format(device.kind, device.label, device.deviceId))
   end)
-end
 
-local f = async(function (self)
-  print "start"
-  local p = timeout_promise(500, "A")
-  print(D.typeof(p), D.typeof(42), D.typeof(function () end))
-  print(D.instanceof(p, D.window.Object), D.instanceof(p, D.window.Promise), D.instanceof(p, D.window.Array))
-  print(D.instanceof(42, D.window.Object), D.instanceof(42, D.window.Promise), D.instanceof(42, D.window.Array))
-  print(self:await(p))
-  print(self:await(timeout_promise(500, "B")))
-  print(self:await(timeout_promise(500, "C")))
-  -- error "X"
-  print(self:await(timeout_promise(500, "D")))
-  print "goal"
-  return "z"
+  local result = self:await(function (self)
+    local result = window:prompt()
+    if result == D.null then
+      self:resume(true)
+    else
+      self:resume(true, result)
+    end
+  end)
+  if result then
+    print("ok", result)
+  else
+    print "cancel"
+  end
+
+  print "finished"
 end)
 
 while true do
-  assert(D.get_error_queue())
-  if f and f:is_ready() then
-    local v = f:get()
-    f = nil
-    print(v)
+  if future and future:is_ready() then
+    future:get()
+    future = nil
   end
+
+  assert(D.get_error_queue())
   coroutine.yield()
 end

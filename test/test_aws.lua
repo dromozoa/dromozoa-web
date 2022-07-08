@@ -50,7 +50,7 @@ local function sha256(m)
   return await(subtle:digest("SHA-256", D.slice(m)))
 end
 
-local future = async(function (self)
+local future = async(function ()
   -- https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html
 
   local access_key = "AKIAIOSFODNN7EXAMPLE"
@@ -120,7 +120,7 @@ local future = async(function (self)
   print(to_hex_string(sha256 ""))
   ]]
 
-
+  print "finished"
 end)
 
 while true do

@@ -21,29 +21,36 @@
 
 local D = require "dromozoa.web"
 
+--[[
+
+local async, await = require "dromozoa.web.async" :export()
+
+]]
+
 local class = {
   queue = { min = 1, max = 0 };
   map = setmetatable({}, { __mode = "k" });
 }
 
-local metatable = {
-  __index = class;
-  __name = "dromozoa.web.async";
-}
-
-local function async(fn)
-  local thread = coroutine.create(function (self) return fn(self) end)
-  local self = setmetatable({ status = "initial", thread = thread }, metatable)
-  class.map[thread] = self
-  self:resume(self)
-  return self
+function class.delay(fn)
+  local queue = class.queue
+  local max = queue.max + 1
+  queue[max] = fn
+  queue.max = max
 end
 
-local function resume(self, ...)
+local promise = {}
+local promise_metatable = {
+  __index = promise;
+  __name = "dromozoa.web.async.promise";
+}
+
+local function promise_resume(self, ...)
   local thread = self.thread
   self.status = "running"
   local result = table.pack(coroutine.resume(thread, ...))
   if coroutine.status(thread) == "dead" then
+    -- 終了フックがあったら、それを呼び出す
     self.status = "ready"
     self.thread = nil
     self.result = result
@@ -53,32 +60,28 @@ local function resume(self, ...)
   end
 end
 
-function class:resume(...)
+function promise:set(...)
   if coroutine.status(self.thread) == "suspended" then
-    resume(self, ...)
+    promise_resume(self, ...)
   else
     local args = table.pack(...)
-    class.delay(function () resume(self, table.unpack(args, 1, args.n)) end)
+    class.delay(function () promise_resume(self, table.unpack(args, 1, args.n)) end)
   end
 end
 
-function class.await(that)
-  local thread, is_main_thread = coroutine.running()
-  assert(not is_main_thread)
-  local self = assert(class.map[thread])
+local future = {}
+local future_metatable = {
+  __index = future;
+  __name = "dromozoa.web.async.future";
+}
 
-  if D.instanceof(that, D.window.Promise) then
-    that["then"](that, function (...)
-      self:resume(true, ...)
-    end):catch(function (...)
-      that:resume(false, ...)
-    end)
-  else
-    that(self)
-  end
+function future:is_ready()
+  return self.promise.status == "ready"
+end
 
-  self.status = "suspended"
-  local result = table.pack(coroutine.yield())
+function future:get()
+  local result = assert(self.promise.result)
+  self.promise.result = nil
   if result[1] then
     return table.unpack(result, 2, result.n)
   else
@@ -86,25 +89,36 @@ function class.await(that)
   end
 end
 
-function class:is_ready()
-  return self.status == "ready"
+local function async(fn)
+  local thread = coroutine.create(function () return fn() end)
+  local promise = setmetatable({ status = "initial", thread = thread }, promise_metatable)
+  class.map[thread] = promise
+  promise_resume(promise)
+  return setmetatable({ promise = promise }, future_metatable)
 end
 
-function class:get(fn)
-  local result = assert(self.result)
-  self.result = nil
-  if result[1] then
-    return table.unpack(result, 2)
+function class.await(that)
+  local thread, is_main_thread = coroutine.running()
+  assert(not is_main_thread)
+  local promise = assert(class.map[thread])
+
+  if D.instanceof(that, D.window.Promise) then
+    that["then"](that, function (...)
+      promise:set(true, ...)
+    end):catch(function (...)
+      that:set(false, ...)
+    end)
   else
-    (fn or error)(result[2])
+    that(promise)
   end
-end
 
-function class.delay(fn)
-  local queue = class.queue
-  local max = queue.max + 1
-  queue[max] = fn
-  queue.max = max
+  promise.status = "suspended"
+  local result = table.pack(coroutine.yield())
+  if result[1] then
+    return table.unpack(result, 2, result.n)
+  else
+    error(result[2])
+  end
 end
 
 function class.dispatch()
@@ -118,6 +132,10 @@ function class.dispatch()
     queue.min = 1
     queue.max = 0
   end
+end
+
+function class.export()
+  return class, class.await
 end
 
 return setmetatable(class, {

@@ -55,9 +55,9 @@ local future = async(function ()
   FS:mount(D.window.IDBFS, {}, "/save")
 
   print "sync true"
-  await(function (self)
+  await(function (promise)
     FS:syncfs(true, function (e)
-      self:resume(D.is_falsy(e), e)
+      promise:set(D.is_falsy(e), e)
     end)
   end)
 
@@ -89,9 +89,9 @@ local future = async(function ()
   assert(out:close())
 
   print "sync"
-  await(function (self)
+  await(function (promise)
     FS:syncfs(function (e)
-      self:resume(D.is_falsy(e), e)
+      promise:set(D.is_falsy(e), e)
     end)
   end)
 

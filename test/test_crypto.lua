@@ -36,7 +36,7 @@ local function import_key(secret)
   return subtle:importKey("raw", secret, { name = "HMAC", hash = { name = "SHA-256" } }, false, D.array { "sign" })
 end
 
-local future = async(function (self)
+local future = async(function ()
   print(crypto:randomUUID())
 
   local buffer = await(subtle:digest("SHA-256", D.slice "foobarbaz"))

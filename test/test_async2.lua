@@ -22,18 +22,18 @@ local await = async.await
 local window = D.window
 local navigator = window.navigator
 
-local future = async(function (self)
+local future = async(function ()
   local devices = await(navigator.mediaDevices:enumerateDevices())
   devices:forEach(function (device)
     io.write(("kind=%s, label=%s, deviceId=%s\n"):format(device.kind, device.label, device.deviceId))
   end)
 
-  local result = await(function (self)
+  local result = await(function (promise)
     local result = window:prompt()
     if result == D.null then
-      self:resume(true)
+      promise:set(true)
     else
-      self:resume(true, result)
+      promise:set(true, result)
     end
   end)
   if result then
@@ -45,7 +45,7 @@ local future = async(function (self)
   print "finished"
 end)
 
--- await(function (self) self:resume(true) end)
+-- await(function (promise) promise:set(true) end)
 
 while true do
   if future and future:is_ready() then

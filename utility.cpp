@@ -24,6 +24,9 @@
 
 namespace dromozoa {
   namespace {
+    // TODO js_pushができない型を与えられたときの挙動を検討する
+    // instanceofはjs_pushに失敗したらfalseを返すべき
+
     void impl_new(lua_State* L) {
       auto top = lua_gettop(L);
 

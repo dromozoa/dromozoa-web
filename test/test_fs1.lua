@@ -65,21 +65,26 @@ local future = async(function (self)
   readdir("/", ul)
   document.body:append(ul)
 
-  local data = os.date "%Y-%m-%d %H:%M:%S"
+  local counter = 0
 
+  print "read test.txt"
   local path = "/save/test.txt"
   local handle, result = io.open(path)
   if handle then
     local content = handle:read "*a"
     print(content)
     handle:close()
+    local n = content:match "^(%d+)\n"
+    if n then
+      counter = tonumber(n) + 1
+    end
   else
     io.stderr:write(("cannot open %s: %s\n"):format(path, result))
   end
 
   print "write test.txt"
   local out = assert(io.open("/save/test.txt", "w"))
-  out:write(data)
+  out:write(counter, "\n", os.date "%Y-%m-%d %H:%M:%S", "\n")
   assert(out:close())
 
   print "sync"

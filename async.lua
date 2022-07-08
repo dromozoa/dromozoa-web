@@ -22,7 +22,10 @@
 local D = require "dromozoa.web"
 
 local class = {
-  tasks = {};
+  queue = {
+    min = 1;
+    max = 0;
+  };
 }
 
 local metatable = {
@@ -41,27 +44,27 @@ local function new(fn)
   return self
 end
 
-function class:resume(...)
-  local args = table.pack(...)
-
-  local fn = function ()
-    local thread = assert(self.thread)
-    self.status = "running"
-    local result = table.pack(coroutine.resume(thread, table.unpack(args, 1, args.n)))
-    if coroutine.status(thread) == "dead" then
-      self.status = "ready"
-      self.thread = nil
-      self.result = result
-    else
-      assert(table.unpack(result, 1, result.n))
-    end
-  end
-
-  local thread = assert(self.thread)
-  if coroutine.status(thread) == "suspended" then
-    fn()
+local function resume(self, ...)
+  local thread = self.thread
+  self.status = "running"
+  local result = table.pack(coroutine.resume(thread, ...))
+  if coroutine.status(thread) == "dead" then
+    self.status = "ready"
+    self.thread = nil
+    self.result = result
   else
-    class.push_task(fn)
+    assert(table.unpack(result, 1, result.n))
+  end
+end
+
+function class:resume(...)
+  if coroutine.status(self.thread) == "suspended" then
+    resume(self, ...)
+  else
+    local args = table.pack(...)
+    class.delay(function ()
+      resume(self, table.unpack(args, 1, args.n))
+    end)
   end
 end
 
@@ -102,18 +105,23 @@ function class:get(fn)
   end
 end
 
-function class.push_task(fn)
-  local tasks = class.tasks
-  tasks[#tasks + 1] = fn
+function class.delay(fn)
+  local queue = class.queue
+  local max = queue.max + 1
+  queue[max] = fn
+  queue.max = max
 end
 
-function class.process_tasks()
-  if #class.tasks > 0 then
-    local tasks = {}
-    tasks, class.tasks = class.tasks, tasks
-    for i = 1, #tasks do
-      tasks[i]()
-    end
+function class.dispatch()
+  local queue = class.queue
+  for i = queue.min, queue.max do
+    local fn = queue[i]
+    queue.min = i + 1
+    fn()
+  end
+  if queue.min > queue.max then
+    queue.min = 1
+    queue.max = 0
   end
 end
 

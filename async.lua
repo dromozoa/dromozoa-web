@@ -26,6 +26,7 @@ local class = {
     min = 1;
     max = 0;
   };
+  map = setmetatable({}, { __mode = "k" });
 }
 
 local metatable = {
@@ -34,12 +35,9 @@ local metatable = {
 }
 
 local function new(fn)
-  local self = setmetatable({
-    status = "initial";
-    thread = coroutine.create(function (self)
-      return fn(self)
-    end);
-  }, metatable)
+  local thread = coroutine.create(function (self) return fn(self) end)
+  local self = setmetatable({ status = "initial"; thread = thread; }, metatable)
+  class.map[thread] = self
   self:resume(self)
   return self
 end
@@ -52,6 +50,7 @@ local function resume(self, ...)
     self.status = "ready"
     self.thread = nil
     self.result = result
+    class.map[thread] = nil
   else
     assert(table.unpack(result, 1, result.n))
   end
@@ -89,6 +88,21 @@ function class:await(that)
   else
     error(result[2])
   end
+end
+
+function class.await2(that)
+  local thread, is_main_thread = coroutine.running()
+  assert(not is_main_thread)
+  local self = assert(class.map[thread])
+  return self:await(that)
+end
+
+function class.map_size()
+  local n = 0
+  for _ in pairs(class.map) do
+    n = n + 1
+  end
+  return n
 end
 
 function class:is_ready()

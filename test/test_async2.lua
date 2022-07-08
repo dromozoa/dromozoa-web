@@ -17,17 +17,20 @@
 
 local D = require "dromozoa.web"
 local async = require "dromozoa.web.async"
+local await = async.await2
 
 local window = D.window
 local navigator = window.navigator
 
+print("async map size", async.map_size())
+
 local future = async(function (self)
-  local devices = self:await(navigator.mediaDevices:enumerateDevices())
+  local devices = await(navigator.mediaDevices:enumerateDevices())
   devices:forEach(function (device)
     io.write(("kind=%s, label=%s, deviceId=%s\n"):format(device.kind, device.label, device.deviceId))
   end)
 
-  local result = self:await(function (self)
+  local result = await(function (self)
     local result = window:prompt()
     if result == D.null then
       self:resume(true)
@@ -44,10 +47,15 @@ local future = async(function (self)
   print "finished"
 end)
 
+print("async map size", async.map_size())
+
+-- await(function (self) self:resume(true) end)
+
 while true do
   if future and future:is_ready() then
     future:get()
     future = nil
+    print("async map size", async.map_size())
   end
   coroutine.yield()
 end

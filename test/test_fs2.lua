@@ -54,7 +54,5 @@ while true do
     future:get()
     future = nil
   end
-
-  assert(D.get_error_queue())
   coroutine.yield()
 end

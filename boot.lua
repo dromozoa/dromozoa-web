@@ -47,11 +47,14 @@ end)
 local thread
 
 return function ()
+  assert(D.get_error_queue())
   async.dispatch()
 
-  if future and future:is_ready() then
-    thread = future:get()
-    future = nil
+  if future then
+    if future:is_ready() then
+      thread = future:get()
+      future = nil
+    end
   end
 
   if thread then

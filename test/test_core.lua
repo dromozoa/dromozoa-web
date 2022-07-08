@@ -17,15 +17,16 @@
 
 local D = require "dromozoa.web"
 
-print(D.get_device_pixel_ratio())
-print(D.get_window_title())
+print("device_pixel_ratio", D.get_device_pixel_ratio())
+print("window_title", D.get_window_title())
 D.set_window_title "タイトル変更"
-print(D.get_screen_size())
+print("window_title", D.get_window_title())
+print("screen_size", D.get_screen_size())
 
 local data = {}
-local n = 90
+local n = 100
 
-print "FPSを計算中"
+print "FPSを計測中"
 
 for i = 1, n + 1 do
   data[i] = D.get_now()

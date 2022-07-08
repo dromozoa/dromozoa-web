@@ -22,8 +22,6 @@
 #include "lua.hpp"
 #include "utility.hpp"
 
-#include <iostream>
-
 namespace dromozoa {
   namespace {
     void impl_new(lua_State* L) {

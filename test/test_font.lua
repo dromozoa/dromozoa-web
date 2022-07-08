@@ -17,20 +17,21 @@
 
 local D = require "dromozoa.web"
 local async = require "dromozoa.web.async"
+local await = async.await
 
 local window = D.window
 local document = window.document
 
-local future = async(function (self)
+local future = async(function ()
   local link = document:createElement "link"
     :setAttribute("href", "https://fonts.googleapis.com/css2?family=BIZ+UDPMincho&display=swap")
     :setAttribute("rel", "stylesheet")
-  local ev = self:await(function (self)
+  local ev = await(function (promise)
     link:addEventListener("load", function (ev)
-      self:resume(true, ev)
+      promise:set(true, ev)
     end)
     link:addEventListener("error", function (ev)
-      self:resume(false, ev)
+      promise:set(false, ev)
     end)
     document.head:append(link)
   end)
@@ -51,7 +52,5 @@ while true do
     future:get()
     future = nil
   end
-
-  assert(D.get_error_queue())
   coroutine.yield()
 end

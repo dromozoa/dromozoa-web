@@ -16,42 +16,42 @@
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 local D = require "dromozoa.web"
-local async = require "dromozoa.web.async"
-local await = async.await
+local async, await = require "dromozoa.web.async" .export()
 
 local window = D.window
 
-local v = 0
-async.delay(function ()
-  print(v)
-  assert(v == 1)
-  v = 2
+local f1 = async(function ()
+  print "f1 started"
+  for i = 1, 10 do
+    print("f1", i)
+    await(function (promise) window:setTimeout(function () promise:set(true) end, 200) end)
+  end
+  print "f1 finished"
+  return "f1"
 end)
-print(v)
-assert(v == 0)
-v = 1
+
+local f2 = async(function ()
+  print "f2 started"
+  for i = 1, 9 do
+    print("f2", i)
+    await(function (promise) window:setTimeout(function () promise:set(true) end, 200) end)
+  end
+  print "f2 finished"
+  return "f2"
+end)
 
 local future = async(function ()
-  print("delay", D.get_now())
-  await(function (promise)
-    promise:set(true)
-  end)
-  print("delay", D.get_now())
-
-  print("setTimeout", D.get_now())
-  await(function (promise)
-    window:setTimeout(function ()
-      promise:set(true)
-    end, 1000)
-  end)
-  print("setTimeout", D.get_now())
-
-  print "finished"
+  print("AAA", f1)
+  local r1 = await(f1)
+  print("BBB", f2)
+  local r2 = await(f2)
+  print "CCC"
+  return r1 .. r2
 end)
 
 while true do
   if future and future:is_ready() then
-    future:get()
+    print(future:get())
     future = nil
   end
   coroutine.yield()

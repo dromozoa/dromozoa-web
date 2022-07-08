@@ -1,0 +1,11 @@
+[
+  {
+    "AllowedHeaders": ["*"],
+    "AllowedMethods": ["GET", "PUT", "POST", "DELETE", "HEAD"],
+    "AllowedOrigins": [
+      "http://localhost",
+      "https://*.dromozoa.com/"
+    ],
+    "ExposeHeaders": []
+  }
+]

@@ -17,13 +17,14 @@
 
 local D = require "dromozoa.web"
 local async = require "dromozoa.web.async"
+local await = async.await
 
 local window = D.window
 local document = window.document
 
-local future = async(function (self)
-  local v = self:await(function (self)
-    self:resume(true, D.new(window.Number, 42))
+local future = async(function ()
+  local v = await(function (promise)
+    promise:set(true, D.new(window.Number, 42))
   end)
 
   assert(v ~= 42)
@@ -35,8 +36,8 @@ local future = async(function (self)
   assert(not D.instanceof(v, window.Promise))
 
   local n = 0
-  local v = self:await(function (self)
-    self:resume(true, D.ref(function (ev)
+  local v = await(function (promise)
+    promise:set(true, D.ref(function (ev)
       n = n + 1
       print("event", n)
     end))
@@ -104,7 +105,5 @@ while true do
     future:get()
     future = nil
   end
-
-  assert(D.get_error_queue())
   coroutine.yield()
 end

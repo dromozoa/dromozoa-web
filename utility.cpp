@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <cstddef>
 #include "common.hpp"
 #include "js_asm.hpp"
 #include "js_push.hpp"
@@ -23,6 +24,9 @@
 
 namespace dromozoa {
   namespace {
+    // TODO js_pushができない型を与えられたときの挙動を検討する
+    // instanceofはjs_pushに失敗したらfalseを返すべき
+
     void impl_new(lua_State* L) {
       auto top = lua_gettop(L);
 
@@ -74,6 +78,12 @@ namespace dromozoa {
       js_push(L, 1);
       DROMOZOA_JS_ASM(D.push($0, !D.stack.pop()), L);
     }
+
+    void impl_slice(lua_State* L) {
+      std::size_t size = 0;
+      const auto* data = luaL_checklstring(L, 1, &size);
+      DROMOZOA_JS_ASM(D.push($0, HEAPU8.slice($1, $2)), L, data, data + size);
+    }
   }
 
   void initialize_utility(lua_State* L) {
@@ -83,5 +93,6 @@ namespace dromozoa {
     set_field(L, -1, "instanceof", function<impl_instanceof>());
     set_field(L, -1, "is_truthy", function<impl_is_truthy>());
     set_field(L, -1, "is_falsy", function<impl_is_falsy>());
+    set_field(L, -1, "slice", function<impl_slice>());
   }
 }

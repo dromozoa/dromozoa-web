@@ -20,9 +20,9 @@
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 local D = require "dromozoa.web"
-local async = require "dromozoa.web.async"
+local async, await = require "dromozoa.web.async" .export()
 
-local future = async(function (self)
+local future = async(function ()
   local window = D.window
   local document = window.document
 
@@ -35,23 +35,26 @@ local future = async(function (self)
     filename = "main.lua"
   end
 
-  local response = self:await(window:fetch(filename, { cache = "no-store" }))
+  local response = await(window:fetch(filename, { cache = "no-store" }))
   if not response.ok then
     error(("cannot fetch %s: %d %s"):format(filename, response.status, response.statusText))
   end
 
-  local code = self:await(response:text())
+  local code = await(response:text())
   return coroutine.create(assert(load(code, "@" .. filename)))
 end)
 
 local thread
 
 return function ()
+  assert(D.get_error_queue())
   async.dispatch()
 
-  if future and future:is_ready() then
-    thread = future:get()
-    future = nil
+  if future then
+    if future:is_ready() then
+      thread = future:get()
+      future = nil
+    end
   end
 
   if thread then

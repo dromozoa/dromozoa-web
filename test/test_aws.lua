@@ -108,15 +108,15 @@ local future = async(function ()
   local sig = hmac_sha256(key, D.slice(string_to_sign))
   print(to_hex_string(sig))
 
+  local authorization = ("AWS4-HMAC-SHA256 Credential=%s/%s/%s/%s/aws4_request,SignedHeaders=%s,Signature=%s"):format(
+    access_key, date, region, service, table.concat(signed_headers, ";"), to_hex_string(sig))
+  print "AWS4-HMAC-SHA256 Credential=AKIAIOSFODNN7EXAMPLE/20130524/us-east-1/s3/aws4_request,SignedHeaders=host;range;x-amz-content-sha256;x-amz-date,Signature=f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41"
+  assert(authorization == "AWS4-HMAC-SHA256 Credential=AKIAIOSFODNN7EXAMPLE/20130524/us-east-1/s3/aws4_request,SignedHeaders=host;range;x-amz-content-sha256;x-amz-date,Signature=f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41")
+
   --[[
   local now = os.time()
   local datetime = os.date("!%Y%m%dT%H%M%SZ", now)
   local date = os.date("!%Y%m%d", now)
-
-  local v = get_signature_key("wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY", "20120215", "us-east-1", "iam")
-  print(to_hex_string(v))
-
-  print(to_hex_string(sha256 ""))
   ]]
 
   print "finished"

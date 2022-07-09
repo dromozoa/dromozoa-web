@@ -20,6 +20,7 @@
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 local D = require "dromozoa.web"
+local window = D.window
 
 local delay_queue = { min = 1, max = 0 }
 
@@ -128,7 +129,7 @@ function class.await(that)
 
   if getmetatable(that) == future_metatable then
     promise_chain(future_get_promise(that), promise)
-  elseif D.instanceof(that, D.window.Promise) then
+  elseif D.instanceof(that, window.Promise) then
     that["then"](that, function (...)
       promise:set(true, ...)
     end):catch(function (...)
@@ -150,7 +151,7 @@ function class.require(name)
   if not package.loaded[name] and not package.preload[name] then
     assert(not name:find "[^%w%.%_]")
     local filename = name:gsub("%.", "/") .. ".lua"
-    local response = class.await(D.window:fetch(filename, { cache = "no-store" }))
+    local response = class.await(window:fetch(filename, { cache = "no-store" }))
     if not response.ok then
       error(("cannot fetch %s: %d %s"):format(filename, response.status, response.statusText))
     end

@@ -22,7 +22,7 @@ local aws
 local future = async(function ()
   print "started"
   aws = async.require "dromozoa.web.aws"
-  print(aws, aws())
+  print(aws)
   print "finished"
 end)
 

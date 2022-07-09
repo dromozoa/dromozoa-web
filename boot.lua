@@ -31,7 +31,6 @@ local future = async(function ()
   if not filename then
     filename = "main.lua"
   end
-
   local response = await(G:fetch(filename, { cache = "no-store" }))
   if not response.ok then
     error(("cannot fetch %s: %d %s"):format(filename, response.status, response.statusText))

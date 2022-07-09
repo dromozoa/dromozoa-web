@@ -15,25 +15,19 @@
 -- You should have received a copy of the GNU General Public License
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-local D = require "dromozoa.web"
-local async = require "dromozoa.web.async"
-local await = async.await
+local D, G = require "dromozoa.web" .import "global"
+local async, await = require "dromozoa.web.async" .import "await"
 
 local future = async(function ()
-  local window = D.window
-  local document = window.document
-
   local filename = "main.txt"
-  local response = await(window:fetch(filename, { cache = "no-store" }))
-
+  local response = await(G:fetch(filename, { cache = "no-store" }))
   if not response.ok then
     error(("cannot fetch %s: %d %s"):format(filename, response.status, response.statusText))
   end
-
-  local text = await(response:text())
-
+  local data = await(response:text())
+  local document = G.document
   local ul = document:createElement "ul"
-  for filename in text:gmatch "(.-)\n" do
+  for filename in data:gmatch "(.-)\n" do
     ul:append(document:createElement "li"
       :append(document:createElement "a"
         :setAttribute("href", "?dromozoa_web_main=" .. filename)
@@ -43,12 +37,11 @@ local future = async(function ()
 end)
 
 while true do
-  if future and future:is_ready() then
-    warn "@on"
-    future:get(function (e) warn(tostring(e)) end)
-    future = nil
+  if future then
+    if future:is_ready() then
+      future:get()
+      future = nil
+    end
   end
-
-  assert(D.get_error_queue())
   coroutine.yield()
 end

@@ -15,17 +15,16 @@
 -- You should have received a copy of the GNU General Public License
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-local D = require "dromozoa.web"
-local window = D.window
-local subtle = window.crypto.subtle
+local D, G = require "dromozoa.web" .import "global"
 local async, await = require "dromozoa.web.async" .import "await"
+local subtle = G.crypto.subtle
 
 local class = {}
 
 local function array_buffer(that)
   if type(that) == "string" then
     return D.slice(that)
-  elseif D.instanceof(that, window.Blob) then
+  elseif D.instanceof(that, G.Blob) then
     return await(that:arrayBuffer())
   else
     return that
@@ -33,7 +32,7 @@ local function array_buffer(that)
 end
 
 function class.hex(data)
-  local source = D.new(window.Uint8Array, data)
+  local source = D.new(G.Uint8Array, data)
   local buffer = {}
   for i = 1, source.length do
     buffer[i] = ("%02x"):format(source[i - 1])
@@ -54,9 +53,9 @@ function class.get_signature_key(secret_key, date, region, service)
 end
 
 function class.sign(source)
-  -- window.console:log(source)
-  local url = D.new(window.URL, source.url)
-  window.console:log(url)
+  -- G.console:log(source)
+  local url = D.new(G.URL, source.url)
+  G.console:log(url)
 
   local iterator = source.headers:entries()
   local entry = iterator:next()

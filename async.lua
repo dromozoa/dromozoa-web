@@ -38,7 +38,7 @@ local promise_metatable = { __index = promise, __name = "dromozoa.web.async.prom
 local promise_map = setmetatable({}, { __mode = "k" })
 
 local function promise_resume(self, ...)
-  local thread = assert(self.thread)
+  local thread = self.thread
   local result = table.pack(coroutine.resume(thread, ...))
   if coroutine.status(thread) == "dead" then
     self.thread = nil
@@ -74,7 +74,6 @@ local function promise_get(self)
 end
 
 local function promise_chain(self, chain)
-  assert(not self.chain)
   self.chain = chain
   if promise_is_ready(self) then
     delay(function () promise_resume(chain, unpack(promise_get(self))) end)
@@ -85,8 +84,8 @@ function promise:set(...)
   if coroutine.status(self.thread) == "suspended" then
     promise_resume(self, ...)
   else
-    local args = table.pack(...)
-    delay(function () promise_resume(self, unpack(args)) end)
+    local buffer = table.pack(...)
+    delay(function () promise_resume(self, unpack(buffer)) end)
   end
 end
 
@@ -100,10 +99,6 @@ end
 local function future_get_promise(self)
   return self[1]
 end
-
--- function future:is_valid()
---   return self[1].result
--- end
 
 function future:is_ready()
   return promise_is_ready(future_get_promise(self))
@@ -120,14 +115,16 @@ end
 
 local class = { delay = delay }
 
-function class.import(list)
-  return class, class.await
+function class.import(...)
+  local buffer = table.pack(...)
+  for i = 1, buffer.n do
+    buffer[i] = class[buffer[i]]
+  end
+  return class, unpack(buffer)
 end
 
 function class.await(that)
-  local thread, is_main_thread = coroutine.running()
-  assert(not is_main_thread)
-  local promise = assert(promise_map[thread])
+  local promise = assert(promise_map[coroutine.running()])
 
   if getmetatable(that) == future_metatable then
     promise_chain(future_get_promise(that), promise)
@@ -150,9 +147,9 @@ function class.await(that)
 end
 
 function class.dispatch()
-  for i = delay_queue.min, delay_queue.max do
-    local fn = delay_queue[i]
-    delay_queue.min = i + 1
+  for min = delay_queue.min, delay_queue.max do
+    local fn = delay_queue[min]
+    delay_queue.min = min + 1
     fn()
   end
   if delay_queue.min > delay_queue.max then

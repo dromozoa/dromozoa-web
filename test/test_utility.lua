@@ -109,6 +109,21 @@ local future = async(function ()
   assert(D.is_truthy(v))
   assert(not D.is_falsy(v))
 
+  local v = D.new(G.Array, 17, undefined, 42)
+  local a, b, c = D.unpack(v)
+  assert(a == 17)
+  assert(b == nil)
+  assert(c == 42)
+
+  local buffer = {}
+  for _, item in D.each(v:entries()) do
+    local k, v = D.unpack(item)
+    buffer[k + 1] = v
+  end
+  assert(buffer[1] == 17)
+  assert(buffer[2] == nil)
+  assert(buffer[3] == 42)
+
   print "finished"
 end)
 

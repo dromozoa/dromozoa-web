@@ -17,6 +17,7 @@
 
 local D, G = require "dromozoa.web" .import "global"
 local async, await = require "dromozoa.web.async" .import "await"
+
 local subtle = G.crypto.subtle
 
 local class = {}
@@ -57,14 +58,10 @@ function class.sign(source)
   local url = D.new(G.URL, source.url)
   G.console:log(url)
 
-  local iterator = source.headers:entries()
-  local entry = iterator:next()
-  while not entry.done do
-    local kv = entry.value
-    print(kv[0], kv[1])
-    entry = iterator:next()
+  for _, item in D.each(source.headers:entries()) do
+    local k, v = D.unpack(item)
+    print(k, v)
   end
-
 end
 
 return class

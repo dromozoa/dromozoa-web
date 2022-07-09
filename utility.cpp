@@ -96,6 +96,34 @@ namespace dromozoa {
       const auto* data = luaL_checklstring(L, 1, &size);
       DROMOZOA_JS_ASM(D.push($0, HEAPU8.slice($1, $2)), L, data, data + size);
     }
+
+    void impl_unpack(lua_State* L) {
+      auto self = check_udata<object>(L, 1);
+      DROMOZOA_JS_ASM({
+        for (v of D.objs[$1]) {
+          D.push($0, v);
+        }
+      }, L, self->get());
+    }
+
+    void impl_each_iterator(lua_State* L) {
+      auto self = check_udata<object>(L, 1);
+      DROMOZOA_JS_ASM({
+        const entry = D.objs[$1].next();
+        if (entry.done) {
+          D.push($0, undefined);
+        } else {
+          D.push($0, entry);
+          D.push($0, entry.value);
+        }
+      }, L, self->get());
+    }
+
+    void impl_each(lua_State* L) {
+      push(L, function<impl_each_iterator>());
+      lua_pushvalue(L, 1);
+      lua_pushnil(L);
+    }
   }
 
   void initialize_utility(lua_State* L) {
@@ -109,5 +137,7 @@ namespace dromozoa {
     set_field(L, -1, "is_truthy", function<impl_is_truthy>());
     set_field(L, -1, "is_falsy", function<impl_is_falsy>());
     set_field(L, -1, "slice", function<impl_slice>());
+    set_field(L, -1, "unpack", function<impl_unpack>());
+    set_field(L, -1, "each", function<impl_each>());
   }
 }

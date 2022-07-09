@@ -97,6 +97,20 @@ local future = async(function ()
   assert(not D.is_falsy "foo")
   assert(not D.is_falsy(1/0)) -- inf
 
+  local v = coroutine.running()
+  assert(D.typeof(v) == nil)
+  assert(not D.instanceof(v, window.Object))
+  assert(D.is_truthy(v))
+  assert(not D.is_falsy(v))
+
+  local v = { number = 42, thread = coroutine.running() }
+  assert(D.ref(v).number == 42)
+  assert(D.ref(v).thread == nil)
+  assert(D.typeof(v) == "object")
+  assert(D.instanceof(v, window.Object))
+  assert(D.is_truthy(v))
+  assert(not D.is_falsy(v))
+
   print "finished"
 end)
 

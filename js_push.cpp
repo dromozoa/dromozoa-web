@@ -48,76 +48,96 @@ namespace dromozoa {
         D.stack.push(v);
       }, L, index);
     }
+
+    bool js_push_impl(lua_State* L, int index, bool not_throw_unexpected) {
+      switch (lua_type(L, index)) {
+        case LUA_TNONE:
+        case LUA_TNIL:
+          DROMOZOA_JS_ASM(D.stack.push(undefined));
+          break;
+        case LUA_TNUMBER:
+          DROMOZOA_JS_ASM(D.stack.push($0), lua_tonumber(L, index));
+          break;
+        case LUA_TBOOLEAN:
+          DROMOZOA_JS_ASM(D.stack.push(!!$0), lua_toboolean(L, index));
+          break;
+        case LUA_TSTRING:
+          DROMOZOA_JS_ASM(D.stack.push(UTF8ToString($0)), lua_tostring(L, index));
+          break;
+        case LUA_TTABLE:
+          {
+            index = lua_absindex(L, index);
+
+            double origin = is_array(L, index);
+            if (origin) {
+              DROMOZOA_JS_ASM(D.stack.push([]));
+            } else {
+              DROMOZOA_JS_ASM(D.stack.push({}));
+            }
+
+            lua_pushnil(L);
+            while (lua_next(L, index)) {
+              switch (lua_type(L, -2)) {
+                case LUA_TNUMBER:
+                  DROMOZOA_JS_ASM(D.stack.push($0), lua_tonumber(L, -2) - origin);
+                  break;
+                case LUA_TSTRING:
+                  DROMOZOA_JS_ASM(D.stack.push(UTF8ToString($0)), lua_tostring(L, -2));
+                  break;
+                default:
+                  lua_pop(L, 1);
+                  continue;
+              }
+              if (js_push_impl(L, -1, true)) {
+                DROMOZOA_JS_ASM({
+                  const v = D.stack.pop();
+                  const k = D.stack.pop();
+                  D.stack[D.stack.length - 1][k] = v;
+                });
+              } else {
+                DROMOZOA_JS_ASM(D.stack.pop());
+              }
+              lua_pop(L, 1);
+            }
+          }
+          break;
+        case LUA_TFUNCTION:
+          js_push_ref(L, index);
+          break;
+        case LUA_TUSERDATA:
+          if (auto* that = test_udata<object>(L, index)) {
+            DROMOZOA_JS_ASM(D.stack.push(D.objs[$0]), that->get());
+          } else {
+            js_push_ref(L, index);
+          }
+          break;
+        case LUA_TLIGHTUSERDATA:
+          if (!lua_touserdata(L, index)) {
+            DROMOZOA_JS_ASM(D.stack.push(null));
+          } else {
+            if (not_throw_unexpected) {
+              return false;
+            } else {
+              throw DROMOZOA_LOGIC_ERROR("unexpected lightuserdata");
+            }
+          }
+          break;
+        default:
+          if (not_throw_unexpected) {
+            return false;
+          } else {
+            throw DROMOZOA_LOGIC_ERROR("unexpected ", luaL_typename(L, index));
+          }
+      }
+      return true;
+    }
   }
 
   void js_push(lua_State* L, int index) {
-    switch (lua_type(L, index)) {
-      case LUA_TNONE:
-      case LUA_TNIL:
-        DROMOZOA_JS_ASM(D.stack.push(undefined));
-        break;
-      case LUA_TNUMBER:
-        DROMOZOA_JS_ASM(D.stack.push($0), lua_tonumber(L, index));
-        break;
-      case LUA_TBOOLEAN:
-        DROMOZOA_JS_ASM(D.stack.push(!!$0), lua_toboolean(L, index));
-        break;
-      case LUA_TSTRING:
-        DROMOZOA_JS_ASM(D.stack.push(UTF8ToString($0)), lua_tostring(L, index));
-        break;
-      case LUA_TTABLE:
-        {
-          index = lua_absindex(L, index);
+    js_push_impl(L, index, false);
+  }
 
-          double origin = is_array(L, index);
-          if (origin) {
-            DROMOZOA_JS_ASM(D.stack.push([]));
-          } else {
-            DROMOZOA_JS_ASM(D.stack.push({}));
-          }
-
-          lua_pushnil(L);
-          while (lua_next(L, index)) {
-            switch (lua_type(L, -2)) {
-              case LUA_TNUMBER:
-                DROMOZOA_JS_ASM(D.stack.push($0), lua_tonumber(L, -2) - origin);
-                break;
-              case LUA_TSTRING:
-                DROMOZOA_JS_ASM(D.stack.push(UTF8ToString($0)), lua_tostring(L, -2));
-                break;
-              default:
-                lua_pop(L, 1);
-                continue;
-            }
-            js_push(L, -1);
-            DROMOZOA_JS_ASM({
-              const v = D.stack.pop();
-              const k = D.stack.pop();
-              D.stack[D.stack.length - 1][k] = v;
-            });
-            lua_pop(L, 1);
-          }
-        }
-        break;
-      case LUA_TFUNCTION:
-        js_push_ref(L, index);
-        break;
-      case LUA_TUSERDATA:
-        if (auto* that = test_udata<object>(L, index)) {
-          DROMOZOA_JS_ASM(D.stack.push(D.objs[$0]), that->get());
-        } else {
-          js_push_ref(L, index);
-        }
-        break;
-      case LUA_TLIGHTUSERDATA:
-        if (!lua_touserdata(L, index)) {
-          DROMOZOA_JS_ASM(D.stack.push(null));
-        } else {
-          throw DROMOZOA_LOGIC_ERROR("unexpected lightuserdata");
-        }
-        break;
-      default:
-        throw DROMOZOA_LOGIC_ERROR("unexpected ", luaL_typename(L, index));
-    }
+  bool js_push_not_throw_unexpcted(lua_State* L, int index) {
+    return js_push_impl(L, index, true);
   }
 }

@@ -20,7 +20,7 @@
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 local D = require "dromozoa.web"
-local async, await, dispatch = require "dromozoa.web.async" .import("await", "dispatch")
+local async, await = require "dromozoa.web.async" .import "await"
 
 local future = async(function ()
   local window = D.window
@@ -47,7 +47,7 @@ local thread
 
 return function ()
   assert(D.get_error_queue())
-  dispatch()
+  async.dispatch()
 
   if future then
     if future:is_ready() then

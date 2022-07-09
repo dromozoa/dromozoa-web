@@ -119,6 +119,32 @@ local future = async(function ()
   local date = os.date("!%Y%m%d", now)
   ]]
 
+  --[[
+    url
+    method
+    headers
+    body
+
+    url = "..."
+    相対URLかもしれない
+
+    method
+
+    headers = {
+      key = value;
+       :
+    }
+
+    body = string or blob
+
+
+    fetch(url, {
+      method = ...,
+      headers = ...,
+      body = ...
+    })
+  ]]
+
   print "finished"
 end)
 

@@ -27,29 +27,6 @@ namespace dromozoa {
     // TODO js_pushができない型を与えられたときの挙動を検討する
     // instanceofはjs_pushに失敗したらfalseを返すべき
 
-    void impl_new(lua_State* L) {
-      auto top = lua_gettop(L);
-
-      js_push(L, 1);
-      DROMOZOA_JS_ASM({
-        D.cstr = D.stack.pop();
-        D.args = [];
-      });
-
-      for (auto i = 2; i <= top; ++i) {
-        js_push(L, i);
-        DROMOZOA_JS_ASM(D.args.push(D.stack.pop()));
-      }
-
-      DROMOZOA_JS_ASM({
-        const cstr = D.cstr;
-        const args = D.args;
-        D.cstr = undefined;
-        D.args = undefined;
-        D.push($0, new cstr(...args));
-      }, L);
-    }
-
     void impl_ref(lua_State* L) {
       js_push(L, 1);
       DROMOZOA_JS_ASM(D.push($0, D.stack.pop()), L);
@@ -87,7 +64,6 @@ namespace dromozoa {
   }
 
   void initialize_utility(lua_State* L) {
-    set_field(L, -1, "new", function<impl_new>());
     set_field(L, -1, "ref", function<impl_ref>());
     set_field(L, -1, "typeof", function<impl_typeof>());
     set_field(L, -1, "instanceof", function<impl_instanceof>());

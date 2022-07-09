@@ -90,6 +90,23 @@ namespace dromozoa {
       auto* self = check_udata<object>(L, 1);
       DROMOZOA_JS_ASM(D.push($0, D.objs[$1].toString()), L, self->get());
     }
+
+    void impl_new(lua_State* L) {
+      auto self = check_udata<object>(L, 1);
+      auto top = lua_gettop(L);
+
+      DROMOZOA_JS_ASM(D.args = []);
+      for (auto i = 2; i <= top; ++i) {
+        js_push(L, i);
+        DROMOZOA_JS_ASM(D.args.push(D.stack.pop()));
+      }
+
+      DROMOZOA_JS_ASM({
+        const args = D.args;
+        D.args = undefined;
+        D.push($0, new D.objs[$1](...args));
+      }, L, self->get());
+    }
   }
 
   void object::close() noexcept {
@@ -111,6 +128,8 @@ namespace dromozoa {
     set_field(L, -1, "__close", close_udata<object>);
     set_field(L, -1, "__gc", gc_udata<object>);
     lua_pop(L, 1);
+
+    set_field(L, -1, "new", function<impl_new>());
 
     DROMOZOA_JS_ASM(D.push($0, window), L);
     lua_setfield(L, -2, "window");

@@ -15,16 +15,14 @@
 -- You should have received a copy of the GNU General Public License
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-local D = require "dromozoa.web"
-local async, await = require "dromozoa.web.async" .import("await")
-
-local window = D.window
+local D, G = require "dromozoa.web" .import "global"
+local async, await = require "dromozoa.web.async" .import "await"
 
 local f1 = async(function ()
   print "f1 started"
   for i = 1, 10 do
     print("f1", i)
-    await(function (promise) window:setTimeout(function () promise:set(true) end, 200) end)
+    await(function (promise) G:setTimeout(function () promise:set(true) end, 200) end)
   end
   print "f1 finished"
   return "f1"
@@ -34,7 +32,7 @@ local f2 = async(function ()
   print "f2 started"
   for i = 1, 9 do
     print("f2", i)
-    await(function (promise) window:setTimeout(function () promise:set(true) end, 200) end)
+    await(function (promise) G:setTimeout(function () promise:set(true) end, 200) end)
   end
   print "f2 finished"
   return "f2"

@@ -20,13 +20,12 @@
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 local D = require "dromozoa.web"
-local async, await, dispatch = require "dromozoa.web.async" .import("await", "dispatch")
+local async, await = require "dromozoa.web.async" .import "await"
 
 local future = async(function ()
   local window = D.window
-  local document = window.document
 
-  local query = D.new(window.URLSearchParams, document.location.search)
+  local query = D.new(window.URLSearchParams, window.document.location.search)
   local filename = query:get "dromozoa_web_main"
   if D.is_falsy(filename) then
     filename = os.getenv "dromozoa_web_main"
@@ -39,7 +38,6 @@ local future = async(function ()
   if not response.ok then
     error(("cannot fetch %s: %d %s"):format(filename, response.status, response.statusText))
   end
-
   local code = await(response:text())
   return coroutine.create(assert(load(code, "@" .. filename)))
 end)
@@ -48,7 +46,7 @@ local thread
 
 return function ()
   assert(D.get_error_queue())
-  dispatch()
+  async.dispatch()
 
   if future then
     if future:is_ready() then

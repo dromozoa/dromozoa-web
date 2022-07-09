@@ -41,7 +41,7 @@ extern "C" {
 
   void luaopen_dromozoa_web_async(lua_State* L) {
     static constexpr char code[] =
-    #include "async.lua"
+    #include "dromozoa/web/async.lua"
     ;
 
     if (luaL_loadbuffer(L, code, std::strlen(code), "@dromozoa/web/async.lua") != LUA_OK) {

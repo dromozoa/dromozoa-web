@@ -27,7 +27,7 @@ end)
 
 while true do
   if future and future:is_ready() then
-    print(future:get())
+    future:get()
     future = nil
   end
   coroutine.yield()

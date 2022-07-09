@@ -113,9 +113,6 @@ namespace dromozoa {
     lua_pop(L, 1);
 
     DROMOZOA_JS_ASM(D.push($0, globalThis), L);
-    lua_setfield(L, -2, "window");
-
-    DROMOZOA_JS_ASM(D.push($0, globalThis), L);
     lua_setfield(L, -2, "global");
 
     set_field(L, -1, "null", nullptr);

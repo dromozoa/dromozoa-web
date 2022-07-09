@@ -146,14 +146,21 @@ function class.await(that)
   end
 end
 
--- function class.require(name)
---   if not package.loaded[name] and not package.preload[name] then
---     local code = ...
---     package.preload[name] = function ()
---     end
---   end
---   return require(name)
--- end
+function class.require(name)
+  if not package.loaded[name] and not package.preload[name] then
+    assert(not name:find "[^%w%.%_]")
+    local filename = name:gsub("%.", "/") .. ".lua"
+    local response = class.await(D.window:fetch(filename, { cache = "no-store" }))
+    if not response.ok then
+      error(("cannot fetch %s: %d %s"):format(filename, response.status, response.statusText))
+    end
+    local code = class.await(response:text())
+    package.preload[name] = function ()
+      return assert(load(code, "@" .. filename))()
+    end
+  end
+  return require(name)
+end
 
 function class.dispatch()
   for min = delay_queue.min, delay_queue.max do

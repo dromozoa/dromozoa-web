@@ -38,7 +38,6 @@ local future = async(function ()
   if not response.ok then
     error(("cannot fetch %s: %d %s"):format(filename, response.status, response.statusText))
   end
-
   local code = await(response:text())
   return coroutine.create(assert(load(code, "@" .. filename)))
 end)

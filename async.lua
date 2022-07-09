@@ -146,6 +146,15 @@ function class.await(that)
   end
 end
 
+-- function class.require(name)
+--   if not package.loaded[name] and not package.preload[name] then
+--     local code = ...
+--     package.preload[name] = function ()
+--     end
+--   end
+--   return require(name)
+-- end
+
 function class.dispatch()
   for min = delay_queue.min, delay_queue.max do
     local fn = delay_queue[min]

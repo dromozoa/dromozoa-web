@@ -24,9 +24,8 @@ local async, await, dispatch = require "dromozoa.web.async" .import("await", "di
 
 local future = async(function ()
   local window = D.window
-  local document = window.document
 
-  local query = D.new(window.URLSearchParams, document.location.search)
+  local query = D.new(window.URLSearchParams, window.document.location.search)
   local filename = query:get "dromozoa_web_main"
   if D.is_falsy(filename) then
     filename = os.getenv "dromozoa_web_main"

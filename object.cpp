@@ -69,7 +69,7 @@ namespace dromozoa {
       auto top = lua_gettop(L);
 
       DROMOZOA_JS_ASM(D.args = []);
-      for (auto i = 2; i <= top; ++i) {
+      for (int i = 2; i <= top; ++i) {
         js_push(L, i);
         DROMOZOA_JS_ASM(D.args.push(D.stack.pop()));
       }
@@ -112,8 +112,11 @@ namespace dromozoa {
     set_field(L, -1, "__gc", gc_udata<object>);
     lua_pop(L, 1);
 
-    DROMOZOA_JS_ASM(D.push($0, window), L);
+    DROMOZOA_JS_ASM(D.push($0, globalThis), L);
     lua_setfield(L, -2, "window");
+
+    DROMOZOA_JS_ASM(D.push($0, globalThis), L);
+    lua_setfield(L, -2, "global");
 
     set_field(L, -1, "null", nullptr);
   }

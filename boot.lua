@@ -19,13 +19,11 @@
 -- You should have received a copy of the GNU General Public License
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-local D = require "dromozoa.web"
+local D, G = require "dromozoa.web" .import "global"
 local async, await = require "dromozoa.web.async" .import "await"
 
 local future = async(function ()
-  local window = D.window
-
-  local query = D.new(window.URLSearchParams, window.document.location.search)
+  local query = D.new(G.URLSearchParams, G.document.location.search)
   local filename = query:get "dromozoa_web_main"
   if D.is_falsy(filename) then
     filename = os.getenv "dromozoa_web_main"
@@ -34,7 +32,7 @@ local future = async(function ()
     filename = "main.lua"
   end
 
-  local response = await(window:fetch(filename, { cache = "no-store" }))
+  local response = await(G:fetch(filename, { cache = "no-store" }))
   if not response.ok then
     error(("cannot fetch %s: %d %s"):format(filename, response.status, response.statusText))
   end

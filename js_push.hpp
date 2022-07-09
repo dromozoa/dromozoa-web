@@ -22,6 +22,7 @@
 
 namespace dromozoa {
   void js_push(lua_State*, int);
+  bool js_push_not_throw_unexpcted(lua_State*, int);
 }
 
 #endif

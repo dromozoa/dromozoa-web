@@ -20,34 +20,27 @@
 #include "js_asm.hpp"
 #include "js_push.hpp"
 #include "lua.hpp"
+#include "object.hpp"
+#include "udata.hpp"
 #include "utility.hpp"
 
 namespace dromozoa {
   namespace {
-    // TODO js_pushができない型を与えられたときの挙動を検討する
-    // instanceofはjs_pushに失敗したらfalseを返すべき
-
     void impl_new(lua_State* L) {
+      auto self = check_udata<object>(L, 1);
       auto top = lua_gettop(L);
 
-      js_push(L, 1);
-      DROMOZOA_JS_ASM({
-        D.cstr = D.stack.pop();
-        D.args = [];
-      });
-
+      DROMOZOA_JS_ASM(D.args = []);
       for (auto i = 2; i <= top; ++i) {
         js_push(L, i);
         DROMOZOA_JS_ASM(D.args.push(D.stack.pop()));
       }
 
       DROMOZOA_JS_ASM({
-        const cstr = D.cstr;
         const args = D.args;
-        D.cstr = undefined;
         D.args = undefined;
-        D.push($0, new cstr(...args));
-      }, L);
+        D.push($0, new D.objs[$1](...args));
+      }, L, self->get());
     }
 
     void impl_ref(lua_State* L) {
@@ -56,27 +49,36 @@ namespace dromozoa {
     }
 
     void impl_typeof(lua_State* L) {
-      js_push(L, 1);
-      DROMOZOA_JS_ASM(D.push($0, typeof D.stack.pop()), L);
+      if (js_push_not_throw_unexpcted(L, 1)) {
+        DROMOZOA_JS_ASM(D.push($0, typeof D.stack.pop()), L);
+      } else {
+        lua_pushnil(L);
+      }
     }
 
     void impl_instanceof(lua_State* L) {
-      js_push(L, 1);
-      js_push(L, 2);
-      DROMOZOA_JS_ASM({
-        const cstr = D.stack.pop();
-        D.push($0, D.stack.pop() instanceof cstr);
-      }, L);
+      auto* that = check_udata<object>(L, 2);
+      if (js_push_not_throw_unexpcted(L, 1)) {
+        DROMOZOA_JS_ASM(D.push($0, D.stack.pop() instanceof D.objs[$1]), L, that->get());
+      } else {
+        push(L, false);
+      }
     }
 
     void impl_is_truthy(lua_State* L) {
-      js_push(L, 1);
-      DROMOZOA_JS_ASM(D.push($0, !!D.stack.pop()), L);
+      if (js_push_not_throw_unexpcted(L, 1)) {
+        DROMOZOA_JS_ASM(D.push($0, !!D.stack.pop()), L);
+      } else {
+        push(L, true);
+      }
     }
 
     void impl_is_falsy(lua_State* L) {
-      js_push(L, 1);
-      DROMOZOA_JS_ASM(D.push($0, !D.stack.pop()), L);
+      if (js_push_not_throw_unexpcted(L, 1)) {
+        DROMOZOA_JS_ASM(D.push($0, !D.stack.pop()), L);
+      } else {
+        push(L, false);
+      }
     }
 
     void impl_slice(lua_State* L) {

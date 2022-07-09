@@ -16,7 +16,7 @@
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 local D = require "dromozoa.web"
-local async, await = require "dromozoa.web.async" .export()
+local async, await = require "dromozoa.web.async" .import("await")
 
 local window = D.window
 

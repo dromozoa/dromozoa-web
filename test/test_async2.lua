@@ -42,14 +42,16 @@ local future = async(function ()
     print "cancel"
   end
 
-  print "finished"
+  await(window:fetch "https://network-error/")
 end)
 
 -- await(function (promise) promise:set(true) end)
 
 while true do
   if future and future:is_ready() then
-    future:get()
+    local result, message = pcall(function () future:get() end)
+    print("finished", message)
+    assert(not result)
     future = nil
   end
   coroutine.yield()

@@ -37,25 +37,18 @@ local promise = {}
 local promise_metatable = { __index = promise, __name = "dromozoa.web.async.promise" }
 local promise_map = setmetatable({}, { __mode = "k" })
 
-local function promise_get(self)
-  local result = assert(self.result)
-  self.result = nil
-  return result
-end
-
 local function promise_resume(self, ...)
   local thread = self.thread
-  self.status = "running"
   local result = table.pack(coroutine.resume(thread, ...))
   if coroutine.status(thread) == "dead" then
-    self.status = "ready"
     self.thread = nil
-    self.result = result
     promise_map[thread] = nil
 
     local chain = self.chain
     if chain then
-      promise_resume(chain, unpack(promise_get(self)))
+      promise_resume(chain, unpack(result))
+    else
+      self.result = result
     end
   else
     assert(unpack(result))
@@ -64,16 +57,25 @@ end
 
 local function promise_new(fn)
   local thread = coroutine.create(function () return fn() end)
-  local self = setmetatable({ status = "initial", thread = thread }, promise_metatable)
+  local self = setmetatable({ thread = thread }, promise_metatable)
   promise_map[thread] = self
   promise_resume(self)
   return self
 end
 
+local function promise_is_ready(self)
+  return not self.thread
+end
+
+local function promise_get(self)
+  local result = assert(self.result)
+  self.result = nil
+  return result
+end
+
 local function promise_chain(self, chain)
-  assert(not self.chain)
   self.chain = chain
-  if self.status == "ready" then
+  if promise_is_ready(self) then
     delay(function () promise_resume(chain, unpack(promise_get(self))) end)
   end
 end
@@ -82,8 +84,8 @@ function promise:set(...)
   if coroutine.status(self.thread) == "suspended" then
     promise_resume(self, ...)
   else
-    local args = table.pack(...)
-    delay(function () promise_resume(self, unpack(args)) end)
+    local buffer = table.pack(...)
+    delay(function () promise_resume(self, unpack(buffer)) end)
   end
 end
 
@@ -94,12 +96,16 @@ local function future_new(promise)
   return setmetatable({ promise }, future_metatable)
 end
 
+local function future_get_promise(self)
+  return self[1]
+end
+
 function future:is_ready()
-  return self[1].status == "ready"
+  return promise_is_ready(future_get_promise(self))
 end
 
 function future:get()
-  local result = promise_get(self[1])
+  local result = promise_get(future_get_promise(self))
   if result[1] then
     return table.unpack(result, 2, result.n)
   else
@@ -109,46 +115,47 @@ end
 
 local class = { delay = delay }
 
+function class.import(...)
+  local buffer = table.pack(...)
+  for i = 1, buffer.n do
+    buffer[i] = class[buffer[i]]
+  end
+  return class, unpack(buffer)
+end
+
 function class.await(that)
-  local thread, is_main_thread = coroutine.running()
-  assert(not is_main_thread)
-  local promise = assert(promise_map[thread])
+  local promise = assert(promise_map[coroutine.running()])
 
   if getmetatable(that) == future_metatable then
-    promise_chain(that[1], promise)
+    promise_chain(future_get_promise(that), promise)
   elseif D.instanceof(that, D.window.Promise) then
     that["then"](that, function (...)
       promise:set(true, ...)
     end):catch(function (...)
-      that:set(false, ...)
+      promise:set(false, ...)
     end)
   else
     that(promise)
   end
 
-  promise.status = "suspended"
   local result = table.pack(coroutine.yield())
   if result[1] then
-    return table.unpack(result, 2, result.n)
+    return unpack(result, 2)
   else
     error(result[2])
   end
 end
 
 function class.dispatch()
-  for i = delay_queue.min, delay_queue.max do
-    local fn = delay_queue[i]
-    delay_queue.min = i + 1
+  for min = delay_queue.min, delay_queue.max do
+    local fn = delay_queue[min]
+    delay_queue.min = min + 1
     fn()
   end
   if delay_queue.min > delay_queue.max then
     delay_queue.min = 1
     delay_queue.max = 0
   end
-end
-
-function class.export()
-  return class, class.await
 end
 
 return setmetatable(class, {

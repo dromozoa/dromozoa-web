@@ -21,6 +21,21 @@ local async, await = require "dromozoa.web.async" :import "await"
 local document = G.document
 
 local future = async(function ()
+  local t = {
+    foo = "FOO";
+    bar = "BAR";
+    ["1"] = "one";
+    42;
+  }
+
+  local a, b, c, d, e, f = D.import(t, "foo", nil, "bar", 1, "1")
+  assert(a == t)
+  assert(b == "FOO")
+  assert(c == nil)
+  assert(d == "BAR")
+  assert(e == 42)
+  assert(f == "one")
+
   local v = await(function (promise)
     promise:set(true, D.new(G.Number, 42))
   end)

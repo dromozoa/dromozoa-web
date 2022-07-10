@@ -65,6 +65,7 @@ local future = async(function ()
 
   print(canonical_request)
   print(aws.hex(aws.sha256(canonical_request)))
+  print "--"
 
   local buffer = {}
   buffer[#buffer + 1] = "AWS4-HMAC-SHA256\n"
@@ -73,8 +74,10 @@ local future = async(function ()
   buffer[#buffer + 1] = aws.hex(aws.sha256(canonical_request))
   local string_to_sign = table.concat(buffer)
   print(string_to_sign)
+  print "--"
 
   local key = aws.get_signature_key(secret_key, date, region, service)
+  print(aws.hex(key))
 
   local sig = aws.hmac_sha256(key, D.slice(string_to_sign))
   print(aws.hex(sig))
@@ -91,7 +94,7 @@ local future = async(function ()
       ["x-amz-date"] = "20130524T000000Z";
     }
   })
-  aws.sign(req)
+  assert(aws.sign(req, access_key, secret_key) == authorization)
   --[[
   local now = os.time()
   local datetime = os.date("!%Y%m%dT%H%M%SZ", now)

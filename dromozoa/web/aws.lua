@@ -32,6 +32,24 @@ local function array_buffer(that)
   end
 end
 
+local function compare(a, b)
+  local x = a[1]
+  local y = b[1]
+  if x == y then
+    return a[2] < b[2]
+  else
+    return x < y
+  end
+end
+
+local function trim(s)
+  return (s:gsub("^%s+", ""):gsub("%s+$", ""))
+end
+
+local function uri_encode(s)
+  return (s:gsub("[^A-Za-z0-9%-%_%.%~]", function (v) return ("%%%02X"):format(v:byte()) end))
+end
+
 function class.hex(data)
   local source = D.new(G.Uint8Array, data)
   local buffer = {}
@@ -53,15 +71,97 @@ function class.get_signature_key(secret_key, date, region, service)
   return class.hmac_sha256(class.hmac_sha256(class.hmac_sha256(class.hmac_sha256("AWS4" .. secret_key, date), region), service), "aws4_request")
 end
 
-function class.sign(source)
-  -- G.console:log(source)
+function class.sign(source, access_key, secret_key)
   local url = D.new(G.URL, source.url)
-  G.console:log(url)
 
+  -- https://github.com/boto/botocore/blob/develop/botocore/data/endpoints.json
+  --     "regionRegex" : "^(us|eu|ap|sa|ca|me|af)\\-\\w+\\-\\d+$",
+  --
+  local endpoint = url.host
+  local service, region = endpoint:match "([^%.]+)%.(%a%a-%s+%-%d+)%.amazonaws%.com"
+  if not service then
+    service = endpoint:match "([^%.]+)%.amazonaws.com"
+    region = "us-east-1"
+  end
+  assert(service)
+
+  local http_method = source.method
+
+  local canonical_uri = url.pathname
+
+  local query = {}
+  for i, item in D.each(url.searchParams:entries()) do
+    local k, v = D.unpack(item)
+    query[i] = { k, v }
+  end
+  table.sort(query, compare)
+  local buffer = {}
+  for i = 1, #query do
+    local item = query[i]
+    buffer[i] = uri_encode(item[1]) .. "=" .. uri_encode(item[2])
+  end
+  local canonical_query_string = table.concat(buffer, "&")
+
+  local headers = {}
+  local host
+  local timestamp
   for i, item in D.each(source.headers:entries()) do
     local k, v = D.unpack(item)
-    print(i, k, v)
+    k = k:lower()
+    v = trim(v)
+    if k == "host" then
+      host = v
+    elseif k == "x-amz-date" then
+      timestamp = v
+    end
+    headers[#headers + 1] = { k, v }
   end
+  if not host then
+    host = url.host
+    headers[#headers + 1] = { "host", host }
+  end
+  assert(timestamp)
+  local date = timestamp:sub(1, 8)
+
+  table.sort(headers, compare)
+  local buffer = {}
+  for i = 1, #headers do
+    local item = headers[i]
+    buffer[i] = item[1] .. ":" .. item[2] .. "\n"
+  end
+  local canonical_headers = table.concat(buffer)
+  local buffer = {}
+  for i = 1, #headers do
+    buffer[i] = headers[i][1]
+  end
+  local signed_headers = table.concat(buffer, ";")
+
+  local hashed_payload = class.hex(class.sha256(await(source:arrayBuffer())))
+
+  local canonical_request =
+    http_method .. "\n" ..
+    canonical_uri .. "\n" ..
+    canonical_query_string .. "\n" ..
+    canonical_headers .. "\n" ..
+    signed_headers .. "\n" ..
+    hashed_payload
+
+  local scope = date .. "/" .. region .. "/" .. service .. "/aws4_request"
+
+  local string_to_sign =
+    "AWS4-HMAC-SHA256\n" ..
+    timestamp .. "\n" ..
+    scope .. "\n" ..
+    class.hex(class.sha256(canonical_request))
+
+  local signing_key = class.get_signature_key(secret_key, date, region, service)
+
+  local signature = class.hmac_sha256(signing_key, string_to_sign)
+
+  return "AWS4-HMAC-SHA256 " ..
+    "Credential=" .. access_key .. "/" .. scope .. "," ..
+    "SignedHeaders=" .. signed_headers .. "," ..
+    "Signature=" .. class.hex(signature)
 end
 
 return class

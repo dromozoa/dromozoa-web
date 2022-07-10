@@ -101,15 +101,16 @@ function class.sign(access_key, secret_key, source)
   local canonical_query_string = table.concat(buffer, "&")
 
   local headers = D.new(G.Headers, source.headers)
-  local aws_date = headers:get "x-amz-date"
-  if D.is_falsy(aws_date) then
-    aws_date = os.date "!%Y%m%dT%H%M%SZ"
-    headers:set("x-amz-date", aws_date)
+  local timestamp = headers:get "x-amz-date"
+  if D.is_falsy(timestamp) then
+    timestamp = os.date "!%Y%m%dT%H%M%SZ"
+    headers:set("x-amz-date", timestamp)
   end
-  local aws_content_sha256 = headers:get "x-amz-content-sha256"
-  if D.is_falsy(aws_content_sha256) then
-    aws_content_sha256 = class.hex(class.sha256(await(source:arrayBuffer())))
-    headers:set("x-amz-content-sha256", aws_content)
+  local date = timestamp:sub(1, 8)
+  local hashed_payload = headers:get "x-amz-content-sha256"
+  if D.is_falsy(hashed_payload) then
+    hashed_payload = class.hex(class.sha256(await(source:arrayBuffer())))
+    headers:set("x-amz-content-sha256", hashed_payload)
   end
 
   local canonical_headers = {}
@@ -121,13 +122,8 @@ function class.sign(access_key, secret_key, source)
     canonical_headers[#canonical_headers + 1] = { "host", url.host }
   end
 
-  local date = aws_date:sub(1, 8)
-
-
-
-
-
   table.sort(canonical_headers, compare)
+
   local buffer = {}
   for i = 1, #canonical_headers do
     buffer[i] = canonical_headers[i][1]
@@ -141,13 +137,6 @@ function class.sign(access_key, secret_key, source)
   end
   local canonical_headers = table.concat(buffer)
 
-  local hashed_payload
-  if content_sha256 then
-    hashed_payload = content_sha256
-  else
-    hashed_payload = class.hex(class.sha256(await(source:arrayBuffer())))
-  end
-
   local canonical_request =
     http_method .. "\n" ..
     canonical_uri .. "\n" ..
@@ -160,7 +149,7 @@ function class.sign(access_key, secret_key, source)
 
   local string_to_sign =
     "AWS4-HMAC-SHA256\n" ..
-    aws_date .. "\n" ..
+    timestamp .. "\n" ..
     scope .. "\n" ..
     class.hex(class.sha256(canonical_request))
 
@@ -168,10 +157,12 @@ function class.sign(access_key, secret_key, source)
 
   local signature = class.hmac_sha256(signing_key, string_to_sign)
 
-  return "AWS4-HMAC-SHA256 " ..
+  local result = "AWS4-HMAC-SHA256 " ..
     "Credential=" .. access_key .. "/" .. scope .. "," ..
     "SignedHeaders=" .. signed_headers .. "," ..
     "Signature=" .. class.hex(signature)
+  headers:set("authorization", result)
+  return result, headers
 end
 
 return class

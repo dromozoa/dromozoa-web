@@ -75,11 +75,9 @@ local future = async(function ()
     };
   })
   local expect = "AWS4-HMAC-SHA256 Credential=AKIAIOSFODNN7EXAMPLE/20130524/us-east-1/s3/aws4_request,SignedHeaders=host;x-amz-content-sha256;x-amz-date,Signature=34b48302e7b5fa45bde8084f4b7868a86f0a534bc59db6670ed5711ef69dc6f7"
-  local result = aws.sign(access_key, secret_key, req)
+  local result, headers = aws.sign(access_key, secret_key, req)
   assert(result == expect)
 
-  local headers = D.new(G.Headers, req.headers)
-  headers:append("Authorization", result)
   local req = D.new(G.Request, req, { headers = headers })
   G.console:log(req)
   for i, item in D.each(req.headers:entries()) do

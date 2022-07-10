@@ -19,7 +19,7 @@
 -- You should have received a copy of the GNU General Public License
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-local D, G = require "dromozoa.web" .import "global"
+local D, G = require "dromozoa.web" :import "global"
 
 local delay_queue = { min = 1, max = 0 }
 
@@ -113,15 +113,7 @@ function future:get()
   end
 end
 
-local class = { delay = delay }
-
-function class.import(...)
-  local buffer = table.pack(...)
-  for i = 1, buffer.n do
-    buffer[i] = class[buffer[i]]
-  end
-  return class, unpack(buffer)
-end
+local class = { import = D.import, delay = delay }
 
 function class.await(that)
   local promise = assert(promise_map[coroutine.running()])

@@ -28,11 +28,10 @@ namespace dromozoa {
   namespace {
     void impl_import(lua_State* L) {
       auto top = lua_gettop(L);
-
-      lua_pushvalue(L, lua_upvalueindex(1));
-      for (int i = 1; i <= top; ++i) {
-        lua_pushvalue(L, 1);
-        lua_gettable(L, lua_upvalueindex(1));
+      lua_pushvalue(L, 1);
+      for (int i = 2; i <= top; ++i) {
+        lua_pushvalue(L, i);
+        lua_gettable(L, 1);
       }
     }
 
@@ -128,9 +127,7 @@ namespace dromozoa {
   }
 
   void initialize_utility(lua_State* L) {
-    lua_pushvalue(L, -1);
-    set_field(L, -2, "import", function<impl_import, 1>());
-
+    set_field(L, -1, "import", function<impl_import>());
     set_field(L, -1, "new", function<impl_new>());
     set_field(L, -1, "ref", function<impl_ref>());
     set_field(L, -1, "typeof", function<impl_typeof>());

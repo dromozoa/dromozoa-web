@@ -71,8 +71,14 @@ function class.get_signature_key(secret_key, date, region, service)
   return class.hmac_sha256(class.hmac_sha256(class.hmac_sha256(class.hmac_sha256("AWS4" .. secret_key, date), region), service), "aws4_request")
 end
 
-function class.sign(access_key, secret_key, source)
-  local url = D.new(G.URL, source.url)
+-- method, url, headers, body
+-- headersだけを書き換える
+function class.sign(access_key, secret_key, method, url, headers, body)
+-- function class.sign(access_key, secret_key, source)
+  local url = D.new(G.URL, url)
+  local headers = D.new(G.Headers, headers)
+
+  -- local url = D.new(G.URL, source.url)
 
   -- https://github.com/boto/botocore/blob/develop/botocore/data/endpoints.json
   local endpoint = url.host
@@ -83,7 +89,7 @@ function class.sign(access_key, secret_key, source)
   end
   assert(service)
 
-  local http_method = source.method
+  local http_method = method
 
   local canonical_uri = url.pathname
 
@@ -100,7 +106,7 @@ function class.sign(access_key, secret_key, source)
   end
   local canonical_query_string = table.concat(buffer, "&")
 
-  local headers = D.new(G.Headers, source.headers)
+  -- local headers = D.new(G.Headers, source.headers)
   local timestamp = headers:get "x-amz-date"
   if D.is_falsy(timestamp) then
     timestamp = os.date "!%Y%m%dT%H%M%SZ"
@@ -109,7 +115,12 @@ function class.sign(access_key, secret_key, source)
   local date = timestamp:sub(1, 8)
   local hashed_payload = headers:get "x-amz-content-sha256"
   if D.is_falsy(hashed_payload) then
-    hashed_payload = class.hex(class.sha256(await(source:arrayBuffer())))
+    if body then
+      hashed_payload = class.hex(class.sha256(await(arrayBuffer(body))))
+    else
+      -- sha256("")
+      hashed_payload = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    end
     headers:set("x-amz-content-sha256", hashed_payload)
   end
 

@@ -39,22 +39,20 @@ namespace dromozoa {
       switch (lua_type(L, 2)) {
         case LUA_TNUMBER:
           DROMOZOA_JS_ASM(D.push($0, D.objs[$1][$2]), L, self->get(), lua_tonumber(L, 2));
-          break;
+          return;
         case LUA_TSTRING:
           DROMOZOA_JS_ASM(D.push($0, D.objs[$1][UTF8ToString($2)]), L, self->get(), lua_tostring(L, 2));
-          break;
+          return;
         case LUA_TUSERDATA:
           if (auto* that = test_udata<object>(L, 2)) {
             if (that->is_symbol()) {
               DROMOZOA_JS_ASM(D.push($0, D.objs[$1][D.objs[$2]]), L, self->get(), that->get());
-              break;
+              return;
             }
           }
-          throw DROMOZOA_LOGIC_ERROR("!!!");
           break;
-        default:
-          luaL_typeerror(L, 2, "number or string");
       }
+      luaL_typeerror(L, 2, "javascript object index");
     }
 
     void impl_newindex(lua_State* L) {
@@ -63,14 +61,24 @@ namespace dromozoa {
         case LUA_TNUMBER:
           js_push(L, 3);
           DROMOZOA_JS_ASM(D.objs[$0][$1] = D.stack.pop(), self->get(), lua_tonumber(L, 2));
-          break;
+          return;
         case LUA_TSTRING:
           js_push(L, 3);
           DROMOZOA_JS_ASM(D.objs[$0][UTF8ToString($1)] = D.stack.pop(), self->get(), lua_tostring(L, 2));
+          return;
+        case LUA_TUSERDATA:
+          if (auto* that = test_udata<object>(L, 2)) {
+            if (that->is_symbol()) {
+              js_push(L, 3);
+              DROMOZOA_JS_ASM(D.objs[$0][D.objs[$1]] = D.stack.pop(), self->get(), that->get());
+              return;
+            }
+          }
           break;
         default:
           luaL_typeerror(L, 2, "number or string");
       }
+      luaL_typeerror(L, 2, "javascript object index");
     }
 
     void impl_call(lua_State* L) {

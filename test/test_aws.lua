@@ -97,7 +97,6 @@ local future = async(function ()
   local datetime = os.date("!%Y%m%dT%H%M%SZ", now)
   local date = os.date("!%Y%m%d", now)
   ]]
-
   print "finished"
 end)
 

@@ -124,11 +124,25 @@ local future = async(function ()
   assert(buffer[2] == nil)
   assert(buffer[3] == 42)
 
-  print(G.Symbol)
-  print(G.Symbol.iterator)
-  print(D.typeof(G.Symbol.iterator))
-  local symbol = G.Symbol.iterator
-  print(v[symbol])
+  local buffer = {}
+  local i = 0
+  for _, v in D.each(v[G.Symbol.iterator](v)) do
+    i = i + 1
+    buffer[i] = v
+  end
+  assert(buffer[1] == 17)
+  assert(buffer[2] == nil)
+  assert(buffer[3] == 42)
+
+  -- for _, item in D.each(iterator) do
+  --   print(D.unpack(item))
+  -- end
+
+  -- print(G.Symbol)
+  -- print(G.Symbol.iterator)
+  -- print(D.typeof(G.Symbol.iterator))
+  -- print(v[symbol])
+  -- print(v[G])
 
   -- for _, item in D.each(v[G.Symbol.iterator]) do
   --   print(item)

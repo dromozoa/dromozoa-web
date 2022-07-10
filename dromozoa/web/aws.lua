@@ -58,9 +58,9 @@ function class.sign(source)
   local url = D.new(G.URL, source.url)
   G.console:log(url)
 
-  for _, item in D.each(source.headers:entries()) do
+  for i, item in D.each(source.headers:entries()) do
     local k, v = D.unpack(item)
-    print(k, v)
+    print(i, k, v)
   end
 end
 

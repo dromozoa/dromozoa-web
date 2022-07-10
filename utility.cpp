@@ -108,15 +108,16 @@ namespace dromozoa {
 
     void impl_each_iterator(lua_State* L) {
       auto self = check_udata<object>(L, 1);
+      auto i = luaL_optnumber(L, 2, 0);
       DROMOZOA_JS_ASM({
         const entry = D.objs[$1].next();
         if (entry.done) {
           D.push($0, undefined);
         } else {
-          D.push($0, entry);
+          D.push($0, $2);
           D.push($0, entry.value);
         }
-      }, L, self->get());
+      }, L, self->get(), i + 1);
     }
 
     void impl_each(lua_State* L) {

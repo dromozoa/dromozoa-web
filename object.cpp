@@ -75,8 +75,6 @@ namespace dromozoa {
             }
           }
           break;
-        default:
-          luaL_typeerror(L, 2, "number or string");
       }
       luaL_typeerror(L, 2, "javascript object index");
     }

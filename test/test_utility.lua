@@ -116,8 +116,9 @@ local future = async(function ()
   assert(c == 42)
 
   local buffer = {}
-  for _, item in D.each(v:entries()) do
+  for i, item in D.each(v:entries()) do
     local k, v = D.unpack(item)
+    -- print(i, k, v)
     buffer[k + 1] = v
   end
   assert(buffer[1] == 17)
@@ -125,28 +126,19 @@ local future = async(function ()
   assert(buffer[3] == 42)
 
   local buffer = {}
-  local i = 0
-  for _, v in D.each(v[G.Symbol.iterator](v)) do
-    i = i + 1
+  for i, v in D.each(v[G.Symbol.iterator](v)) do
+    -- print(i, v)
     buffer[i] = v
   end
   assert(buffer[1] == 17)
   assert(buffer[2] == nil)
   assert(buffer[3] == 42)
 
-  -- for _, item in D.each(iterator) do
-  --   print(D.unpack(item))
-  -- end
-
-  -- print(G.Symbol)
-  -- print(G.Symbol.iterator)
-  -- print(D.typeof(G.Symbol.iterator))
-  -- print(v[symbol])
-  -- print(v[G])
-
-  -- for _, item in D.each(v[G.Symbol.iterator]) do
-  --   print(item)
-  -- end
+  local s = G.Symbol "foo"
+  v[s] = "bar"
+  v[3] = { [s] = "baz" }
+  -- G.console:log(v)
+  assert(v[3][s] == "baz")
 
   print "finished"
 end)

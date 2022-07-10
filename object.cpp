@@ -43,6 +43,13 @@ namespace dromozoa {
         case LUA_TSTRING:
           DROMOZOA_JS_ASM(D.push($0, D.objs[$1][UTF8ToString($2)]), L, self->get(), lua_tostring(L, 2));
           break;
+        case LUA_TUSERDATA:
+          if (auto* that = test_udata<object>(L, 2)) {
+            DROMOZOA_JS_ASM(D.push($0, D.objs[$1][D.objs[$2]]), L, self->get(), that->get());
+          } else {
+            throw DROMOZOA_LOGIC_ERROR("!!!");
+          }
+          break;
         default:
           luaL_typeerror(L, 2, "number or string");
       }

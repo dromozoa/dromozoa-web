@@ -124,6 +124,10 @@ local future = async(function ()
   assert(buffer[2] == nil)
   assert(buffer[3] == 42)
 
+  -- for _, item in D.each(v[G.Symbol.iterator]) do
+  --   print(item)
+  -- end
+
   print "finished"
 end)
 

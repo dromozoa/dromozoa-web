@@ -71,12 +71,10 @@ function class.get_signature_key(secret_key, date, region, service)
   return class.hmac_sha256(class.hmac_sha256(class.hmac_sha256(class.hmac_sha256("AWS4" .. secret_key, date), region), service), "aws4_request")
 end
 
-function class.sign(source, access_key, secret_key)
+function class.sign(access_key, secret_key, source)
   local url = D.new(G.URL, source.url)
 
   -- https://github.com/boto/botocore/blob/develop/botocore/data/endpoints.json
-  --     "regionRegex" : "^(us|eu|ap|sa|ca|me|af)\\-\\w+\\-\\d+$",
-  --
   local endpoint = url.host
   local service, region = endpoint:match "([^%.]+)%.(%a%a-%s+%-%d+)%.amazonaws%.com"
   if not service then
@@ -102,41 +100,53 @@ function class.sign(source, access_key, secret_key)
   end
   local canonical_query_string = table.concat(buffer, "&")
 
-  local headers = {}
-  local host
-  local timestamp
-  for i, item in D.each(source.headers:entries()) do
-    local k, v = D.unpack(item)
-    k = k:lower()
-    v = trim(v)
-    if k == "host" then
-      host = v
-    elseif k == "x-amz-date" then
-      timestamp = v
-    end
-    headers[#headers + 1] = { k, v }
+  local headers = D.new(G.Headers, source.headers)
+  local aws_date = headers:get "x-amz-date"
+  if D.is_falsy(aws_date) then
+    aws_date = os.date "!%Y%m%dT%H%M%SZ"
+    headers:set("x-amz-date", aws_date)
   end
-  if not host then
-    host = url.host
-    headers[#headers + 1] = { "host", host }
+  local aws_content_sha256 = headers:get "x-amz-content-sha256"
+  if D.is_falsy(aws_content_sha256) then
+    aws_content_sha256 = class.hex(class.sha256(await(source:arrayBuffer())))
+    headers:set("x-amz-content-sha256", aws_content)
   end
-  assert(timestamp)
-  local date = timestamp:sub(1, 8)
 
-  table.sort(headers, compare)
-  local buffer = {}
-  for i = 1, #headers do
-    local item = headers[i]
-    buffer[i] = item[1] .. ":" .. item[2] .. "\n"
+  local canonical_headers = {}
+  for i, item in D.each(headers:entries()) do
+    local k, v = D.unpack(item)
+    canonical_headers[i] = { k:lower(), trim(v) }
   end
-  local canonical_headers = table.concat(buffer)
+  if not headers:has "host" then
+    canonical_headers[#canonical_headers + 1] = { "host", url.host }
+  end
+
+  local date = aws_date:sub(1, 8)
+
+
+
+
+
+  table.sort(canonical_headers, compare)
   local buffer = {}
-  for i = 1, #headers do
-    buffer[i] = headers[i][1]
+  for i = 1, #canonical_headers do
+    buffer[i] = canonical_headers[i][1]
   end
   local signed_headers = table.concat(buffer, ";")
 
-  local hashed_payload = class.hex(class.sha256(await(source:arrayBuffer())))
+  local buffer = {}
+  for i = 1, #canonical_headers do
+    local item = canonical_headers[i]
+    buffer[i] = item[1] .. ":" .. item[2] .. "\n"
+  end
+  local canonical_headers = table.concat(buffer)
+
+  local hashed_payload
+  if content_sha256 then
+    hashed_payload = content_sha256
+  else
+    hashed_payload = class.hex(class.sha256(await(source:arrayBuffer())))
+  end
 
   local canonical_request =
     http_method .. "\n" ..
@@ -150,7 +160,7 @@ function class.sign(source, access_key, secret_key)
 
   local string_to_sign =
     "AWS4-HMAC-SHA256\n" ..
-    timestamp .. "\n" ..
+    aws_date .. "\n" ..
     scope .. "\n" ..
     class.hex(class.sha256(canonical_request))
 

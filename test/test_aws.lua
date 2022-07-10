@@ -23,84 +23,68 @@ local future = async(function ()
 
   local aws = async.require "dromozoa.web.aws"
 
+  -- https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html#example-signature-calculations
   local access_key = "AKIAIOSFODNN7EXAMPLE"
   local secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
 
-  local datetime = "20130524T000000Z"
-  local date = "20130524"
-  local region = "us-east-1"
-  local service = "s3"
-  local sha256_empty = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-
-  local http_method = "GET"
-  local canonical_uri = "/test.txt"
-  local canonical_query_string = ""
-  local headers = {
-    Host = "examplebucket.s3.amazonaws.com";
-    Range = " bytes=0-9 ";
-    ["x-amz-content-sha256"] = sha256_empty;
-    ["x-amz-date"] = datetime;
-  }
-  local canonical_headers = {}
-  local signed_headers = {}
-  local hashed_payload = sha256_empty
-
-  for k, v in pairs(headers) do
-    local k = k:lower()
-    local v = v:gsub("^%s+", ""):gsub("%s+$", "")
-    canonical_headers[k] = v
-    signed_headers[#signed_headers + 1] = k
-  end
-  table.sort(signed_headers)
-
-  local buffer = {}
-  buffer[#buffer + 1] = ("%s\n%s\n%s\n"):format(http_method, canonical_uri, canonical_query_string)
-  for i = 1, #signed_headers do
-    local k = signed_headers[i]
-    local v = canonical_headers[k]
-    buffer[#buffer + 1] = ("%s:%s\n"):format(k, v)
-  end
-  buffer[#buffer + 1] = ("\n%s\n%s"):format(table.concat(signed_headers, ";"), hashed_payload)
-  local canonical_request = table.concat(buffer)
-
-  print(canonical_request)
-  print(aws.hex(aws.sha256(canonical_request)))
-  print "--"
-
-  local buffer = {}
-  buffer[#buffer + 1] = "AWS4-HMAC-SHA256\n"
-  buffer[#buffer + 1] = ("%s\n"):format(datetime)
-  buffer[#buffer + 1] = ("%s/%s/%s/aws4_request\n"):format(date, region, service)
-  buffer[#buffer + 1] = aws.hex(aws.sha256(canonical_request))
-  local string_to_sign = table.concat(buffer)
-  print(string_to_sign)
-  print "--"
-
-  local key = aws.get_signature_key(secret_key, date, region, service)
-  print(aws.hex(key))
-
-  local sig = aws.hmac_sha256(key, D.slice(string_to_sign))
-  print(aws.hex(sig))
-
-  local authorization = ("AWS4-HMAC-SHA256 Credential=%s/%s/%s/%s/aws4_request,SignedHeaders=%s,Signature=%s"):format(
-    access_key, date, region, service, table.concat(signed_headers, ";"), aws.hex(sig))
-  print "AWS4-HMAC-SHA256 Credential=AKIAIOSFODNN7EXAMPLE/20130524/us-east-1/s3/aws4_request,SignedHeaders=host;range;x-amz-content-sha256;x-amz-date,Signature=f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41"
-  assert(authorization == "AWS4-HMAC-SHA256 Credential=AKIAIOSFODNN7EXAMPLE/20130524/us-east-1/s3/aws4_request,SignedHeaders=host;range;x-amz-content-sha256;x-amz-date,Signature=f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41")
-
+  -- https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html#example-signature-GET-object
   local req = D.new(G.Request, "https://examplebucket.s3.amazonaws.com/test.txt", {
     headers = {
       Range = "bytes=0-9";
-      ["x-amz-content-sha256"] = sha256_empty;
+      ["x-amz-content-sha256"] = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
       ["x-amz-date"] = "20130524T000000Z";
-    }
+    };
   })
-  assert(aws.sign(req, access_key, secret_key) == authorization)
-  --[[
-  local now = os.time()
-  local datetime = os.date("!%Y%m%dT%H%M%SZ", now)
-  local date = os.date("!%Y%m%d", now)
-  ]]
-  print "finished"
+  local expect = "AWS4-HMAC-SHA256 Credential=AKIAIOSFODNN7EXAMPLE/20130524/us-east-1/s3/aws4_request,SignedHeaders=host;range;x-amz-content-sha256;x-amz-date,Signature=f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41"
+  local result = aws.sign(access_key, secret_key, req)
+  assert(result == expect)
+
+  -- https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html#example-signature-PUT-object
+  local req = D.new(G.Request, "https://examplebucket.s3.amazonaws.com/test$file.text", {
+    method = "PUT";
+    headers = {
+      -- Date = "Fri, 24 May 2013 00:00:00 GMT";
+      ["x-amz-date"] = "20130524T000000Z";
+      ["x-amz-storage-class"] = "REDUCED_REDUNDANCY";
+      ["x-amz-content-sha256"] = "44ce7dd67c959e0d3524ffac1771dfbba87d2b6b4b4e99e42034a8b803f8b072";
+    };
+    body = "Welcome to Amazon S3.";
+  })
+  local expect = "AWS4-HMAC-SHA256 Credential=AKIAIOSFODNN7EXAMPLE/20130524/us-east-1/s3/aws4_request,SignedHeaders=date;host;x-amz-content-sha256;x-amz-date;x-amz-storage-class,Signature=98ad721746da40c64f1a55b78f14c238d841ea1380cd77a1b5971af0ece108bd"
+  local result = aws.sign(access_key, secret_key, req)
+  print(expect)
+  print(result)
+  -- assert(result == expect)
+
+  -- https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html#example-signature-GET-bucket-lifecycle
+  local req = D.new(G.Request, "https://examplebucket.s3.amazonaws.com?lifecycle", {
+    headers = {
+      ["x-amz-date"] = "20130524T000000Z";
+      ["x-amz-content-sha256"] = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+    };
+  })
+  local expect = "AWS4-HMAC-SHA256 Credential=AKIAIOSFODNN7EXAMPLE/20130524/us-east-1/s3/aws4_request,SignedHeaders=host;x-amz-content-sha256;x-amz-date,Signature=fea454ca298b7da1c68078a5d1bdbfbbe0d65c699e0f91ac7a200a0136783543"
+  local result = aws.sign(access_key, secret_key, req)
+  assert(result == expect)
+
+  -- https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html#example-signature-list-bucket
+  local req = D.new(G.Request, "https://examplebucket.s3.amazonaws.com?max-keys=2&prefix=J", {
+    headers = {
+      ["x-amz-content-sha256"] = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+      ["x-amz-date"] = "20130524T000000Z";
+    };
+  })
+  local expect = "AWS4-HMAC-SHA256 Credential=AKIAIOSFODNN7EXAMPLE/20130524/us-east-1/s3/aws4_request,SignedHeaders=host;x-amz-content-sha256;x-amz-date,Signature=34b48302e7b5fa45bde8084f4b7868a86f0a534bc59db6670ed5711ef69dc6f7"
+  local result = aws.sign(access_key, secret_key, req)
+  assert(result == expect)
+
+  local headers = D.new(G.Headers, req.headers)
+  headers:append("Authorization", result)
+  local req = D.new(G.Request, req, { headers = headers })
+  G.console:log(req)
+  for i, item in D.each(req.headers:entries()) do
+    print(D.unpack(item))
+  end
 end)
 
 while true do

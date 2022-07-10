@@ -46,8 +46,16 @@ local function trim(s)
   return (s:gsub("^%s+", ""):gsub("%s+$", ""))
 end
 
+local function uri_ecode_impl(s)
+  return ("%%%02X"):format(s:byte())
+end
+
 local function uri_encode(s)
-  return (s:gsub("[^A-Za-z0-9%-%_%.%~]", function (v) return ("%%%02X"):format(v:byte()) end))
+  return (s:gsub("[^A-Za-z0-9%-%_%.%~]", uri_ecode_impl))
+end
+
+local function uri_encode_path(s)
+  return (s:gsub("[^A-Za-z0-9%-%_%.%~%/]", uri_ecode_impl))
 end
 
 function class.hex(data)
@@ -86,7 +94,7 @@ function class.sign(access_key, secret_key, method, url, headers, body)
 
   local http_method = method
 
-  local canonical_uri = url.pathname
+  local canonical_uri = uri_encode_path(url.pathname)
 
   local query = {}
   for i, item in D.each(url.searchParams:entries()) do
@@ -167,7 +175,7 @@ function class.sign(access_key, secret_key, method, url, headers, body)
     "SignedHeaders=" .. signed_headers .. "," ..
     "Signature=" .. class.hex(signature)
   headers:set("authorization", result)
-  return result, headers
+  return headers
 end
 
 return class

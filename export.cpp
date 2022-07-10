@@ -79,12 +79,16 @@ extern "C" {
     lua_pushstring(L, value);
   }
 
+  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_symbol(lua_State* L, int ref) {
+    new_udata<object>(L, ref, true);
+  }
+
   void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_null(lua_State* L) {
     lua_pushlightuserdata(L, nullptr);
   }
 
-  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_object(lua_State* L, int id) {
-    new_udata<object>(L, id);
+  void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_object(lua_State* L, int ref) {
+    new_udata<object>(L, ref, false);
   }
 
   void EMSCRIPTEN_KEEPALIVE dromozoa_web_push_ref(lua_State* L, int ref) {

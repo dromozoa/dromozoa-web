@@ -25,12 +25,14 @@ namespace dromozoa {
   class object : noncopyable {
   public:
     static constexpr char NAME[] = "dromozoa.web.object";
-    explicit object(int ref) : ref_(ref) {}
+    explicit object(int ref, bool is_symbol) : ref_(ref), is_symbol_(is_symbol) {}
     ~object() { close(); }
     int get() const { return ref_; }
+    bool is_symbol() const { return is_symbol_; }
     void close() noexcept;
   private:
     int ref_;
+    bool is_symbol_;
   };
 
   void initialize_object(lua_State*);

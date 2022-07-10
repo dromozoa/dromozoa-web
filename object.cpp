@@ -45,10 +45,12 @@ namespace dromozoa {
           break;
         case LUA_TUSERDATA:
           if (auto* that = test_udata<object>(L, 2)) {
-            DROMOZOA_JS_ASM(D.push($0, D.objs[$1][D.objs[$2]]), L, self->get(), that->get());
-          } else {
-            throw DROMOZOA_LOGIC_ERROR("!!!");
+            if (that->is_symbol()) {
+              DROMOZOA_JS_ASM(D.push($0, D.objs[$1][D.objs[$2]]), L, self->get(), that->get());
+              break;
+            }
           }
+          throw DROMOZOA_LOGIC_ERROR("!!!");
           break;
         default:
           luaL_typeerror(L, 2, "number or string");

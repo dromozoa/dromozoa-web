@@ -71,14 +71,9 @@ function class.get_signature_key(secret_key, date, region, service)
   return class.hmac_sha256(class.hmac_sha256(class.hmac_sha256(class.hmac_sha256("AWS4" .. secret_key, date), region), service), "aws4_request")
 end
 
--- method, url, headers, body
--- headersだけを書き換える
 function class.sign(access_key, secret_key, method, url, headers, body)
--- function class.sign(access_key, secret_key, source)
   local url = D.new(G.URL, url)
   local headers = D.new(G.Headers, headers)
-
-  -- local url = D.new(G.URL, source.url)
 
   -- https://github.com/boto/botocore/blob/develop/botocore/data/endpoints.json
   local endpoint = url.host
@@ -106,7 +101,6 @@ function class.sign(access_key, secret_key, method, url, headers, body)
   end
   local canonical_query_string = table.concat(buffer, "&")
 
-  -- local headers = D.new(G.Headers, source.headers)
   local timestamp = headers:get "x-amz-date"
   if D.is_falsy(timestamp) then
     timestamp = os.date "!%Y%m%dT%H%M%SZ"

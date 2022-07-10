@@ -30,11 +30,11 @@
 #include "stack_guard.hpp"
 
 namespace dromozoa {
-  template <class T, T (*)(lua_State*)>
+  template <class T, T (*)(lua_State*), int>
   struct function_wrapper;
 
-  template <int (*T)(lua_State*)>
-  struct function_wrapper<int, T> {
+  template <int (*T)(lua_State*), int T_n>
+  struct function_wrapper<int, T, T_n> {
     static int value(lua_State* L) {
       try {
         return T(L);
@@ -48,8 +48,8 @@ namespace dromozoa {
     }
   };
 
-  template <void (*T)(lua_State*)>
-  struct function_wrapper<void, T> {
+  template <void (*T)(lua_State*), int T_n>
+  struct function_wrapper<void, T, T_n> {
     static int value(lua_State* L) {
       try {
         auto top = lua_gettop(L);
@@ -75,14 +75,14 @@ namespace dromozoa {
     }
   };
 
-  template <int (*T)(lua_State*)>
-  function_wrapper<int, T> function() {
-    return function_wrapper<int, T>();
+  template <int (*T)(lua_State*), int T_n = 0>
+  function_wrapper<int, T, T_n> function() {
+    return function_wrapper<int, T, T_n>();
   }
 
-  template <void (*T)(lua_State*)>
-  function_wrapper<void, T> function() {
-    return function_wrapper<void, T>();
+  template <void (*T)(lua_State*), int T_n = 0>
+  function_wrapper<void, T, T_n> function() {
+    return function_wrapper<void, T, T_n>();
   }
 
   template <class T, std::enable_if_t<(std::is_integral_v<T> && sizeof(T) < sizeof(lua_Integer) + std::is_signed_v<T>), std::nullptr_t> = nullptr>
@@ -128,9 +128,9 @@ namespace dromozoa {
     lua_pushboolean(L, value);
   }
 
-  template <class T, T (*T_function)(lua_State*)>
-  inline void push(lua_State* L, function_wrapper<T, T_function>) {
-    lua_pushcclosure(L, function_wrapper<T, T_function>::value, 0);
+  template <class T, T (*T_function)(lua_State*), int T_n = 0>
+  inline void push(lua_State* L, function_wrapper<T, T_function, T_n>) {
+    lua_pushcclosure(L, function_wrapper<T, T_function, T_n>::value, T_n);
   }
 
   template <bool T>
@@ -146,9 +146,11 @@ namespace dromozoa {
   template <class T_key, class T_value>
   inline void set_field(lua_State* L, int index, T_key&& key, T_value&& value) {
     index = lua_absindex(L, index);
-    push(L, std::forward<T_key>(key));
     push(L, std::forward<T_value>(value));
+    push(L, std::forward<T_key>(key));
+    lua_pushvalue(L, -2);
     lua_settable(L, index);
+    lua_pop(L, 1);
   }
 
   template <class T_key>

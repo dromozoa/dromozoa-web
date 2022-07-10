@@ -15,16 +15,14 @@
 -- You should have received a copy of the GNU General Public License
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-local D = require "dromozoa.web"
-local async = require "dromozoa.web.async"
-local await = async.await
+local D, G = require "dromozoa.web" .import "global"
+local async, await = require "dromozoa.web.async" .import "await"
 
-local window = D.window
-local crypto = window.crypto
+local crypto = G.crypto
 local subtle = crypto.subtle
 
 local function to_hex_string(buffer)
-  local source = D.new(window.Uint8Array, buffer)
+  local source = D.new(G.Uint8Array, buffer)
   local result = {}
   for i = 1, source.length do
     result[i] = ("%02x"):format(source[i - 1])
@@ -46,10 +44,6 @@ local future = async(function ()
   local buffer = await(subtle:digest("SHA-256", D.slice "日本語\0あいうえお"))
   local digest = to_hex_string(buffer)
   assert(digest == "43b0fa97739f6c418d9643ae9488cfd0180037bf7a04c59bba33617069d38067")
-
-  -- local key = await(subtle:generateKey({ name = "HMAC", hash = { name = "SHA-256" } }, true, D.array { "sign", "verify" }))
-  -- local jwk = await(subtle:exportKey("jwk", key))
-  -- print(window.JSON:stringify(jwk))
 
   -- https://docs.aws.amazon.com/general/latest/gr/signature-v4-examples.html
   local secret = D.slice("AWS4" .. "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY")

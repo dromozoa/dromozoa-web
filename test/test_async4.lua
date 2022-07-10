@@ -16,19 +16,18 @@
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
 local D = require "dromozoa.web"
-local async, await = require "dromozoa.web.async" .import("await")
-local aws
+local async, await = require "dromozoa.web.async" .import "await"
 
 local future = async(function ()
   print "started"
-  aws = async.require "dromozoa.web.aws"
-  print(aws, aws())
+  local aws = async.require "dromozoa.web.aws"
+  print(aws)
   print "finished"
 end)
 
 while true do
   if future and future:is_ready() then
-    print(future:get())
+    future:get()
     future = nil
   end
   coroutine.yield()

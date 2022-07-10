@@ -23,6 +23,7 @@ const D = {
   push_number:   cwrap("dromozoa_web_push_number", null,      ["pointer", "number"]),
   push_boolean:  cwrap("dromozoa_web_push_boolean",null,      ["pointer", "number"]),
   push_string:   cwrap("dromozoa_web_push_string", null,      ["pointer", "string"]),
+  push_symbol:   cwrap("dromozoa_web_push_symbol", null,      ["pointer", "number"]),
   push_null:     cwrap("dromozoa_web_push_null",   null,      ["pointer"          ]),
   push_object:   cwrap("dromozoa_web_push_object", null,      ["pointer", "number"]),
   push_ref:      cwrap("dromozoa_web_push_ref",    null,      ["number"           ]),
@@ -56,6 +57,9 @@ const D = {
         break;
       case "string":
         D.push_string(L, v);
+        break;
+      case "symbol":
+        D.push_symbol(L, D.ref_object(v));
         break;
       default:
         if (v === null) {

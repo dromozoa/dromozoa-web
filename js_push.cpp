@@ -84,6 +84,15 @@ namespace dromozoa {
                 case LUA_TSTRING:
                   DROMOZOA_JS_ASM(D.stack.push(UTF8ToString($0)), lua_tostring(L, -2));
                   break;
+                case LUA_TUSERDATA:
+                  if (auto* that = test_udata<object>(L, -2)) {
+                    if (that->is_symbol()) {
+                      DROMOZOA_JS_ASM(D.stack.push(D.objs[$0]), that->get());
+                      break;
+                    }
+                  }
+                  lua_pop(L, 1);
+                  continue;
                 default:
                   lua_pop(L, 1);
                   continue;

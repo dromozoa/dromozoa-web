@@ -15,11 +15,8 @@
 -- You should have received a copy of the GNU General Public License
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-local D = require "dromozoa.web"
-local async = require "dromozoa.web.async"
-local await = async.await
-
-local window = D.window
+local D, G = require "dromozoa.web" .import "global"
+local async, await = require "dromozoa.web.async" .import "await"
 
 local v = 0
 async.delay(function ()
@@ -40,7 +37,7 @@ local future = async(function ()
 
   print("setTimeout", D.get_now())
   await(function (promise)
-    window:setTimeout(function ()
+    G:setTimeout(function ()
       promise:set(true)
     end, 1000)
   end)

@@ -26,12 +26,22 @@
 
 namespace dromozoa {
   namespace {
+    void impl_import(lua_State* L) {
+      auto top = lua_gettop(L);
+
+      lua_pushvalue(L, lua_upvalueindex(1));
+      for (int i = 1; i <= top; ++i) {
+        lua_pushvalue(L, 1);
+        lua_gettable(L, lua_upvalueindex(1));
+      }
+    }
+
     void impl_new(lua_State* L) {
       auto self = check_udata<object>(L, 1);
       auto top = lua_gettop(L);
 
       DROMOZOA_JS_ASM(D.args = []);
-      for (auto i = 2; i <= top; ++i) {
+      for (int i = 2; i <= top; ++i) {
         js_push(L, i);
         DROMOZOA_JS_ASM(D.args.push(D.stack.pop()));
       }
@@ -86,9 +96,41 @@ namespace dromozoa {
       const auto* data = luaL_checklstring(L, 1, &size);
       DROMOZOA_JS_ASM(D.push($0, HEAPU8.slice($1, $2)), L, data, data + size);
     }
+
+    void impl_unpack(lua_State* L) {
+      auto self = check_udata<object>(L, 1);
+      DROMOZOA_JS_ASM({
+        for (v of D.objs[$1]) {
+          D.push($0, v);
+        }
+      }, L, self->get());
+    }
+
+    void impl_each_iterator(lua_State* L) {
+      auto self = check_udata<object>(L, 1);
+      auto i = luaL_optnumber(L, 2, 0);
+      DROMOZOA_JS_ASM({
+        const entry = D.objs[$1].next();
+        if (entry.done) {
+          D.push($0, undefined);
+        } else {
+          D.push($0, $2);
+          D.push($0, entry.value);
+        }
+      }, L, self->get(), i + 1);
+    }
+
+    void impl_each(lua_State* L) {
+      push(L, function<impl_each_iterator>());
+      lua_pushvalue(L, 1);
+      lua_pushnil(L);
+    }
   }
 
   void initialize_utility(lua_State* L) {
+    lua_pushvalue(L, -1);
+    set_field(L, -2, "import", function<impl_import, 1>());
+
     set_field(L, -1, "new", function<impl_new>());
     set_field(L, -1, "ref", function<impl_ref>());
     set_field(L, -1, "typeof", function<impl_typeof>());
@@ -96,5 +138,7 @@ namespace dromozoa {
     set_field(L, -1, "is_truthy", function<impl_is_truthy>());
     set_field(L, -1, "is_falsy", function<impl_is_falsy>());
     set_field(L, -1, "slice", function<impl_slice>());
+    set_field(L, -1, "unpack", function<impl_unpack>());
+    set_field(L, -1, "each", function<impl_each>());
   }
 }

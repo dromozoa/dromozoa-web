@@ -15,17 +15,15 @@
 -- You should have received a copy of the GNU General Public License
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-local D = require "dromozoa.web"
-local async = require "dromozoa.web.async"
-local await = async.await
+local D, G = require "dromozoa.web" .import "global"
+local async, await = require "dromozoa.web.async" .import "await"
 
-local window = D.window
-local document = window.document
-local FS = window.FS
+local document = G.document
+local FS = G.FS
 
 local future = async(function ()
   FS:mkdir "/save"
-  FS:mount(D.window.IDBFS, {}, "/save")
+  FS:mount(G.IDBFS, {}, "/save")
 
   await(function (promise)
     FS:syncfs(true, function (e)

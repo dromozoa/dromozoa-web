@@ -15,21 +15,17 @@
 -- You should have received a copy of the GNU General Public License
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-local D = require "dromozoa.web"
-local async = require "dromozoa.web.async"
-local await = async.await
-
-local window = D.window
-local navigator = window.navigator
+local D, G = require "dromozoa.web" .import "global"
+local async, await = require "dromozoa.web.async" .import "await"
 
 local future = async(function ()
-  local devices = await(navigator.mediaDevices:enumerateDevices())
+  local devices = await(G.navigator.mediaDevices:enumerateDevices())
   devices:forEach(function (device)
     io.write(("kind=%s, label=%s, deviceId=%s\n"):format(device.kind, device.label, device.deviceId))
   end)
 
   local result = await(function (promise)
-    local result = window:prompt()
+    local result = G:prompt()
     if result == D.null then
       promise:set(true)
     else
@@ -42,7 +38,7 @@ local future = async(function ()
     print "cancel"
   end
 
-  await(window:fetch "https://network-error/")
+  await(G:fetch "https://network-error/")
 end)
 
 -- await(function (promise) promise:set(true) end)

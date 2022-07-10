@@ -15,25 +15,23 @@
 -- You should have received a copy of the GNU General Public License
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-local D = require "dromozoa.web"
-local async = require "dromozoa.web.async"
-local await = async.await
+local D, G = require "dromozoa.web" .import "global"
+local async, await = require "dromozoa.web.async" .import "await"
 
-local window = D.window
-local document = window.document
+local document = G.document
 
 local future = async(function ()
   local v = await(function (promise)
-    promise:set(true, D.new(window.Number, 42))
+    promise:set(true, D.new(G.Number, 42))
   end)
 
   assert(v ~= 42)
   assert(v:valueOf() == 42)
   assert(type(v) == "userdata")
   assert(D.typeof(v) == "object")
-  assert(D.instanceof(v, window.Object))
-  assert(D.instanceof(v, window.Number))
-  assert(not D.instanceof(v, window.Promise))
+  assert(D.instanceof(v, G.Object))
+  assert(D.instanceof(v, G.Number))
+  assert(not D.instanceof(v, G.Promise))
 
   local n = 0
   local v = await(function (promise)
@@ -46,9 +44,9 @@ local future = async(function ()
   assert(n == 0)
   assert(type(v) == "userdata")
   assert(D.typeof(v) == "function")
-  assert(D.instanceof(v, window.Object))
-  assert(D.instanceof(v, window.Function))
-  assert(not D.instanceof(v, window.Promise))
+  assert(D.instanceof(v, G.Object))
+  assert(D.instanceof(v, G.Function))
+  assert(not D.instanceof(v, G.Promise))
 
   local button1 = document:createElement "button" :append "ボタン1"
   document.body:append(button1)
@@ -99,7 +97,7 @@ local future = async(function ()
 
   local v = coroutine.running()
   assert(D.typeof(v) == nil)
-  assert(not D.instanceof(v, window.Object))
+  assert(not D.instanceof(v, G.Object))
   assert(D.is_truthy(v))
   assert(not D.is_falsy(v))
 
@@ -107,9 +105,40 @@ local future = async(function ()
   assert(D.ref(v).number == 42)
   assert(D.ref(v).thread == nil)
   assert(D.typeof(v) == "object")
-  assert(D.instanceof(v, window.Object))
+  assert(D.instanceof(v, G.Object))
   assert(D.is_truthy(v))
   assert(not D.is_falsy(v))
+
+  local v = D.new(G.Array, 17, undefined, 42)
+  local a, b, c = D.unpack(v)
+  assert(a == 17)
+  assert(b == nil)
+  assert(c == 42)
+
+  local buffer = {}
+  for i, item in D.each(v:entries()) do
+    local k, v = D.unpack(item)
+    -- print(i, k, v)
+    buffer[k + 1] = v
+  end
+  assert(buffer[1] == 17)
+  assert(buffer[2] == nil)
+  assert(buffer[3] == 42)
+
+  local buffer = {}
+  for i, v in D.each(v[G.Symbol.iterator](v)) do
+    -- print(i, v)
+    buffer[i] = v
+  end
+  assert(buffer[1] == 17)
+  assert(buffer[2] == nil)
+  assert(buffer[3] == 42)
+
+  local s = G.Symbol "foo"
+  v[s] = "bar"
+  v[3] = { [s] = "baz" }
+  -- G.console:log(v)
+  assert(v[3][s] == "baz")
 
   print "finished"
 end)

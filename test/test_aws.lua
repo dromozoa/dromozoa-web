@@ -15,42 +15,13 @@
 -- You should have received a copy of the GNU General Public License
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-local D = require "dromozoa.web"
+local D, G = require "dromozoa.web" .import "global"
 local async, await = require "dromozoa.web.async" .import "await"
-
-local window = D.window
-local crypto = window.crypto
-local subtle = crypto.subtle
-
-local function to_hex_string(buffer)
-  local source = D.new(window.Uint8Array, buffer)
-  local result = {}
-  for i = 1, source.length do
-    result[i] = ("%02x"):format(source[i - 1])
-  end
-  return table.concat(result)
-end
-
-local function hmac_sha256(k, m)
-  local key = await(subtle:importKey("raw", k, { name = "HMAC", hash = { name = "SHA-256"} }, false, D.array { "sign" }))
-  return await(subtle:sign("HMAC", key, m))
-end
-
-local function get_signature_key(key, date, region, service)
-  return hmac_sha256(hmac_sha256(hmac_sha256(hmac_sha256(
-    D.slice("AWS4" .. key),
-    D.slice(date)),
-    D.slice(region)),
-    D.slice(service)),
-    D.slice "aws4_request")
-end
-
-local function sha256(m)
-  return await(subtle:digest("SHA-256", D.slice(m)))
-end
 
 local future = async(function ()
   -- https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html
+
+  local aws = async.require "dromozoa.web.aws"
 
   local access_key = "AKIAIOSFODNN7EXAMPLE"
   local secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
@@ -93,58 +64,39 @@ local future = async(function ()
   local canonical_request = table.concat(buffer)
 
   print(canonical_request)
-  print(to_hex_string(sha256(canonical_request)))
+  print(aws.hex(aws.sha256(canonical_request)))
 
   local buffer = {}
   buffer[#buffer + 1] = "AWS4-HMAC-SHA256\n"
   buffer[#buffer + 1] = ("%s\n"):format(datetime)
   buffer[#buffer + 1] = ("%s/%s/%s/aws4_request\n"):format(date, region, service)
-  buffer[#buffer + 1] = to_hex_string(sha256(canonical_request))
+  buffer[#buffer + 1] = aws.hex(aws.sha256(canonical_request))
   local string_to_sign = table.concat(buffer)
   print(string_to_sign)
 
-  local key = get_signature_key(secret_key, date, region, service)
+  local key = aws.get_signature_key(secret_key, date, region, service)
 
-  local sig = hmac_sha256(key, D.slice(string_to_sign))
-  print(to_hex_string(sig))
+  local sig = aws.hmac_sha256(key, D.slice(string_to_sign))
+  print(aws.hex(sig))
 
   local authorization = ("AWS4-HMAC-SHA256 Credential=%s/%s/%s/%s/aws4_request,SignedHeaders=%s,Signature=%s"):format(
-    access_key, date, region, service, table.concat(signed_headers, ";"), to_hex_string(sig))
+    access_key, date, region, service, table.concat(signed_headers, ";"), aws.hex(sig))
   print "AWS4-HMAC-SHA256 Credential=AKIAIOSFODNN7EXAMPLE/20130524/us-east-1/s3/aws4_request,SignedHeaders=host;range;x-amz-content-sha256;x-amz-date,Signature=f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41"
   assert(authorization == "AWS4-HMAC-SHA256 Credential=AKIAIOSFODNN7EXAMPLE/20130524/us-east-1/s3/aws4_request,SignedHeaders=host;range;x-amz-content-sha256;x-amz-date,Signature=f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41")
 
+  local req = D.new(G.Request, "https://examplebucket.s3.amazonaws.com/test.txt", {
+    headers = {
+      Range = "bytes=0-9";
+      ["x-amz-content-sha256"] = sha256_empty;
+      ["x-amz-date"] = "20130524T000000Z";
+    }
+  })
+  aws.sign(req)
   --[[
   local now = os.time()
   local datetime = os.date("!%Y%m%dT%H%M%SZ", now)
   local date = os.date("!%Y%m%d", now)
   ]]
-
-  --[[
-    url
-    method
-    headers
-    body
-
-    url = "..."
-    相対URLかもしれない
-
-    method
-
-    headers = {
-      key = value;
-       :
-    }
-
-    body = string or blob
-
-
-    fetch(url, {
-      method = ...,
-      headers = ...,
-      body = ...
-    })
-  ]]
-
   print "finished"
 end)
 

@@ -15,6 +15,53 @@
 -- You should have received a copy of the GNU General Public License
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-return function ()
-  return 42
+local D, G = require "dromozoa.web" .import "global"
+local async, await = require "dromozoa.web.async" .import "await"
+
+local subtle = G.crypto.subtle
+
+local class = {}
+
+local function array_buffer(that)
+  if type(that) == "string" then
+    return D.slice(that)
+  elseif D.instanceof(that, G.Blob) then
+    return await(that:arrayBuffer())
+  else
+    return that
+  end
 end
+
+function class.hex(data)
+  local source = D.new(G.Uint8Array, data)
+  local buffer = {}
+  for i = 1, source.length do
+    buffer[i] = ("%02x"):format(source[i - 1])
+  end
+  return table.concat(buffer)
+end
+
+function class.sha256(data)
+  return await(subtle:digest("SHA-256", array_buffer(data)))
+end
+
+function class.hmac_sha256(key, data)
+  return await(subtle:sign("HMAC", await(subtle:importKey("raw", array_buffer(key), { name = "HMAC", hash = { name = "SHA-256"} }, false, D.array { "sign" })), array_buffer(data)))
+end
+
+function class.get_signature_key(secret_key, date, region, service)
+  return class.hmac_sha256(class.hmac_sha256(class.hmac_sha256(class.hmac_sha256("AWS4" .. secret_key, date), region), service), "aws4_request")
+end
+
+function class.sign(source)
+  -- G.console:log(source)
+  local url = D.new(G.URL, source.url)
+  G.console:log(url)
+
+  for i, item in D.each(source.headers:entries()) do
+    local k, v = D.unpack(item)
+    print(i, k, v)
+  end
+end
+
+return class

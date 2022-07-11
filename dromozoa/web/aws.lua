@@ -20,8 +20,6 @@ local async, await = require "dromozoa.web.async" :import "await"
 
 local subtle = G.crypto.subtle
 
-local class = {}
-
 local function array_buffer(that)
   if type(that) == "string" then
     return D.slice(that)
@@ -85,6 +83,8 @@ local function get_signature_key(secret_key, date, region, service)
   return hmac_sha256(hmac_sha256(hmac_sha256(hmac_sha256("AWS4" .. secret_key, date), region), service), "aws4_request")
 end
 
+local class = {}
+
 function class.sign(access_key, secret_key, method, url, headers, body)
   local url = D.new(G.URL, url)
   local headers = D.new(G.Headers, headers)
@@ -98,15 +98,14 @@ function class.sign(access_key, secret_key, method, url, headers, body)
   end
   assert(service)
 
-  local query = {}
+  local buffer = {}
   for i, item in D.each(url.searchParams:entries()) do
     local k, v = D.unpack(item)
-    query[i] = { k, v }
+    buffer[i] = { k, v }
   end
-  table.sort(query, compare)
-  local buffer = {}
-  for i = 1, #query do
-    local item = query[i]
+  table.sort(buffer, compare)
+  for i = 1, #buffer do
+    local item = buffer[i]
     buffer[i] = uri_encode(item[1]) .. "=" .. uri_encode(item[2])
   end
   local canonical_query_string = table.concat(buffer, "&")
@@ -122,7 +121,6 @@ function class.sign(access_key, secret_key, method, url, headers, body)
     if body then
       hashed_payload = hex(sha256(await(arrayBuffer(body))))
     else
-      -- sha256("")
       hashed_payload = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     end
     headers:set("x-amz-content-sha256", hashed_payload)

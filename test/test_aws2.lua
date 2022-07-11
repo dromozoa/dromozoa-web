@@ -51,7 +51,7 @@ local future = async(function ()
 
       local response = await(G:fetch(url, { cache = "no-store", headers = headers }))
       if not response.ok then
-        error(("cannot fetch %s: %d %s"):format(filename, response.status, response.statusText))
+        error(("cannot fetch %s: %d %s"):format(url, response.status, response.statusText))
       end
       local text = await(response:text())
       print(text)

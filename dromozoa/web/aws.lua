@@ -54,19 +54,19 @@ local function uri_encode(s)
 end
 
 local function uri_encode_path(s)
-  return (s:gsub("[^A-Za-z0-9%-%_%.%~%/]", uri_encoder))
+  return (s:gsub("[^A-Za-z0-9%-%_%.%~%/%%]", uri_encoder))
 end
 
-local base16_encoder = {}
+local hex_encoder = {}
 for byte = 0x00, 0xFF do
-  base16_encoder[byte] = ("%02x"):format(byte)
+  hex_encoder[byte] = ("%02x"):format(byte)
 end
 
 local function hex(data)
   local source = D.new(G.Uint8Array, data)
   local buffer = {}
   for i = 1, source.length do
-    buffer[i] = base16_encoder[source[i - 1]]
+    buffer[i] = hex_encoder[source[i - 1]]
   end
   return table.concat(buffer)
 end
@@ -106,7 +106,7 @@ local function make_canonical_headers(headers, host, body)
   local content_sha256 = headers:get "x-amz-content-sha256"
   if D.is_falsy(content_sha256) then
     if body then
-      content_sha256 = hex(sha256(await(arrayBuffer(body))))
+      content_sha256 = hex(sha256(body))
     else
       content_sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     end
@@ -168,7 +168,7 @@ function class.sign(access_key, secret_key, method, url, headers, body)
 
   local canonical_request = table.concat({
     method;
-    uri_encode_path(url.pathname);
+    uri_encode_path(url.pathname); -- TODO s3以外ではちゃんとエンコードしてよい？
     canonical_query_string;
     canonical_headers;
     signed_headers;

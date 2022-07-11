@@ -46,37 +46,43 @@ local function trim(s)
   return (s:gsub("^%s+", ""):gsub("%s+$", ""))
 end
 
-local function uri_ecode_impl(s)
-  return ("%%%02X"):format(s:byte())
+local uri_encoder = {}
+for byte = 0x00, 0xFF do
+  uri_encoder[string.char(byte)] = ("%%%02X"):format(byte)
 end
 
 local function uri_encode(s)
-  return (s:gsub("[^A-Za-z0-9%-%_%.%~]", uri_ecode_impl))
+  return (s:gsub("[^A-Za-z0-9%-%_%.%~]", uri_encoder))
 end
 
 local function uri_encode_path(s)
-  return (s:gsub("[^A-Za-z0-9%-%_%.%~%/]", uri_ecode_impl))
+  return (s:gsub("[^A-Za-z0-9%-%_%.%~%/]", uri_encoder))
 end
 
-function class.hex(data)
+local hex_encoder = {}
+for byte = 0x00, 0xFF do
+  hex_encoder[byte] = ("%02x"):format(byte)
+end
+
+local function hex(data)
   local source = D.new(G.Uint8Array, data)
   local buffer = {}
   for i = 1, source.length do
-    buffer[i] = ("%02x"):format(source[i - 1])
+    buffer[i] = hex_encoder[source[i - 1]]
   end
   return table.concat(buffer)
 end
 
-function class.sha256(data)
+local function sha256(data)
   return await(subtle:digest("SHA-256", array_buffer(data)))
 end
 
-function class.hmac_sha256(key, data)
+local function hmac_sha256(key, data)
   return await(subtle:sign("HMAC", await(subtle:importKey("raw", array_buffer(key), { name = "HMAC", hash = { name = "SHA-256"} }, false, D.array { "sign" })), array_buffer(data)))
 end
 
-function class.get_signature_key(secret_key, date, region, service)
-  return class.hmac_sha256(class.hmac_sha256(class.hmac_sha256(class.hmac_sha256("AWS4" .. secret_key, date), region), service), "aws4_request")
+local function get_signature_key(secret_key, date, region, service)
+  return hmac_sha256(hmac_sha256(hmac_sha256(hmac_sha256("AWS4" .. secret_key, date), region), service), "aws4_request")
 end
 
 function class.sign(access_key, secret_key, method, url, headers, body)
@@ -84,17 +90,13 @@ function class.sign(access_key, secret_key, method, url, headers, body)
   local headers = D.new(G.Headers, headers)
 
   -- https://github.com/boto/botocore/blob/develop/botocore/data/endpoints.json
-  local endpoint = url.host
-  local service, region = endpoint:match "([^%.]+)%.(%a%a%-%w+%-%d+)%.amazonaws%.com"
+  local host = url.host
+  local service, region = host:match "([^%.]+)%.(%a%a%-%w+%-%d+)%.amazonaws%.com"
   if not service then
-    service = endpoint:match "([^%.]+)%.amazonaws.com"
+    service = host:match "([^%.]+)%.amazonaws.com"
     region = "us-east-1"
   end
   assert(service)
-
-  local http_method = method
-
-  local canonical_uri = uri_encode_path(url.pathname)
 
   local query = {}
   for i, item in D.each(url.searchParams:entries()) do
@@ -118,7 +120,7 @@ function class.sign(access_key, secret_key, method, url, headers, body)
   local hashed_payload = headers:get "x-amz-content-sha256"
   if D.is_falsy(hashed_payload) then
     if body then
-      hashed_payload = class.hex(class.sha256(await(arrayBuffer(body))))
+      hashed_payload = hex(sha256(await(arrayBuffer(body))))
     else
       -- sha256("")
       hashed_payload = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -132,7 +134,7 @@ function class.sign(access_key, secret_key, method, url, headers, body)
     canonical_headers[i] = { k:lower(), trim(v) }
   end
   if not headers:has "host" then
-    canonical_headers[#canonical_headers + 1] = { "host", url.host }
+    canonical_headers[#canonical_headers + 1] = { "host", host }
   end
 
   table.sort(canonical_headers, compare)
@@ -151,8 +153,8 @@ function class.sign(access_key, secret_key, method, url, headers, body)
   local canonical_headers = table.concat(buffer)
 
   local canonical_request =
-    http_method .. "\n" ..
-    canonical_uri .. "\n" ..
+    method .. "\n" ..
+    uri_encode_path(url.pathname) .. "\n" ..
     canonical_query_string .. "\n" ..
     canonical_headers .. "\n" ..
     signed_headers .. "\n" ..
@@ -164,16 +166,16 @@ function class.sign(access_key, secret_key, method, url, headers, body)
     "AWS4-HMAC-SHA256\n" ..
     timestamp .. "\n" ..
     scope .. "\n" ..
-    class.hex(class.sha256(canonical_request))
+    hex(sha256(canonical_request))
 
-  local signing_key = class.get_signature_key(secret_key, date, region, service)
+  local signing_key = get_signature_key(secret_key, date, region, service)
 
-  local signature = class.hmac_sha256(signing_key, string_to_sign)
+  local signature = hmac_sha256(signing_key, string_to_sign)
 
   local result = "AWS4-HMAC-SHA256 " ..
     "Credential=" .. access_key .. "/" .. scope .. "," ..
     "SignedHeaders=" .. signed_headers .. "," ..
-    "Signature=" .. class.hex(signature)
+    "Signature=" .. hex(signature)
   headers:set("authorization", result)
   return headers
 end

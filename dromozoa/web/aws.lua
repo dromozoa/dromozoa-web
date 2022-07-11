@@ -83,23 +83,9 @@ local function get_signature_key(secret_key, date, region, service)
   return hmac_sha256(hmac_sha256(hmac_sha256(hmac_sha256("AWS4" .. secret_key, date), region), service), "aws4_request")
 end
 
-local class = {}
-
-function class.sign(access_key, secret_key, method, url, headers, body)
-  local url = D.new(G.URL, url)
-  local headers = D.new(G.Headers, headers)
-
-  -- https://github.com/boto/botocore/blob/develop/botocore/data/endpoints.json
-  local host = url.host
-  local service, region = host:match "([^%.]+)%.(%a%a%-%w+%-%d+)%.amazonaws%.com"
-  if not service then
-    service = host:match "([^%.]+)%.amazonaws.com"
-    region = "us-east-1"
-  end
-  assert(service)
-
+local function get_canonical_query_string(search_params)
   local buffer = {}
-  for i, item in D.each(url.searchParams:entries()) do
+  for i, item in D.each(search_params:entries()) do
     local k, v = D.unpack(item)
     buffer[i] = { k, v }
   end
@@ -108,14 +94,18 @@ function class.sign(access_key, secret_key, method, url, headers, body)
     local item = buffer[i]
     buffer[i] = uri_encode(item[1]) .. "=" .. uri_encode(item[2])
   end
-  local canonical_query_string = table.concat(buffer, "&")
+  return table.concat(buffer, "&")
+end
+
+local function get_canonical_headers(headers, host, body)
+  local buffer = {}
 
   local timestamp = headers:get "x-amz-date"
   if D.is_falsy(timestamp) then
     timestamp = os.date "!%Y%m%dT%H%M%SZ"
     headers:set("x-amz-date", timestamp)
   end
-  local date = timestamp:sub(1, 8)
+
   local hashed_payload = headers:get "x-amz-content-sha256"
   if D.is_falsy(hashed_payload) then
     if body then
@@ -134,21 +124,39 @@ function class.sign(access_key, secret_key, method, url, headers, body)
   if not headers:has "host" then
     canonical_headers[#canonical_headers + 1] = { "host", host }
   end
-
   table.sort(canonical_headers, compare)
 
-  local buffer = {}
+  local signed_headers_buffer = {}
   for i = 1, #canonical_headers do
-    buffer[i] = canonical_headers[i][1]
+    signed_headers_buffer[i] = canonical_headers[i][1]
   end
-  local signed_headers = table.concat(buffer, ";")
 
-  local buffer = {}
+  local canonical_headers_buffer = {}
   for i = 1, #canonical_headers do
     local item = canonical_headers[i]
-    buffer[i] = item[1] .. ":" .. item[2] .. "\n"
+    canonical_headers_buffer[i] = item[1] .. ":" .. item[2] .. "\n"
   end
-  local canonical_headers = table.concat(buffer)
+
+  return table.concat(canonical_headers_buffer), table.concat(signed_headers_buffer, ";"), timestamp, hashed_payload
+end
+
+local class = {}
+
+function class.sign(access_key, secret_key, method, url, headers, body)
+  local url = D.new(G.URL, url)
+  local headers = D.new(G.Headers, headers)
+
+  -- https://github.com/boto/botocore/blob/develop/botocore/data/endpoints.json
+  local host = url.host
+  local service, region = host:match "([^%.]+)%.(%a%a%-%w+%-%d+)%.amazonaws%.com"
+  if not service then
+    service = assert(host:match "([^%.]+)%.amazonaws.com")
+    region = "us-east-1"
+  end
+
+  local canonical_query_string = get_canonical_query_string(url.searchParams)
+  local canonical_headers, signed_headers, timestamp, hashed_payload = get_canonical_headers(headers, host, body)
+  local date = timestamp:sub(1, 8)
 
   local canonical_request =
     method .. "\n" ..

@@ -57,16 +57,16 @@ local function uri_encode_path(s)
   return (s:gsub("[^A-Za-z0-9%-%_%.%~%/]", uri_encoder))
 end
 
-local base16_encoder = {}
+local hex_encoder = {}
 for byte = 0x00, 0xFF do
-  base16_encoder[byte] = ("%02x"):format(byte)
+  hex_encoder[byte] = ("%02x"):format(byte)
 end
 
 local function hex(data)
   local source = D.new(G.Uint8Array, data)
   local buffer = {}
   for i = 1, source.length do
-    buffer[i] = base16_encoder[source[i - 1]]
+    buffer[i] = hex_encoder[source[i - 1]]
   end
   return table.concat(buffer)
 end

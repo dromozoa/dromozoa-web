@@ -39,8 +39,6 @@ local future = async(function ()
     futures[#futures + 1] = async(function ()
       local access_key = access_key.value
       local secret_key = secret_key.value
-      print(access_key)
-      print(secret_key)
 
       local url = "https://dromozoa-web.s3.ap-northeast-1.amazonaws.com/test.txt"
       local headers = aws.sign(access_key, secret_key, "GET", url, {})

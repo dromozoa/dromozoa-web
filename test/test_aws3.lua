@@ -136,6 +136,9 @@ local function setup_command(aws)
       };
     };
     { "div";
+      { "a", name="link", "(no data)" };
+    };
+    { "div";
       { "label";
         "File: ";
         { "input", name="file", type="file" };
@@ -149,6 +152,7 @@ local function setup_command(aws)
   }
 
   local path = div:querySelector "input[name=path]"
+  local link = div:querySelector "a[name=link]"
   local file = div:querySelector "input[name=file]"
   local get = div:querySelector "button[name=get]"
   local put = div:querySelector "button[name=put]"
@@ -164,8 +168,13 @@ local function setup_command(aws)
       local headers = aws.sign(access_key, secret_key, "GET", url, {})
       local response = await(G:fetch(url, { cache = "no-store", headers = headers }))
       if response.ok then
-        local text = await(response:text())
-        print(text)
+        local body = await(response:blob())
+        local href = link:getAttribute "href"
+        if D.is_truthy(href) then
+          G.URL:revokeObjectURL(href)
+        end
+        link:setAttribute("href", G.URL:createObjectURL(body))
+        link.textContent = body.type .. " " .. body.size
       else
         io.stderr:write(("cannot fetch %s: %d %s\n"):format(url, response.status, response.statusText))
       end
@@ -188,8 +197,24 @@ local function setup_command(aws)
       local headers = aws.sign(access_key, secret_key, "PUT", url, { ["content-type"] = body.type }, body)
       local response = await(G:fetch(url, { method = "PUT", cache = "no-store", headers = headers, body = body }))
       if response.ok then
-        local text = await(response:text())
-        print(text)
+        io.write(("%d %s\n"):format(response.status, response.statusText))
+      else
+        io.stderr:write(("cannot fetch %s: %d %s\n"):format(url, response.status, response.statusText))
+      end
+    end)
+  end)
+
+  delete:addEventListener("click", function (ev)
+    ev:preventDefault()
+    ev:stopPropagation()
+    futures:async(function ()
+      local access_key, secret_key = load_credentials()
+      local url = D.new(G.URL, "https://dromozoa-web.s3.ap-northeast-1.amazonaws.com")
+      url.pathname = path.value
+      local headers = aws.sign(access_key, secret_key, "DELETE", url, {})
+      local response = await(G:fetch(url, { method = "DELETE", cache = "no-store", headers = headers }))
+      if response.ok then
+        io.write(("%d %s\n"):format(response.status, response.statusText))
       else
         io.stderr:write(("cannot fetch %s: %d %s\n"):format(url, response.status, response.statusText))
       end

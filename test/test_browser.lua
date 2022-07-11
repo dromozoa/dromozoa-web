@@ -15,7 +15,10 @@
 -- You should have received a copy of the GNU General Public License
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-local D = require "dromozoa.web"
+local D, G = require "dromozoa.web" :import "global"
+local async, await = require "dromozoa.web.async" :import "await"
+
+print("thread1 started", coroutine.running())
 
 print("device_pixel_ratio", D.get_device_pixel_ratio())
 print("window_title", D.get_window_title())
@@ -45,3 +48,26 @@ print("sum", sum)
 print("avg", avg)
 print("sd", math.sqrt(v))
 print("fps", 1000 / avg)
+
+local future = async(function ()
+  print "setTimeout started"
+  local t = D.get_now()
+  await(function (promise)
+    G:setTimeout(function () promise:set(true) end, 1000)
+  end)
+  print "setTimeout finished"
+  return D.get_now() - t
+end)
+
+print("thread1 finished", coroutine.running())
+
+return function ()
+  print("thread2 started", coroutine.running())
+  while true do
+    if future and future:is_ready() then
+      print(future:get())
+      future = nil
+    end
+    coroutine.yield()
+  end
+end

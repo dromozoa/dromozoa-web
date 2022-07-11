@@ -53,9 +53,13 @@ return function ()
   end
 
   if thread then
-    assert(coroutine.resume(thread))
+    local _, fn = assert(coroutine.resume(thread))
     if coroutine.status(thread) == "dead" then
-      thread = nil
+      if fn then
+        thread = coroutine.create(fn)
+      else
+        thread = nil
+      end
     end
   end
 end

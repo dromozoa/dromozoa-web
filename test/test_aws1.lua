@@ -72,6 +72,8 @@ local future = async(function ()
     local k, v = D.unpack(item)
     print(k, v)
   end
+
+  print "finished"
 end)
 
 while true do

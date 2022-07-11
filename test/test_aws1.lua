@@ -20,7 +20,6 @@ local async, await = require "dromozoa.web.async" :import "await"
 
 local future = async(function ()
   -- https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html
-
   local aws = async.require "dromozoa.web.aws"
 
   -- https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html#example-signature-calculations

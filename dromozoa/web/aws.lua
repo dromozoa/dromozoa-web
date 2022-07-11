@@ -85,7 +85,7 @@ function class.sign(access_key, secret_key, method, url, headers, body)
 
   -- https://github.com/boto/botocore/blob/develop/botocore/data/endpoints.json
   local endpoint = url.host
-  local service, region = endpoint:match "([^%.]+)%.(%a%a-%s+%-%d+)%.amazonaws%.com"
+  local service, region = endpoint:match "([^%.]+)%.(%a%a%-%w+%-%d+)%.amazonaws%.com"
   if not service then
     service = endpoint:match "([^%.]+)%.amazonaws.com"
     region = "us-east-1"

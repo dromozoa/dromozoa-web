@@ -19,8 +19,8 @@
 -- You should have received a copy of the GNU General Public License
 -- along with dromozoa-web.  If not, see <http://www.gnu.org/licenses/>.
 
-local D, G = require "dromozoa.web" .import "global"
-local async, await = require "dromozoa.web.async" .import "await"
+local D, G = require "dromozoa.web" :import "global"
+local async, await = require "dromozoa.web.async" :import "await"
 
 local future = async(function ()
   local query = D.new(G.URLSearchParams, G.document.location.search)

@@ -57,16 +57,16 @@ local function uri_encode_path(s)
   return (s:gsub("[^A-Za-z0-9%-%_%.%~%/]", uri_encoder))
 end
 
-local hex_encoder = {}
+local base16_encoder = {}
 for byte = 0x00, 0xFF do
-  hex_encoder[byte] = ("%02x"):format(byte)
+  base16_encoder[byte] = ("%02x"):format(byte)
 end
 
 local function hex(data)
   local source = D.new(G.Uint8Array, data)
   local buffer = {}
   for i = 1, source.length do
-    buffer[i] = hex_encoder[source[i - 1]]
+    buffer[i] = base16_encoder[source[i - 1]]
   end
   return table.concat(buffer)
 end
@@ -79,41 +79,38 @@ local function hmac_sha256(key, data)
   return await(subtle:sign("HMAC", await(subtle:importKey("raw", array_buffer(key), { name = "HMAC", hash = { name = "SHA-256"} }, false, D.array { "sign" })), array_buffer(data)))
 end
 
-local function get_signature_key(secret_key, date, region, service)
-  return hmac_sha256(hmac_sha256(hmac_sha256(hmac_sha256("AWS4" .. secret_key, date), region), service), "aws4_request")
-end
-
-local function get_canonical_query_string(search_params)
-  local buffer = {}
+local function make_canonical_query_string(search_params)
+  local canonical_query_string = {}
   for i, item in D.each(search_params:entries()) do
     local k, v = D.unpack(item)
-    buffer[i] = { k, v }
+    canonical_query_string[i] = { k, v }
   end
-  table.sort(buffer, compare)
-  for i = 1, #buffer do
-    local item = buffer[i]
-    buffer[i] = uri_encode(item[1]) .. "=" .. uri_encode(item[2])
+  table.sort(canonical_query_string, compare)
+
+  local canonical_query_string_buffer = {}
+  for i = 1, #canonical_query_string do
+    local item = canonical_query_string[i]
+    canonical_query_string_buffer[i] = uri_encode(item[1]) .. "=" .. uri_encode(item[2])
   end
-  return table.concat(buffer, "&")
+
+  return table.concat(canonical_query_string_buffer, "&")
 end
 
-local function get_canonical_headers(headers, host, body)
-  local buffer = {}
-
-  local timestamp = headers:get "x-amz-date"
-  if D.is_falsy(timestamp) then
-    timestamp = os.date "!%Y%m%dT%H%M%SZ"
-    headers:set("x-amz-date", timestamp)
+local function make_canonical_headers(headers, host, body)
+  local date = headers:get "x-amz-date"
+  if D.is_falsy(date) then
+    date = os.date "!%Y%m%dT%H%M%SZ"
+    headers:set("x-amz-date", date)
   end
 
-  local hashed_payload = headers:get "x-amz-content-sha256"
-  if D.is_falsy(hashed_payload) then
+  local content_sha256 = headers:get "x-amz-content-sha256"
+  if D.is_falsy(content_sha256) then
     if body then
-      hashed_payload = hex(sha256(await(arrayBuffer(body))))
+      content_sha256 = hex(sha256(await(arrayBuffer(body))))
     else
-      hashed_payload = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      content_sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     end
-    headers:set("x-amz-content-sha256", hashed_payload)
+    headers:set("x-amz-content-sha256", content_sha256)
   end
 
   local canonical_headers = {}
@@ -126,63 +123,70 @@ local function get_canonical_headers(headers, host, body)
   end
   table.sort(canonical_headers, compare)
 
-  local signed_headers_buffer = {}
-  for i = 1, #canonical_headers do
-    signed_headers_buffer[i] = canonical_headers[i][1]
-  end
-
   local canonical_headers_buffer = {}
   for i = 1, #canonical_headers do
     local item = canonical_headers[i]
     canonical_headers_buffer[i] = item[1] .. ":" .. item[2] .. "\n"
   end
 
-  return table.concat(canonical_headers_buffer), table.concat(signed_headers_buffer, ";"), timestamp, hashed_payload
+  local signed_headers_buffer = {}
+  for i = 1, #canonical_headers do
+    signed_headers_buffer[i] = canonical_headers[i][1]
+  end
+
+  return table.concat(canonical_headers_buffer), table.concat(signed_headers_buffer, ";"), date, content_sha256
+end
+
+local function make_signature_key(secret_key, date, region, service)
+  return hmac_sha256(hmac_sha256(hmac_sha256(hmac_sha256("AWS4" .. secret_key, date), region), service), "aws4_request")
 end
 
 local class = {}
 
 function class.sign(access_key, secret_key, method, url, headers, body)
   local url = D.new(G.URL, url)
+  local host = url.host
   local headers = D.new(G.Headers, headers)
 
   -- https://github.com/boto/botocore/blob/develop/botocore/data/endpoints.json
-  local host = url.host
   local service, region = host:match "([^%.]+)%.(%a%a%-%w+%-%d+)%.amazonaws%.com"
   if not service then
     service = assert(host:match "([^%.]+)%.amazonaws.com")
     region = "us-east-1"
   end
 
-  local canonical_query_string = get_canonical_query_string(url.searchParams)
-  local canonical_headers, signed_headers, timestamp, hashed_payload = get_canonical_headers(headers, host, body)
-  local date = timestamp:sub(1, 8)
+  local canonical_query_string = make_canonical_query_string(url.searchParams)
+  local canonical_headers, signed_headers, datetime, hashed_payload = make_canonical_headers(headers, host, body)
+  local date = datetime:sub(1, 8)
 
-  local canonical_request =
-    method .. "\n" ..
-    uri_encode_path(url.pathname) .. "\n" ..
-    canonical_query_string .. "\n" ..
-    canonical_headers .. "\n" ..
-    signed_headers .. "\n" ..
-    hashed_payload
+  local scope = table.concat({
+    date;
+    region;
+    service;
+    "aws4_request";
+  }, "/")
 
-  local scope = date .. "/" .. region .. "/" .. service .. "/aws4_request"
+  local canonical_request = table.concat({
+    method;
+    uri_encode_path(url.pathname);
+    canonical_query_string;
+    canonical_headers;
+    signed_headers;
+    hashed_payload;
+  }, "\n")
 
-  local string_to_sign =
-    "AWS4-HMAC-SHA256\n" ..
-    timestamp .. "\n" ..
-    scope .. "\n" ..
-    hex(sha256(canonical_request))
+  local string_to_sign = table.concat({
+    "AWS4-HMAC-SHA256";
+    datetime;
+    scope;
+    hex(sha256(canonical_request));
+  }, "\n")
 
-  local signing_key = get_signature_key(secret_key, date, region, service)
+  local signature = hex(hmac_sha256(make_signature_key(secret_key, date, region, service), string_to_sign))
 
-  local signature = hmac_sha256(signing_key, string_to_sign)
+  local authorization = ("AWS4-HMAC-SHA256 Credential=%s/%s, SignedHeaders=%s, Signature=%s"):format(access_key, scope, signed_headers, signature)
+  headers:set("authorization", authorization)
 
-  local result = "AWS4-HMAC-SHA256 " ..
-    "Credential=" .. access_key .. "/" .. scope .. "," ..
-    "SignedHeaders=" .. signed_headers .. "," ..
-    "Signature=" .. hex(signature)
-  headers:set("authorization", result)
   return headers
 end
 

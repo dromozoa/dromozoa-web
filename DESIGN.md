@@ -18,6 +18,37 @@ AWSはsignでいける？
 
 https://stackoverflow.com/questions/55594587/setup-a-basic-websocket-mock-in-aws-apigatewayt
 
+送信用のAPIでCORSを有効にする
+
+```
+[
+    {
+        "AllowedHeaders": [
+            "*"
+        ],
+        "AllowedMethods": [
+            "GET",
+            "PUT",
+            "POST",
+            "DELETE",
+            "HEAD"
+        ],
+        "AllowedOrigins": [
+            "http://localhost",
+            "https://*.dromozoa.com/"
+        ],
+        "ExposeHeaders": []
+    }
+]
+AllowedHeaders=*,AllowedMethods=GET,PUT,POST,DELETE,HEAD,AllowedOrigins=http://localhost,https://*.dromozoa.com
+```
+
+CORSはwebsocketに設定できない。
+
+```
+aws apigatewayv2 update-api --api-id ********** --cors-configuration 'AllowHeaders=*,AllowMethods=GET,PUT,POST,DELETE,HEAD,AllowOrigins=http://localhost,https://*.dromozoa.com'
+```
+
 ## エラーの伝搬
 
 - JavaScriptの例外

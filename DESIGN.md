@@ -16,6 +16,8 @@ AWSはsignでいける？
 - Lambdaを使わないで、いけるところまでいく。
 - access keyは安全な方法で配布できるとする。
 
+https://stackoverflow.com/questions/55594587/setup-a-basic-websocket-mock-in-aws-apigatewayt
+
 ## エラーの伝搬
 
 - JavaScriptの例外

@@ -79,7 +79,7 @@ futures:async(function ()
       socket.onopen = function ()
         print "onopen"
 
-        socket:send [[{}]]
+        socket:send [[{"message":"test"}]]
       end
 
       socket.onclose = function ()

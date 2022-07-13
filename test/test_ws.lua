@@ -67,26 +67,34 @@ futures:async(function ()
       return
     end
 
-    socket = D.new(G.WebSocket, "wss://ce57u4bdl6.execute-api.ap-northeast-1.amazonaws.com/d?name=foo-server")
+    futures:async(function ()
+      local url = D.new(G.URL, "wss://ce57u4bdl6.execute-api.ap-northeast-1.amazonaws.com/d?name=foo-server")
 
-    socket.onopen = function ()
-      print "onopen"
+      print(url)
+      url = aws.sign_query(access_key, secret_key, "GET", url, {})
+      print(url)
 
-      socket:send [[{}]]
-    end
+      socket = D.new(G.WebSocket, url)
 
-    socket.onclose = function ()
-      print "onclose"
-      socket = nil
-    end
+      socket.onopen = function ()
+        print "onopen"
 
-    socket.onerror = function (ev)
-      print("onerror", ev, ev.message)
-    end
+        socket:send [[{}]]
+      end
 
-    socket.onmessage = function (ev)
-      print("onmessage", ev, ev.data)
-    end
+      socket.onclose = function ()
+        print "onclose"
+        socket = nil
+      end
+
+      socket.onerror = function (ev)
+        print("onerror", ev, ev.message)
+      end
+
+      socket.onmessage = function (ev)
+        print("onmessage", ev, ev.data)
+      end
+    end)
   end)
 
   local close = document:createElement "button" :append "Close"

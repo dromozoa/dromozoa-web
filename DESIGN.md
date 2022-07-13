@@ -49,6 +49,18 @@ CORSはwebsocketに設定できない。
 aws apigatewayv2 update-api --api-id ********** --cors-configuration 'AllowHeaders=*,AllowMethods=GET,PUT,POST,DELETE,HEAD,AllowOrigins=http://localhost,https://*.dromozoa.com'
 ```
 
+```
+aws apigatewayv2 update-integration \
+    --api-id ce57u4bdl6 \
+    --integration-id okrpt2q \
+    --request-parameters 'integration.request.body.name'='route.request.querystring.name'
+```
+
+
+
+
+- リクエストとレスポンスのマッピングをよく確認する
+
 ## エラーの伝搬
 
 - JavaScriptの例外

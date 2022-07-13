@@ -190,4 +190,60 @@ function class.sign(access_key, secret_key, method, url, headers, body)
   return headers
 end
 
+function class.sign_query(access_key, secret_key, method, url, headers, body)
+  local url = D.new(G.URL, url)
+  local host = url.host
+  local headers = D.new(G.Headers, headers)
+
+  -- https://github.com/boto/botocore/blob/develop/botocore/data/endpoints.json
+  local service, region = host:match "([^%.]+)%.(%a%a%-%w+%-%d+)%.amazonaws%.com"
+  if not service then
+    service = assert(host:match "([^%.]+)%.amazonaws.com")
+    region = "us-east-1"
+  end
+
+  local search_params = url.searchParams
+
+  local datetime = os.date "!%Y%m%dT%H%M%SZ"
+  local date = datetime:sub(1, 8)
+  local scope = table.concat({
+    date;
+    region;
+    service;
+    "aws4_request";
+  }, "/")
+  local canonical_headers = ("host:%s\n"):format(host)
+  local signed_headers = "host"
+
+  search_params:append("X-Amz-Date", datetime)
+  search_params:append("X-Amz-Expire", "3600")
+  search_params:append("X-Amz-Algorithm", "AWS4-HMAC-SHA256")
+  search_params:append("X-Amz-Credential", ("%s/%s"):format(access_key, scope))
+  search_params:append("X-Amz-SignedHeaders", "host")
+
+  local canonical_query_string = make_canonical_query_string(url.searchParams)
+
+  local canonical_request = table.concat({
+    method;
+    uri_encode_path(url.pathname); -- TODO s3以外ではちゃんとエンコードしてよい？
+    canonical_query_string;
+    canonical_headers;
+    signed_headers;
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+  }, "\n")
+
+  local string_to_sign = table.concat({
+    "AWS4-HMAC-SHA256";
+    datetime;
+    scope;
+    hex(sha256(canonical_request));
+  }, "\n")
+
+  local signature = hex(hmac_sha256(make_signature_key(secret_key, date, region, service), string_to_sign))
+
+  search_params:append("X-Amz-Signature", signature)
+
+  return url
+end
+
 return class

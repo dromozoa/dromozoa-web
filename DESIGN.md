@@ -51,13 +51,10 @@ aws apigatewayv2 update-api --api-id ********** --cors-configuration 'AllowHeade
 
 ```
 aws apigatewayv2 update-integration \
-    --api-id ce57u4bdl6 \
-    --integration-id okrpt2q \
+    --api-id ********** \
+    --integration-id ******* \
     --request-parameters 'integration.request.body.name'='route.request.querystring.name'
 ```
-
-
-
 
 - リクエストとレスポンスのマッピングをよく確認する
 

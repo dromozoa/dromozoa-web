@@ -1,5 +1,63 @@
 # dromozoa-web
 
+## websocket
+
+認証はクエリで行う
+AWSはsignでいける？
+
+- API GatewayでWebSocketを構築
+- $request.body.action, $connect, $disconnectを作る
+- Lambdaオーソライザを使えば簡単だけど
+- $connectにIAM認証をつける
+- WebSocketでもopenapiつかえる……よね？
+
+コンセプト
+
+- Lambdaを使わないで、いけるところまでいく。
+- access keyは安全な方法で配布できるとする。
+
+https://stackoverflow.com/questions/55594587/setup-a-basic-websocket-mock-in-aws-apigatewayt
+
+送信用のAPIでCORSを有効にする
+
+```
+[
+    {
+        "AllowedHeaders": [
+            "*"
+        ],
+        "AllowedMethods": [
+            "GET",
+            "PUT",
+            "POST",
+            "DELETE",
+            "HEAD"
+        ],
+        "AllowedOrigins": [
+            "http://localhost",
+            "https://*.dromozoa.com/"
+        ],
+        "ExposeHeaders": []
+    }
+]
+AllowedHeaders=*,AllowedMethods=GET,PUT,POST,DELETE,HEAD,AllowedOrigins=http://localhost,https://*.dromozoa.com
+```
+
+CORSはwebsocketに設定できない。
+
+```
+aws apigatewayv2 update-api --api-id ********** --cors-configuration 'AllowHeaders=*,AllowMethods=GET,PUT,POST,DELETE,HEAD,AllowOrigins=http://localhost,https://*.dromozoa.com'
+```
+
+```
+aws apigatewayv2 update-integration \
+    --api-id ********** \
+    --integration-id ******* \
+    --request-parameters 'integration.request.body.name'='route.request.querystring.name'
+```
+
+- リクエストとレスポンスのマッピングをよく確認する
+
 ## エラーの伝搬
 
 - JavaScriptの例外

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>dromozoa-web</title>
+</head>
+<body>
+<script>
+(() => {
+
+  let f = async () => {
+    console.log(1)
+    await new Promise(resolve => {
+      setTimeout(() => resolve(), 500)
+    })
+    console.log(2)
+  }
+  let g = () => {
+    console.log(3)
+  }
+
+  // f().then(() => console.log("then")).catch((e) => console.log("catch", e))
+
+  console.log(f)
+  console.log(g)
+
+  setTimeout(f, 0)
+  setTimeout(g, 0)
+
+  console.log(4)
+
+  let x = function* () {
+    yield 17
+    yield 23
+    yield 42
+    return 69
+  }
+
+  let y = function* () {
+    let generator = x()
+    yield "foo"
+    const v = yield* generator
+    console.log("yield*", v)
+    yield "bar"
+    return "baz"
+  }
+
+  let i = 0
+  let iterator = y()
+  while (true) {
+    let entry = iterator.next()
+    if (entry.done) {
+      console.log(++i, entry.value, "finished")
+      break
+    } else {
+      console.log(++i, entry.value)
+    }
+  }
+
+  // i = 0
+  // iterator = x()
+  // for (y of iterator) {
+  //   console.log(++i, y)
+  // }
+  // console.log(++i, iterator)
+
+})()
+</script>
+</body>
+</html>

@@ -67,8 +67,10 @@ futures:async(function ()
       return
     end
 
+    local nonce = G.crypto:randomUUID()
+
     futures:async(function ()
-      local url = D.new(G.URL, "wss://n2qtecb02e.execute-api.ap-northeast-1.amazonaws.com/d?name=test&public_key=aaaaaaaaa")
+      local url = D.new(G.URL, "wss://n2qtecb02e.execute-api.ap-northeast-1.amazonaws.com/d?name=test&public_key=aaaaaaaaa&nonce=" .. nonce)
 
       print(url)
       url = aws.sign_query(access_key, secret_key, "GET", url, {})
@@ -78,7 +80,6 @@ futures:async(function ()
 
       socket.onopen = function ()
         print "onopen"
-
         socket:send [[{"action":"get_connection"}]]
       end
 
@@ -95,6 +96,32 @@ futures:async(function ()
         print("onmessage", ev, ev.data)
       end
     end)
+  end)
+
+  local get = document:createElement "button" :append "Get"
+  get:addEventListener("click", function (ev)
+    ev:preventDefault()
+    ev:stopPropagation()
+
+    if not socket then
+      io.stderr:write "socket not opened\n"
+      return
+    end
+
+    socket:send [[{"action":"get_connection"}]]
+  end)
+
+  local put = document:createElement "button" :append "Put"
+  put:addEventListener("click", function (ev)
+    ev:preventDefault()
+    ev:stopPropagation()
+
+    if not socket then
+      io.stderr:write "socket not opened\n"
+      return
+    end
+
+    socket:send [[{"action":"put_connection"}]]
   end)
 
   local close = document:createElement "button" :append "Close"
@@ -218,6 +245,8 @@ futures:async(function ()
 
   document.body:append(document:createElement "div"
     :append(document:createElement "div" :append(open))
+    :append(document:createElement "div" :append(get))
+    :append(document:createElement "div" :append(put))
     :append(document:createElement "div" :append(close))
     :append(document:createElement "div" :append(connection_id))
     :append(document:createElement "div" :append(get_connection))

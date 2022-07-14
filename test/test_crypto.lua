@@ -61,6 +61,11 @@ local future = async(function ()
   local signing = await(subtle:sign("HMAC", key, D.slice "aws4_request"))
   assert(to_hex_string(signing) == "f4780e2d9f65fa895f9c67b32ce1baf0b0d8a43505a000a1a9e090d414db404d")
 
+  local pair = await(subtle:generateKey({ name = "ECDSA", namedCurve = "P-521" }, true, D.array { "sign", "verify" }))
+  local public_key_jwt = await(subtle:exportKey("jwk", pair.publicKey))
+  local data = G.JSON:stringify(public_key_jwt)
+  print(#data, data)
+
   print "finished"
 end)
 

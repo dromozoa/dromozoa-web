@@ -20,6 +20,7 @@ local async, await = require "dromozoa.web.async" :import "await"
 
 local FS = G.FS
 local document = G.document
+local subtle = G.crypto.subtle
 local socket
 
 local futures = { n = 0 }
@@ -57,6 +58,15 @@ futures:async(function ()
     io.stderr:write(("cannot open %s: %s\n"):format(credentials_path, message))
   end
 
+  local pair = await(subtle:generateKey({ name = "ECDSA", namedCurve = "P-256" }, true, D.array { "sign", "verify" }))
+  local private_key = pair.privateKey
+  local public_key = pair.publicKey
+  local public_key_jwk = G.JSON:stringify(await(subtle:exportKey("jwk", public_key)))
+  print(public_key_jwk)
+
+  local nonce = G.crypto:randomUUID()
+  print(nonce)
+
   local open = document:createElement "button" :append "Open"
   open:addEventListener("click", function (ev)
     ev:preventDefault()
@@ -67,11 +77,11 @@ futures:async(function ()
       return
     end
 
-    local nonce = G.crypto:randomUUID()
-
     futures:async(function ()
-      local url = D.new(G.URL, "wss://n2qtecb02e.execute-api.ap-northeast-1.amazonaws.com/d?name=test&public_key=aaaaaaaaa&nonce=" .. nonce)
-
+      local url = D.new(G.URL, "wss://n2qtecb02e.execute-api.ap-northeast-1.amazonaws.com/d")
+      url.searchParams:append("name", "testだよ")
+      url.searchParams:append("nonce", nonce)
+      url.searchParams:append("public_key", public_key_jwk)
       print(url)
       url = aws.sign_query(access_key, secret_key, "GET", url, {})
       print(url)

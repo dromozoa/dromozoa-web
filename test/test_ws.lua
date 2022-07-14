@@ -68,7 +68,7 @@ futures:async(function ()
     end
 
     futures:async(function ()
-      local url = D.new(G.URL, "wss://ce57u4bdl6.execute-api.ap-northeast-1.amazonaws.com/d?name=foo-server")
+      local url = D.new(G.URL, "wss://n2qtecb02e.execute-api.ap-northeast-1.amazonaws.com/d?name=test&public_key=aaaaaaaaa")
 
       print(url)
       url = aws.sign_query(access_key, secret_key, "GET", url, {})
@@ -79,7 +79,7 @@ futures:async(function ()
       socket.onopen = function ()
         print "onopen"
 
-        socket:send [[{"message":"test"}]]
+        socket:send [[{"action":"get_connection"}]]
       end
 
       socket.onclose = function ()
@@ -112,17 +112,33 @@ futures:async(function ()
 
   local connection_id = document:createElement "input" :setAttribute("type", "text")
 
-  local get_connections = document:createElement "button" :append "GET @connections"
+  local get_connection = document:createElement "button" :append "GET /connections/{connection_id}"
+  get_connection:addEventListener("click", function (ev)
+    ev:preventDefault()
+    ev:stopPropagation()
+    futures:async(function ()
+      local key = connection_id.value
+      local url = D.new(G.URL, "https://iuhpbxsimf.execute-api.ap-northeast-1.amazonaws.com/d/connections/" .. key)
+      local headers = aws.sign(access_key, secret_key, "GET", url, {})
+      local response = await(G:fetch(url, { cache = "no-store", headers = headers }))
+      if response.ok then
+        local body = await(response:text())
+        print(body)
+      else
+        io.stderr:write(("cannot fetch %s: %d %s\n"):format(url, response.status, response.statusText))
+      end
+    end)
+  end)
+
+  local get_connections = document:createElement "button" :append "GET /connections"
   get_connections:addEventListener("click", function (ev)
     ev:preventDefault()
     ev:stopPropagation()
     futures:async(function ()
       local key = connection_id.value
-      local url1 = D.new(G.URL, "https://ce57u4bdl6.execute-api.ap-northeast-1.amazonaws.com/d/@connections/" .. key)
-      local url2 = D.new(G.URL, "https://ycyu9ow4k0.execute-api.ap-northeast-1.amazonaws.com/d/connections/" .. key)
-      local headers = aws.sign(access_key, secret_key, "GET", url1, {})
-      headers:set("x-dromozoa-web-authorization", headers:get "authorization")
-      local response = await(G:fetch(url2, { cache = "no-store", headers = headers }))
+      local url = D.new(G.URL, "https://iuhpbxsimf.execute-api.ap-northeast-1.amazonaws.com/d/connections")
+      local headers = aws.sign(access_key, secret_key, "GET", url, {})
+      local response = await(G:fetch(url, { cache = "no-store", headers = headers }))
       if response.ok then
         local body = await(response:text())
         print(body)
@@ -132,18 +148,19 @@ futures:async(function ()
     end)
   end)
 
-  local post_connections = document:createElement "button" :append "POST @connections"
-  post_connections:addEventListener("click", function (ev)
+  local get_socket_connections = document:createElement "button" :append "GET /socket_connections/{connection_id}"
+  get_socket_connections:addEventListener("click", function (ev)
     ev:preventDefault()
     ev:stopPropagation()
     futures:async(function ()
       local key = connection_id.value
-      local url1 = D.new(G.URL, "https://ce57u4bdl6.execute-api.ap-northeast-1.amazonaws.com/d/@connections/" .. key)
-      local url2 = D.new(G.URL, "https://ycyu9ow4k0.execute-api.ap-northeast-1.amazonaws.com/d/connections/" .. key)
-      local body = [[{"foo":42}]]
-      local headers = aws.sign(access_key, secret_key, "POST", url1, {}, body)
-      headers:set("x-dromozoa-web-authorization", headers:get "authorization")
-      local response = await(G:fetch(url2, { method = "POST", cache = "no-store", headers = headers, body = body }))
+      local url1 = D.new(G.URL, "https://n2qtecb02e.execute-api.ap-northeast-1.amazonaws.com/d/@connections/" .. key)
+      local url2 = D.new(G.URL, "https://iuhpbxsimf.execute-api.ap-northeast-1.amazonaws.com/d/socket_connections/" .. key)
+      local headers1 = aws.sign(access_key, secret_key, "GET", url1, {})
+      headers1:set("x-dromozoa-web-socket-connections-authorization", headers1:get "authorization")
+      headers1:delete "authorization"
+      local headers2 = aws.sign(access_key, secret_key, "GET", url2, headers1)
+      local response = await(G:fetch(url2, { cache = "no-store", headers = headers2 }))
       if response.ok then
         local body = await(response:text())
         print(body)
@@ -152,13 +169,62 @@ futures:async(function ()
       end
     end)
   end)
+
+  local post_socket_connections = document:createElement "button" :append "POST /socket_connections/{connection_id}"
+  post_socket_connections:addEventListener("click", function (ev)
+    ev:preventDefault()
+    ev:stopPropagation()
+    futures:async(function ()
+      local key = connection_id.value
+      local url1 = D.new(G.URL, "https://n2qtecb02e.execute-api.ap-northeast-1.amazonaws.com/d/@connections/" .. key)
+      local url2 = D.new(G.URL, "https://iuhpbxsimf.execute-api.ap-northeast-1.amazonaws.com/d/socket_connections/" .. key)
+      local body = [[{"foo":42}]]
+      local headers1 = aws.sign(access_key, secret_key, "POST", url1, {}, body)
+      headers1:set("x-dromozoa-web-socket-connections-authorization", headers1:get "authorization")
+      headers1:delete "authorization"
+      local headers2 = aws.sign(access_key, secret_key, "POST", url2, headers1, body)
+      local response = await(G:fetch(url2, { method = "POST", cache = "no-store", headers = headers2, body = body }))
+      if response.ok then
+        local body = await(response:text())
+        print(body)
+      else
+        io.stderr:write(("cannot fetch %s: %d %s\n"):format(url, response.status, response.statusText))
+      end
+    end)
+  end)
+
+  local delete_socket_connections = document:createElement "button" :append "DELETE /socket_connections/{connection_id}"
+  delete_socket_connections:addEventListener("click", function (ev)
+    ev:preventDefault()
+    ev:stopPropagation()
+    futures:async(function ()
+      local key = connection_id.value
+      local url1 = D.new(G.URL, "https://n2qtecb02e.execute-api.ap-northeast-1.amazonaws.com/d/@connections/" .. key)
+      local url2 = D.new(G.URL, "https://iuhpbxsimf.execute-api.ap-northeast-1.amazonaws.com/d/socket_connections/" .. key)
+      local headers1 = aws.sign(access_key, secret_key, "DELETE", url1, {})
+      headers1:set("x-dromozoa-web-socket-connections-authorization", headers1:get "authorization")
+      headers1:delete "authorization"
+      local headers2 = aws.sign(access_key, secret_key, "DELETE", url2, headers1)
+      local response = await(G:fetch(url2, { method = "DELETE", cache = "no-store", headers = headers2 }))
+      if response.ok then
+        local body = await(response:text())
+        print(body)
+      else
+        io.stderr:write(("cannot fetch %s: %d %s\n"):format(url, response.status, response.statusText))
+      end
+    end)
+  end)
+
 
   document.body:append(document:createElement "div"
     :append(document:createElement "div" :append(open))
     :append(document:createElement "div" :append(close))
     :append(document:createElement "div" :append(connection_id))
+    :append(document:createElement "div" :append(get_connection))
     :append(document:createElement "div" :append(get_connections))
-    :append(document:createElement "div" :append(post_connections))
+    :append(document:createElement "div" :append(get_socket_connections))
+    :append(document:createElement "div" :append(post_socket_connections))
+    :append(document:createElement "div" :append(delete_socket_connections))
   )
 
   print "finished"

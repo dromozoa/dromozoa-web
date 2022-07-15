@@ -20,6 +20,7 @@ local async, await = require "dromozoa.web.async" :import "await"
 
 local FS = G.FS
 local document = G.document
+local subtle = G.crypto.subtle
 local socket
 
 local futures = { n = 0 }
@@ -57,6 +58,15 @@ futures:async(function ()
     io.stderr:write(("cannot open %s: %s\n"):format(credentials_path, message))
   end
 
+  local pair = await(subtle:generateKey({ name = "ECDSA", namedCurve = "P-256" }, true, D.array { "sign", "verify" }))
+  local private_key = pair.privateKey
+  local public_key = pair.publicKey
+  local public_key_jwk = G.JSON:stringify(await(subtle:exportKey("jwk", public_key)))
+  print(public_key_jwk)
+
+  local nonce = G.crypto:randomUUID()
+  print(nonce)
+
   local open = document:createElement "button" :append "Open"
   open:addEventListener("click", function (ev)
     ev:preventDefault()
@@ -68,8 +78,10 @@ futures:async(function ()
     end
 
     futures:async(function ()
-      local url = D.new(G.URL, "wss://n2qtecb02e.execute-api.ap-northeast-1.amazonaws.com/d?name=test&public_key=aaaaaaaaa")
-
+      local url = D.new(G.URL, "wss://n2qtecb02e.execute-api.ap-northeast-1.amazonaws.com/d")
+      url.searchParams:append("name", "testだよ")
+      url.searchParams:append("nonce", nonce)
+      url.searchParams:append("public_key", public_key_jwk)
       print(url)
       url = aws.sign_query(access_key, secret_key, "GET", url, {})
       print(url)
@@ -78,7 +90,6 @@ futures:async(function ()
 
       socket.onopen = function ()
         print "onopen"
-
         socket:send [[{"action":"get_connection"}]]
       end
 
@@ -95,6 +106,32 @@ futures:async(function ()
         print("onmessage", ev, ev.data)
       end
     end)
+  end)
+
+  local get = document:createElement "button" :append "Get"
+  get:addEventListener("click", function (ev)
+    ev:preventDefault()
+    ev:stopPropagation()
+
+    if not socket then
+      io.stderr:write "socket not opened\n"
+      return
+    end
+
+    socket:send [[{"action":"get_connection"}]]
+  end)
+
+  local put = document:createElement "button" :append "Put"
+  put:addEventListener("click", function (ev)
+    ev:preventDefault()
+    ev:stopPropagation()
+
+    if not socket then
+      io.stderr:write "socket not opened\n"
+      return
+    end
+
+    socket:send [[{"action":"put_connection"}]]
   end)
 
   local close = document:createElement "button" :append "Close"
@@ -218,6 +255,8 @@ futures:async(function ()
 
   document.body:append(document:createElement "div"
     :append(document:createElement "div" :append(open))
+    :append(document:createElement "div" :append(get))
+    :append(document:createElement "div" :append(put))
     :append(document:createElement "div" :append(close))
     :append(document:createElement "div" :append(connection_id))
     :append(document:createElement "div" :append(get_connection))
